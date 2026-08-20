@@ -19,37 +19,42 @@ drifted somewhere else, tell me and I'll re-cut them.
 
 > $1,000. The whole day.
 >
-> Not a four-hour block with overage charges. Not a "ceremony add-on." Ceremony,
-> cocktail hour, reception — we're there from the first guest to the last dance,
-> running sound and MCing the whole thing.
+> Not a four-hour block with overage charges. Not a "ceremony add-on." Ceremony
+> through last dance — we're there from the first guest to the last song,
+> running sound, MCing, and keeping the day-of timeline moving.
 >
 > One rate, quoted up front, that doesn't move.
 >
-> Link in bio to check your date.
+> Book a 30-minute call with us and we'll tell you straight away whether your
+> date is open and what your day would look like. Link in bio.
 >
 > #weddingdj #weddingmc #backyardwedding #diywedding #weddingplanning
 > #engaged #weddingmusic #receptionmusic #weddingvendors #brideandgroom
+> #weddingcost #weddingbudget #justengaged
 
 ---
 
 ## 2 — `02-whats-included.png`
 
-> What the $1,000 actually covers, since nobody else seems to list it:
+> Everything the day needs. Here's what the $1,000 actually covers, since
+> nobody else seems to list it:
 >
-> — Sound for the ceremony, cocktail hour, and reception
-> — MC duties, dialed up or down to taste (some couples want a host, some want
-> us invisible until it matters)
+> — Ceremony, cocktail hour, and reception sound
+> — MC duties, as loud or as invisible as you like (some couples want a host,
+> some want us unnoticed until it matters)
 > — All the equipment, set up before you arrive and struck after you leave
-> — Day-of timeline. Send us the run of show and we'll call the cues
+> — Day-of timeline — send us the run of show and we'll call the cues
 >
 > That last one surprises people. Someone has to tell the wedding party when to
 > line up, and it's usually easiest if it's the person already holding a
 > microphone.
 >
-> Link in bio.
+> Book a 30-minute call with us to walk through your date, your venue, and what
+> you actually need on the day. Link in bio.
 >
 > #weddingdj #weddingmc #dayofcoordination #weddingtimeline #backyardwedding
 > #diywedding #weddingplanning #weddingvendors #weddingmusic #engaged
+> #weddingchecklist #receptionmusic #justengaged
 
 ---
 
@@ -67,12 +72,13 @@ drifted somewhere else, tell me and I'll re-cut them.
 > person can carry the day from guitar to turntable.
 >
 > Both get quoted separately, honestly, once we know your date and headcount.
-> Easiest to talk through on a call.
 >
-> Link in bio.
+> Book a 30-minute call with us and we'll price the whole thing out loud — no
+> menu, no pressure. Link in bio.
 >
 > #weddingdj #weddingbartender #acousticwedding #liveweddingmusic
 > #backyardwedding #diywedding #weddingplanning #weddingvendors #engaged
+> #weddingbudget #weddingcost #transparentpricing
 
 ---
 
@@ -88,7 +94,8 @@ drifted somewhere else, tell me and I'll re-cut them.
 > No pitch deck, no follow-up sequence. If we're not the right fit we'll say so
 > on the call.
 >
-> Book it from the link in bio, or email hello@crossroadsweddingco.com.
+> Book a 30-minute call with us from the link in bio, or email
+> hello@crossroadsweddingco.com.
 >
 > #weddingdj #weddingmc #weddingplanning #backyardwedding #diywedding
 > #engaged #weddingvendors #weddingmusic #justengaged #weddingseason
@@ -100,9 +107,9 @@ drifted somewhere else, tell me and I'll re-cut them.
 - **Hashtags are all national.** Once the service area is settled, swap three or
   four of them for local tags — those are what actually reach couples who can
   book you.
-- **"Link in bio"** assumes the bio points at crossroadsweddingco.com. Once the
-  booking page exists, pointing the bio link straight at it is probably worth
-  more than the homepage for posts 3 and 4.
+- **"Link in bio"** assumes the bio points at crossroadsweddingco.com. All four
+  captions now ask for the 30-minute call, so once the booking page is live,
+  pointing the bio link straight at it will convert better than the homepage.
 - Every claim here comes off the website — the rate, what's included, bar and
   acoustic being quoted separately, the call length. Nothing invented. If any of
   it is wrong, the website is wrong too and both should change together.
