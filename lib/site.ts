@@ -18,7 +18,7 @@ export const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
 
 export const DJ_DAY_RATE_USD = 1000;
 
-export const INTRO_CALL_LENGTH = "15–30 minute";
+export const INTRO_CALL_LENGTH = "30-minute";
 
 // Booking page for the intro call. Set NEXT_PUBLIC_BOOKING_URL in Vercel to
 // the share link from a Google Calendar appointment schedule (free tier: one
