@@ -6,6 +6,7 @@ import Pricing from "@/components/Pricing";
 import About from "@/components/About";
 import ContactCTA from "@/components/ContactCTA";
 import Footer from "@/components/Footer";
+import StructuredData from "@/components/StructuredData";
 
 export default function Home() {
   return (
@@ -20,6 +21,7 @@ export default function Home() {
         <ContactCTA />
       </main>
       <Footer />
+      <StructuredData />
     </>
   );
 }

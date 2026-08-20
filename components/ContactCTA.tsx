@@ -1,8 +1,7 @@
 import SafeImage from "@/components/SafeImage";
 import LeadForm from "@/components/LeadForm";
 import { IMAGES } from "@/lib/images";
-
-const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 export default function ContactCTA() {
   return (
