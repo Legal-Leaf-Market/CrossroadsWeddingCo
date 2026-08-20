@@ -18,6 +18,15 @@ export const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
 
 export const DJ_DAY_RATE_USD = 1000;
 
+export const INTRO_CALL_LENGTH = "15–30 minute";
+
+// Booking page for the intro call. Set NEXT_PUBLIC_BOOKING_URL in Vercel to
+// the share link from a Google Calendar appointment schedule (free tier: one
+// booking page, which is all this needs) or any other scheduler. While it's
+// empty the booking card simply doesn't render, leaving the form and the
+// mailto link as the only ways in.
+export const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_URL ?? "";
+
 // Mirrors the four cards in <Services />; used for schema.org makesOffer.
 export const SERVICE_OFFERS = [
   {

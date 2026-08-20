@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "ig:posts": "node scripts/generate-ig-posts.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

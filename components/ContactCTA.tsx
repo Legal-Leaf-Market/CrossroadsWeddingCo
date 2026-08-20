@@ -1,5 +1,6 @@
 import SafeImage from "@/components/SafeImage";
 import LeadForm from "@/components/LeadForm";
+import BookCallCard from "@/components/BookCallCard";
 import { IMAGES } from "@/lib/images";
 import { CONTACT_EMAIL } from "@/lib/site";
 
@@ -22,6 +23,7 @@ export default function ContactCTA() {
           directly.
         </p>
         <div className="mt-10">
+          <BookCallCard />
           <LeadForm />
         </div>
         <p className="mt-6 text-sm text-cream/50">
