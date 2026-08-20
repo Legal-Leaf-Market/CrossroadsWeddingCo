@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Fraunces, Karla } from "next/font/google";
+import { Spectral, Karla } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const spectral = Spectral({
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
   variable: "--font-display-sans",
   display: "swap",
 });
@@ -35,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${fraunces.variable} ${karla.variable} antialiased`}>
+      <body className={`${spectral.variable} ${karla.variable} antialiased`}>
         {children}
       </body>
     </html>

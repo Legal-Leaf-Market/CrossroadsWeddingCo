@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Services from "@/components/Services";
+import Gallery from "@/components/Gallery";
 import Pricing from "@/components/Pricing";
 import About from "@/components/About";
 import ContactCTA from "@/components/ContactCTA";
@@ -13,6 +14,7 @@ export default function Home() {
       <main>
         <Hero />
         <Services />
+        <Gallery />
         <Pricing />
         <About />
         <ContactCTA />

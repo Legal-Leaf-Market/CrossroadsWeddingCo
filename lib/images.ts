@@ -10,4 +10,7 @@ export const IMAGES = {
   dayOf: unsplash("1546032996-6dfacbacbf3f"),
   about: unsplash("1519225421980-715cb0215aed"),
   contact: unsplash("1583939003579-730e3918a45a", "w=1800&q=70&auto=format&fit=crop"),
+  galleryRings: unsplash("1519741497674-611481863552", "w=900&q=80&auto=format&fit=crop"),
+  galleryTable: unsplash("1511285560929-80b456fea0bc", "w=900&q=80&auto=format&fit=crop"),
+  galleryArch: unsplash("1519671482749-fd09be7ccebf", "w=900&q=80&auto=format&fit=crop"),
 };

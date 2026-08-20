@@ -1,4 +1,5 @@
 import SafeImage from "@/components/SafeImage";
+import LeadForm from "@/components/LeadForm";
 import { IMAGES } from "@/lib/images";
 
 const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
@@ -17,16 +18,22 @@ export default function ContactCTA() {
       <div className="relative mx-auto max-w-3xl px-6 text-center">
         <h2 className="text-3xl">Tell us your date</h2>
         <p className="mt-3 text-cream/70">
-          Email is the fastest way to reach us — send your date, venue (or
-          backyard address), and what you're picturing for music, bar, and
-          day-of help.
+          Send your date, venue (or backyard address), and what you're
+          picturing for music, bar, and day-of help — or just email us
+          directly.
         </p>
-        <a
-          href={`mailto:${CONTACT_EMAIL}?subject=Wedding date inquiry`}
-          className="mt-8 inline-block rounded-full bg-terracotta px-8 py-4 text-base font-semibold text-cream hover:bg-terracotta-dark"
-        >
-          {CONTACT_EMAIL}
-        </a>
+        <div className="mt-10">
+          <LeadForm />
+        </div>
+        <p className="mt-6 text-sm text-cream/50">
+          Prefer email?{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=Wedding date inquiry`}
+            className="underline hover:text-cream/80"
+          >
+            {CONTACT_EMAIL}
+          </a>
+        </p>
       </div>
     </section>
   );
