@@ -8,7 +8,7 @@ export default function ContactCTA() {
   return (
     <section id="contact" className="relative overflow-hidden bg-charcoal py-24 text-cream">
       <SafeImage
-        src={IMAGES.contact}
+        src={IMAGES.stringLights}
         alt="String lights glowing at dusk"
         fill
         sizes="100vw"

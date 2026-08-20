@@ -4,8 +4,8 @@ import { IMAGES } from "@/lib/images";
 const SERVICES = [
   {
     title: "Wedding DJ",
-    image: IMAGES.receptionTable,
-    alt: "Candlelit reception table strung with lights at an outdoor wedding",
+    image: IMAGES.stringLights,
+    alt: "String lights glowing over an evening wedding reception",
     body: "Ceremony sound, cocktail hour, reception, and every transition between them. We MC as much or as little as you want — some couples want a bold host, others want us invisible until it matters.",
   },
   {
