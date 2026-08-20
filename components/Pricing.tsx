@@ -1,3 +1,5 @@
+import { DJ_DAY_RATE_USD } from "@/lib/site";
+
 export default function Pricing() {
   return (
     <section id="pricing" className="bg-cream py-20">
@@ -12,7 +14,8 @@ export default function Pricing() {
             Wedding DJ
           </p>
           <p className="mt-2 text-5xl text-charcoal">
-            $1,000<span className="text-lg text-ink/60"> / day</span>
+            ${DJ_DAY_RATE_USD.toLocaleString("en-US")}
+            <span className="text-lg text-ink/60"> / day</span>
           </p>
           <p className="mt-4 text-sm text-ink/70">
             Ceremony through last dance, sound equipment, MC, and day-of

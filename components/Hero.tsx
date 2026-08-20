@@ -6,14 +6,14 @@ export default function Hero() {
     <section id="top" className="relative bg-charcoal">
       <div className="relative h-[70vh] min-h-[480px] w-full overflow-hidden">
         <SafeImage
-          src={IMAGES.hero}
-          alt="Long candlelit reception table strung with lights at an outdoor backyard wedding"
+          src={IMAGES.dancing}
+          alt="Wedding guests dancing together in warm sunset light"
           fill
           priority
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/60 to-charcoal/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/50 to-charcoal/15" />
         <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-center px-6">
           <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold">
             Backyard weddings &middot; DIY venues &middot; Ballrooms

@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Spectral, Karla } from "next/font/google";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const spectral = Spectral({
@@ -15,10 +16,16 @@ const karla = Karla({
   display: "swap",
 });
 
+const TITLE = `${SITE_NAME} | ${SITE_TAGLINE}`;
+
 export const metadata: Metadata = {
-  title: "Crossroads Wedding Co. | Wedding DJ, Live Music & Bar Service",
-  description:
-    "Backyard-to-ballroom wedding DJ services starting at $1,000, plus live acoustic sets and licensed bartenders. We run your day so you don't have to.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   keywords: [
     "wedding DJ",
     "backyard wedding DJ",
@@ -27,6 +34,38 @@ export const metadata: Metadata = {
     "wedding day-of coordinator",
     "affordable wedding DJ",
   ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    siteName: SITE_NAME,
+    title: TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#faf5ec",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
