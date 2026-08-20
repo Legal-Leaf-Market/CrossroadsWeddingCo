@@ -3,11 +3,7 @@ function unsplash(id: string, params = "w=1600&q=80&auto=format&fit=crop") {
 }
 
 export const IMAGES = {
-  // Unsplash's own /download endpoint 302s to the CDN. Used here because the
-  // photo-page id (dlr-DoLLUks) can't be turned into an images.unsplash.com
-  // path without loading the page. Swap in the direct CDN URL, or a local
-  // file in /public, when one is to hand.
-  heroGarden: "https://unsplash.com/photos/dlr-DoLLUks/download?w=2400",
+  djBooth: unsplash("1470225620780-dba8ba36b745"),
   liveMusic: unsplash("1465495976277-4387d4b0b4c6"),
   bar: unsplash("1470337458703-46ad1756a187"),
   dayOf: unsplash("1546032996-6dfacbacbf3f"),
@@ -15,5 +11,5 @@ export const IMAGES = {
   stringLights: unsplash("1583939003579-730e3918a45a", "w=1800&q=70&auto=format&fit=crop"),
   galleryRings: unsplash("1519741497674-611481863552", "w=900&q=80&auto=format&fit=crop"),
   galleryTable: unsplash("1511285560929-80b456fea0bc", "w=900&q=80&auto=format&fit=crop"),
-  galleryArch: unsplash("1519671482749-fd09be7ccebf", "w=900&q=80&auto=format&fit=crop"),
+  gardenArch: unsplash("1519671482749-fd09be7ccebf"),
 };

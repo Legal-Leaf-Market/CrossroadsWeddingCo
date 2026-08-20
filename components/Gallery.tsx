@@ -4,7 +4,7 @@ import { IMAGES } from "@/lib/images";
 const GALLERY = [
   { src: IMAGES.galleryRings, alt: "Wedding rings resting on flower petals" },
   { src: IMAGES.galleryTable, alt: "Candlelit reception table decor detail" },
-  { src: IMAGES.galleryArch, alt: "Floral arch at an outdoor wedding ceremony" },
+  { src: IMAGES.djBooth, alt: "DJ decks set up for a wedding reception" },
 ];
 
 export default function Gallery() {

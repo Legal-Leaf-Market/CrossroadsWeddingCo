@@ -6,8 +6,8 @@ export default function Hero() {
     <section id="top" className="relative bg-charcoal">
       <div className="relative h-[70vh] min-h-[480px] w-full overflow-hidden">
         <SafeImage
-          src={IMAGES.heroGarden}
-          alt="Outdoor wedding table setting with lemons and floral arrangements"
+          src={IMAGES.gardenArch}
+          alt="Floral arch at an outdoor wedding ceremony"
           fill
           priority
           sizes="100vw"
