@@ -80,7 +80,7 @@ drifted somewhere else, tell me and I'll re-cut them.
 
 > A short call, and you'll know if we're your crew.
 >
-> Fifteen to thirty minutes. You tell us the date, the venue (or the backyard),
+> Thirty minutes. You tell us the date, the venue (or the backyard),
 > and roughly what you're picturing. We tell you whether we're free, what the
 > day would look like, and what bar service or a live acoustic set would run if
 > you want either.

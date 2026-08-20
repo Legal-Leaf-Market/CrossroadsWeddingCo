@@ -153,7 +153,7 @@ const POSTS = [
       children: [
         display(96, COLORS.cream, "A short call, and you\u2019ll know if we\u2019re your crew.", { maxWidth: 860 }),
         rule(COLORS.terracotta, { marginTop: 44 }),
-        bodyText(40, COLORS.muted, "Fifteen to thirty minutes \u2014 your date, your venue, and what you actually need on the day. No pitch deck.", {
+        bodyText(40, COLORS.muted, "Thirty minutes \u2014 your date, your venue, and what you actually need on the day. No pitch deck.", {
           marginTop: 44,
           maxWidth: 800,
         }),
