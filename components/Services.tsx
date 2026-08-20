@@ -1,18 +1,29 @@
+import SafeImage from "@/components/SafeImage";
+import { IMAGES } from "@/lib/images";
+
 const SERVICES = [
   {
     title: "Wedding DJ",
+    image: IMAGES.dj,
+    alt: "Wedding guests dancing together at sunset",
     body: "Ceremony sound, cocktail hour, reception, and every transition between them. We MC as much or as little as you want — some couples want a bold host, others want us invisible until it matters.",
   },
   {
     title: "Live Acoustic Sets",
+    image: IMAGES.liveMusic,
+    alt: "Close-up of hands playing an acoustic guitar",
     body: "Several of our DJs are also working musicians. Add a live acoustic set for your ceremony or cocktail hour — the same person can carry the whole day from guitar to turntable.",
   },
   {
     title: "Bar Service",
+    image: IMAGES.bar,
+    alt: "Bartender pouring a cocktail at an outdoor event",
     body: "Licensed, experienced bartenders for backyard and DIY-venue weddings where the venue doesn't provide one. Bring your own bar; we'll staff and run it.",
   },
   {
     title: "Day-Of Coordination",
+    image: IMAGES.dayOf,
+    alt: "Long outdoor reception table set for a wedding dinner",
     body: "Send us the names, the schedule, and the run of show. On the day, we're the ones calling cues, cuing the wedding party, and keeping everything moving — the unofficial coordinator role, built in.",
   },
 ];
@@ -30,12 +41,23 @@ export default function Services() {
           {SERVICES.map((service) => (
             <div
               key={service.title}
-              className="rounded-2xl border border-parchment bg-cream p-6"
+              className="overflow-hidden rounded-2xl border border-parchment bg-cream"
             >
-              <h3 className="text-xl text-charcoal">{service.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink/70">
-                {service.body}
-              </p>
+              <div className="relative h-48 w-full">
+                <SafeImage
+                  src={service.image}
+                  alt={service.alt}
+                  fill
+                  sizes="(min-width: 640px) 50vw, 100vw"
+                  className="object-cover"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-xl text-charcoal">{service.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ink/70">
+                  {service.body}
+                </p>
+              </div>
             </div>
           ))}
         </div>

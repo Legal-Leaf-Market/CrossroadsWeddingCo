@@ -1,18 +1,30 @@
+import SafeImage from "@/components/SafeImage";
+import { IMAGES } from "@/lib/images";
+
 export default function Hero() {
   return (
-    <section id="top" className="border-b border-parchment bg-cream">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 md:grid-cols-2 md:items-center md:py-28">
-        <div>
-          <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-sage-dark">
+    <section id="top" className="relative bg-charcoal">
+      <div className="relative h-[70vh] min-h-[480px] w-full overflow-hidden">
+        <SafeImage
+          src={IMAGES.hero}
+          alt="Long candlelit reception table strung with lights at an outdoor backyard wedding"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/60 to-charcoal/20" />
+        <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-center px-6">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold">
             Backyard weddings &middot; DIY venues &middot; Ballrooms
           </p>
-          <h1 className="text-4xl leading-tight text-charcoal sm:text-5xl">
+          <h1 className="max-w-2xl text-4xl leading-tight text-cream sm:text-5xl md:text-6xl">
             The DJ &amp; music crew that also quietly runs your day.
           </h1>
-          <p className="mt-6 text-lg text-ink/80">
+          <p className="mt-6 max-w-xl text-lg text-cream/80">
             Give us the names, the schedule, and the vibe. We handle the
-            microphone, the playlist, the timeline, and the awkward silences —
-            so you can actually be at your own wedding.
+            microphone, the playlist, the timeline, and the awkward silences
+            — so you can actually be at your own wedding.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <a
@@ -23,15 +35,18 @@ export default function Hero() {
             </a>
             <a
               href="#pricing"
-              className="rounded-full border border-charcoal/20 px-6 py-3 text-sm font-semibold text-charcoal hover:border-charcoal/40"
+              className="rounded-full border border-cream/40 px-6 py-3 text-sm font-semibold text-cream hover:border-cream/70"
             >
               See pricing
             </a>
           </div>
         </div>
-        <div className="rounded-2xl border border-parchment bg-parchment/60 p-8">
+      </div>
+
+      <div className="relative mx-auto -mt-16 max-w-4xl px-6">
+        <div className="rounded-2xl border border-parchment bg-cream p-8 shadow-xl">
           <h2 className="text-xl text-charcoal">What a Saturday looks like</h2>
-          <ul className="mt-4 space-y-3 text-ink/80">
+          <ul className="mt-4 grid gap-3 text-ink/80 sm:grid-cols-2">
             <li>&bull; DJ &amp; sound for ceremony, cocktail hour, and reception</li>
             <li>&bull; A live acoustic set woven in, if you want one</li>
             <li>&bull; A licensed bartender pouring, if you need one</li>
@@ -39,6 +54,7 @@ export default function Hero() {
           </ul>
         </div>
       </div>
+      <div className="h-20 bg-cream" />
     </section>
   );
 }
