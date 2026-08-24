@@ -4,7 +4,7 @@ import { IMAGES } from "@/lib/images";
 export default function Hero() {
   return (
     <section id="top" className="relative bg-charcoal">
-      <div className="relative h-[70vh] min-h-[480px] w-full overflow-hidden">
+      <div className="relative flex min-h-[max(480px,70vh)] w-full items-center overflow-hidden">
         <SafeImage
           src={IMAGES.gardenArch}
           alt="Floral arch at an outdoor wedding ceremony"
@@ -17,7 +17,7 @@ export default function Hero() {
             On md+ the headline is left-aligned, so weight it sideways and let the right
             of the photo read clearly; on mobile the text spans the width, so it stays vertical. */}
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/70 to-charcoal/45 md:bg-gradient-to-r md:from-charcoal/95 md:via-charcoal/70 md:to-charcoal/25" />
-        <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-center px-6">
+        <div className="relative mx-auto w-full max-w-6xl px-6 pt-20 pb-32">
           <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold">
             Backyard weddings &middot; DIY venues &middot; Ballrooms
           </p>
