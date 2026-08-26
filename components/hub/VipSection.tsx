@@ -54,7 +54,8 @@ export default function VipSection({
       sentSaveIds,
       keepalive,
       onConflict: (body) => {
-        const b = body as { vips: VipRow[] };
+        const b = body as { vips?: VipRow[] };
+        if (!Array.isArray(b.vips)) return;
         setVips(b.vips);
         // Disarm: the rows just changed under any armed remove button.
         setArmedRemove(null);

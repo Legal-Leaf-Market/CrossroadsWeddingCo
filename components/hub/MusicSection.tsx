@@ -164,8 +164,8 @@ export default function MusicSection({
       sentSaveIds: cuesSaveIds,
       keepalive,
       onConflict: (body) => {
-        const b = body as { cues: CueRow[] };
-        setCues(toGrid(b.cues));
+        const b = body as { cues?: CueRow[] };
+        if (Array.isArray(b.cues)) setCues(toGrid(b.cues));
       },
     });
 
@@ -177,7 +177,8 @@ export default function MusicSection({
       sentSaveIds: playlistsSaveIds,
       keepalive,
       onConflict: (body) => {
-        const b = body as { mustPlay: TrackRow[]; doNotPlay: TrackRow[] };
+        const b = body as { mustPlay?: TrackRow[]; doNotPlay?: TrackRow[] };
+        if (!Array.isArray(b.mustPlay) || !Array.isArray(b.doNotPlay)) return;
         setMustPlay(b.mustPlay);
         setDoNotPlay(b.doNotPlay);
         // Disarm: the rows just changed under any armed remove button.
@@ -193,7 +194,10 @@ export default function MusicSection({
       { spotifyPlaylistUrl: playlistUrl.trim() },
       { keepalive },
     );
-    return out.ok ? { ok: true } : { ok: false, message: out.message };
+    if (out.ok) return { ok: true };
+    // A 400 (say, a track link pasted where a playlist link belongs) rejects
+    // this exact value every time; retrying without an edit is pointless.
+    return { ok: false, message: out.message, noRetry: out.status >= 400 && out.status < 500 };
   };
 
   const cueSave = useAutosave(saveCues);

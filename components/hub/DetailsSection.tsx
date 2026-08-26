@@ -49,13 +49,15 @@ export default function DetailsSection({
     const out = await hubSave(`/api/hub/${token}/details`, "PATCH", payload, { keepalive });
     if (!out.ok) {
       for (const k of keys) dirty.current.add(k);
-      return { ok: false, message: out.message };
+      return { ok: false, message: out.message, noRetry: out.status >= 400 && out.status < 500 };
     }
+    // Reads under the badge's "Not saved: " prefix, so the message names
+    // what is not saved rather than contradicting the prefix.
     return heldEmail
       ? {
           ok: false,
           noRetry: true,
-          message: "Everything except the venue email is saved; finish it and it saves too",
+          message: "the venue email is incomplete; everything else is saved",
         }
       : { ok: true };
   };

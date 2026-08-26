@@ -118,9 +118,12 @@ export function useAutosave(save: SaveFn, delay = 700) {
   // already confirmed saved: cancel the debounce and retry timers and queue
   // an immediate keepalive save. If a save is mid-flight the queued one runs
   // right after it (and skips itself if that save already confirmed this
-  // state); if the tab is frozen before it runs, the in-flight keepalive
-  // request still completes and self-conflict detection reconciles the rev
-  // when the tab resumes.
+  // state). A tab frozen or killed while a debounce-fired save is in flight
+  // is the one accepted loss window: that request is not keepalive, but its
+  // body is usually already transmitted, so the server tends to commit, and
+  // self-conflict detection (revAwareSave) reconciles the rev when the tab
+  // resumes. Do not "simplify" either of those away; they are what covers
+  // this case.
   useEffect(() => {
     const flush = () => {
       if (timer.current) {
@@ -245,10 +248,13 @@ export function RemoveButton({
 
 export type HubSaveOutcome = { ok: boolean; status: number; message?: string; body?: unknown };
 
-// Browsers cap the total in-flight keepalive body budget around 64KB; a
-// larger body makes fetch throw before dispatch. Deciding by size up front
+// Browsers cap the in-flight keepalive body budget around 64KB of UTF-8
+// BYTES (shared across concurrent keepalive fetches); an over-budget body
+// makes fetch throw before dispatch. Deciding by measured byte size up front
 // avoids a throw-then-refetch fallback, which could double-send a request
-// that failed for an unrelated reason.
+// that failed for an unrelated reason. Several sections flushing at once can
+// still jointly exceed the shared budget; those requests fail cleanly to
+// status 0 and the quiet retry recovers whenever the tab survives.
 const KEEPALIVE_BODY_LIMIT = 60_000;
 
 /**
@@ -267,7 +273,9 @@ export async function hubSave(
       method,
       headers: { "Content-Type": "application/json" },
       body: payload,
-      keepalive: Boolean(opts?.keepalive) && payload.length < KEEPALIVE_BODY_LIMIT,
+      keepalive:
+        Boolean(opts?.keepalive) &&
+        new TextEncoder().encode(payload).length < KEEPALIVE_BODY_LIMIT,
     });
     const parsed: unknown = await res.json().catch(() => null);
     const message =
@@ -305,7 +313,13 @@ export async function revAwareSave(opts: {
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random()}`;
-  opts.sentSaveIds.current = [...opts.sentSaveIds.current.slice(-7), saveId];
+  // Ids accumulate until a commit is CONFIRMED, then reset to just the
+  // confirmed one. Evicting by recency instead would let an offline burst of
+  // failed retries push out the one id whose commit landed but whose
+  // response was lost, turning the later self-409 into a false cross-device
+  // conflict that rolls back every edit. The cap is a runaway guard sized
+  // far past any plausible unconfirmed streak.
+  opts.sentSaveIds.current = [...opts.sentSaveIds.current.slice(-49), saveId];
   const out = await hubSave(
     opts.path,
     "PUT",
@@ -315,16 +329,31 @@ export async function revAwareSave(opts: {
   if (out.ok) {
     const body = out.body as { rev?: number } | null;
     if (typeof body?.rev === "number") opts.rev.current = body.rev;
+    opts.sentSaveIds.current = [saveId];
     return { ok: true };
   }
   if (out.status === 409) {
     const body = out.body as { rev?: number; lastSaveId?: string } | null;
     if (typeof body?.rev === "number") opts.rev.current = body.rev;
     if (typeof body?.lastSaveId === "string" && opts.sentSaveIds.current.includes(body.lastSaveId)) {
-      return { ok: false };
+      // Our own earlier commit landed but its response was lost. The rev is
+      // adopted above; the quiet retry re-sends the newest rows under it.
+      // (When nothing changed since, that re-send commits identical rows and
+      // bumps the rev once more, which can cost another device one spurious
+      // conflict refresh in the retry window: accepted, the conflict UX
+      // recovers it.)
+      return { ok: false, message: "still syncing, hang on" };
+    }
+    // A 409 body should carry the server's rows; if an intermediary produced
+    // a bodyless or malformed 409, applying it would crash the section, so
+    // treat it as a plain retryable failure instead.
+    if (out.body === null || typeof out.body !== "object") {
+      return { ok: false, message: out.message };
     }
     opts.onConflict(out.body);
     return { ok: false, conflict: true, message: out.message };
   }
-  return { ok: false, message: out.message };
+  // 4xx responses are deterministic rejections of this exact payload; a
+  // quiet retry would just re-send the same doomed request.
+  return { ok: false, message: out.message, noRetry: out.status >= 400 && out.status < 500 };
 }

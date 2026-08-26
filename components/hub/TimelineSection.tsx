@@ -66,7 +66,8 @@ export default function TimelineSection({
       sentSaveIds,
       keepalive,
       onConflict: (body) => {
-        const b = body as { items: TimelineRow[] };
+        const b = body as { items?: TimelineRow[] };
+        if (!Array.isArray(b.items)) return;
         setItems(b.items);
         // The rows just changed under any armed remove button; disarm so the
         // confirm tap cannot delete whichever row slid into that index.
