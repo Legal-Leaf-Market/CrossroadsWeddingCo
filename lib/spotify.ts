@@ -1,6 +1,6 @@
 // Spotify is a priority integration (CLAUDE.md §9.2): couples curate playlists
 // in their own accounts and share the link. This module reads those shared
-// playlists and searches the catalog via the client-credentials flow — no user
+// playlists and searches the catalog via the client-credentials flow, no user
 // login involved. Everything fails closed until SPOTIFY_CLIENT_ID and
 // SPOTIFY_CLIENT_SECRET exist (free app at developer.spotify.com).
 // Write-back (collaborative playlists from our side) needs the OAuth
@@ -82,7 +82,7 @@ export async function getPlaylist(playlistId: string): Promise<SpotifyPlaylist> 
       items: { track: { id: string | null; name: string; artists: { name: string }[] } | null }[];
     };
     for (const item of page.items) {
-      // Local files and removed tracks come back with null ids — skip them.
+      // Local files and removed tracks come back with null ids; skip them.
       if (item.track?.id) {
         tracks.push({
           title: item.track.name,

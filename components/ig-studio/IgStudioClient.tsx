@@ -81,7 +81,7 @@ export default function IgStudioClient() {
     if (res.status === 401) {
       window.sessionStorage.removeItem(TOKEN_KEY);
       setToken("");
-      throw new Error("Token rejected — try again");
+      throw new Error("Token rejected. Try again.");
     }
     if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
     return json;
@@ -237,7 +237,7 @@ export default function IgStudioClient() {
 
         {findings.length > 0 && (
           <section>
-            <h2 style={sectionH2}>Findings — pick one</h2>
+            <h2 style={sectionH2}>Findings: pick one</h2>
             <div style={{ display: "grid", gap: 10 }}>
               {findings.map((f, i) => (
                 <button
@@ -267,7 +267,7 @@ export default function IgStudioClient() {
 
         {photos.length > 0 && (
           <section>
-            <h2 style={sectionH2}>Photos — pick one</h2>
+            <h2 style={sectionH2}>Photos: pick one</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
               {photos.map((p) => (
                 <button

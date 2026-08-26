@@ -5,7 +5,7 @@ import { searchUnsplash, triggerUnsplashDownload } from "@/lib/ig-studio/unsplas
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/* /api/ig-research — the research half of /ig-studio.
+/* /api/ig-research: the research half of /ig-studio.
  *
  *   POST { mode:"findings", topic? }                    -> content ideas + matching Unsplash photos
  *   POST { mode:"draft", finding, photoDownloadLocation?, notes? } -> ONE Instagram post draft
@@ -28,7 +28,7 @@ and day-of timeline coordination.
 Search the web for genuinely useful, current content ideas for this business's Instagram: seasonal
 wedding-planning trends, backyard/DIY/indie-folk wedding inspiration, practical tips couples actually
 search for, or notable shifts in the wedding-vendor industry relevant to a small DJ/entertainment
-business. This is content research for social posts, not journalism — keep it practical and on-brand.
+business. This is content research for social posts, not journalism. Keep it practical and on-brand.
 No hype, no fake urgency, no invented statistics.
 
 For each idea report: the headline, what it is, why it matters to couples planning backyard/DIY/indie-folk
@@ -38,12 +38,12 @@ Return ONLY a JSON array of at most 8 objects, no prose around it:
 [{"headline": "...", "what": "one or two sentences", "why": "one sentence", "angle": "the post this could become, one line",
   "sources": ["url", ...], "confidence": "high|medium|low"}]
 confidence is LOW when one outlet carries it, MEDIUM when reported but not primary, HIGH when a primary
-source confirms it. Be honest — the editor is deciding what to post from this.`;
+source confirms it. Be honest: the editor is deciding what to post from this.`;
 
 const DRAFT_SYSTEM = `You draft ONE Instagram post for Crossroads Wedding Co. (wedding DJ, live acoustic
 sets, bar service, day-of coordination; flat $1,000 DJ day rate; backyard/DIY/indie-folk niche; Midwest),
 from a finding a human editor has already chosen. House voice: warm, honest, no hype, no fake urgency.
-The business has no client testimonials yet — never invent one, a client name, or a review.
+The business has no client testimonials yet. Never invent one, a client name, or a review.
 
 Never invent a statistic, price, or client story. The $1,000 day rate may be reused since it's a real
 fact; do not invent any other number, date, or figure not present in the finding you were given.
@@ -51,10 +51,10 @@ fact; do not invent any other number, date, or figure not present in the finding
 Return ONLY JSON, no prose around it:
 {"overlayHeadline": "text to appear ON the image, 8 words or fewer",
  "overlaySubhead": "optional short supporting line, 12 words or fewer, or empty string",
- "caption": "the Instagram caption — first line is the hook, 2-4 short paragraphs",
+ "caption": "the Instagram caption. First line is the hook, 2-4 short paragraphs",
  "hashtags": ["#weddingdj", ... 8-15 relevant tags mixing broad, niche, and regional terms],
  "claims": [{"claim": "the factual assertion as it appears", "source": "url", "confidence": "high|medium|low"}]}
-claims is an empty array if the post asserts nothing factual beyond the $1,000 rate — most posts won't need it.`;
+claims is an empty array if the post asserts nothing factual beyond the $1,000 rate, most posts won't need it.`;
 
 function noStore(json: unknown, status = 200) {
   return NextResponse.json(json, {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     return noStore(
       {
         error: "IG_STUDIO_TOKEN is not set, so this tool is off",
-        hint: "fails closed on purpose — an unconfigured deploy can't be billed by a stranger",
+        hint: "fails closed on purpose so an unconfigured deploy can't be billed by a stranger",
       },
       501,
     );

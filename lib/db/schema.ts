@@ -15,7 +15,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-// Enums (CLAUDE.md §3). Kept in sync with scripts/phase1-schema.sql by hand —
+// Enums (CLAUDE.md §3). Kept in sync with scripts/phase1-schema.sql by hand;
 // migrations in this repo are hand-authored, additive, idempotent SQL.
 // Adding a value here requires an ALTER TYPE ... ADD VALUE IF NOT EXISTS line
 // in the SQL file: editing its CREATE TYPE list is a silent no-op on any
@@ -102,7 +102,7 @@ export const talentBlockouts = pgTable(
 // Deviations from spec (CLAUDE.md §9.3): contact_email/contact_phone live here
 // because inquiry-stage bookings predate any users row; venue_address is
 // nullable for the same reason; spotify_playlist_url captures the couple's own
-// shared playlist (§9.2 — priority integration).
+// shared playlist (§9.2, priority integration).
 export const weddings = pgTable(
   "weddings",
   {

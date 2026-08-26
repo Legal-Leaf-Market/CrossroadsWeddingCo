@@ -7,7 +7,7 @@ export default function Pricing() {
         <h2 className="text-3xl text-charcoal">Straightforward pricing</h2>
         <p className="mx-auto mt-3 max-w-xl text-ink/70">
           No tiered packages designed to upsell you. One honest day rate for
-          DJ services — add live music or bar service if you want them.
+          DJ services. Add live music or bar service if you want them.
         </p>
         <div className="mx-auto mt-10 max-w-sm rounded-2xl border-2 border-terracotta bg-parchment/40 p-8">
           <p className="text-sm font-semibold uppercase tracking-widest text-sage-dark">
@@ -24,11 +24,11 @@ export default function Pricing() {
           </p>
           <div className="mt-5 space-y-2 border-t border-terracotta/30 pt-4 text-left text-sm text-ink/70">
             <p>
-              <span className="font-semibold text-charcoal">Live acoustic set</span> — flat $
+              <span className="font-semibold text-charcoal">Live acoustic set</span>: flat $
               {ACOUSTIC_ADDON_USD}
             </p>
             <p>
-              <span className="font-semibold text-charcoal">Bar service</span> — from $
+              <span className="font-semibold text-charcoal">Bar service</span>: from $
               {BARTENDER_MIN_USD}, fully quoted on your intro call
             </p>
           </div>

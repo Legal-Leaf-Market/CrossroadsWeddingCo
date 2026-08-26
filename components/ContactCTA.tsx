@@ -9,7 +9,7 @@ export default function ContactCTA() {
         <h2 className="text-3xl">Tell us your date</h2>
         <p className="mt-3 text-cream/70">
           Send your date, venue (or backyard address), and what you're
-          picturing for music, bar, and day-of help — or just email us
+          picturing for music, bar, and day-of help, or just email us
           directly.
         </p>
         <div className="mt-10">

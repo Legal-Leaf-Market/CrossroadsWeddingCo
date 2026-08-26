@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[leads] insert failed:", (err as Error).message);
     return noStore(
-      { error: "Something went wrong saving your info — please email us directly instead." },
+      { error: "Something went wrong saving your info. Please email us directly instead." },
       500,
     );
   }

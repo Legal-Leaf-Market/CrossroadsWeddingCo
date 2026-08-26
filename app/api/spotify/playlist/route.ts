@@ -7,13 +7,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Internal tool: reads a couple's shared playlist so it can be ingested into
-// playlist_curations. Admin-token gated — without the gate this would be an
+// playlist_curations. Admin-token gated, because without the gate this would be an
 // open Spotify proxy. The Phase 2 portal will call this server-side with the
 // couple's own magic-link session instead.
 export async function POST(req: NextRequest) {
   if (!isSpotifyConfigured()) {
     return NextResponse.json(
-      { error: "Spotify is not configured yet — set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET" },
+      { error: "Spotify is not configured yet. Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET." },
       { status: 501 },
     );
   }
@@ -42,6 +42,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(playlist);
   } catch (err) {
     console.error("[spotify] playlist fetch failed:", (err as Error).message);
-    return NextResponse.json({ error: "Could not read that playlist — is it public or unlisted?" }, { status: 502 });
+    return NextResponse.json({ error: "Could not read that playlist. Is it public or unlisted?" }, { status: 502 });
   }
 }
