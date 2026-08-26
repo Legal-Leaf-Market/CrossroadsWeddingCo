@@ -1,4 +1,4 @@
-import { DJ_DAY_RATE_USD } from "@/lib/site";
+import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD, DEPOSIT_USD, DJ_DAY_RATE_USD } from "@/lib/site";
 
 export default function Pricing() {
   return (
@@ -19,14 +19,24 @@ export default function Pricing() {
           </p>
           <p className="mt-4 text-sm text-ink/70">
             Ceremony through last dance, sound equipment, MC, and day-of
-            timeline coordination included. Live acoustic sets and bar
-            service quoted separately based on your date and headcount.
+            timeline coordination included. A ${DEPOSIT_USD} deposit locks
+            your date.
           </p>
+          <div className="mt-5 space-y-2 border-t border-terracotta/30 pt-4 text-left text-sm text-ink/70">
+            <p>
+              <span className="font-semibold text-charcoal">Live acoustic set</span> — flat $
+              {ACOUSTIC_ADDON_USD}
+            </p>
+            <p>
+              <span className="font-semibold text-charcoal">Bar service</span> — from $
+              {BARTENDER_MIN_USD}, fully quoted on your intro call
+            </p>
+          </div>
           <a
-            href="#contact"
+            href="/book"
             className="mt-6 inline-block rounded-full bg-terracotta px-6 py-3 text-sm font-semibold text-cream hover:bg-terracotta-dark"
           >
-            Ask about your date
+            Check your date
           </a>
         </div>
       </div>

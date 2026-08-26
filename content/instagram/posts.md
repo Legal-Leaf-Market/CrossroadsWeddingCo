@@ -66,12 +66,13 @@ drifted somewhere else, tell me and I'll re-cut them.
 > want to build a menu designed to make the cheapest option feel sad. So there's
 > one day rate for DJ and MC, and that's the whole conversation.
 >
-> Two things we do that sit outside it: licensed bartenders for backyard and
-> DIY venues without their own bar staff, and live acoustic sets for the
-> ceremony or cocktail hour — several of us are working musicians, so the same
-> person can carry the day from guitar to turntable.
+> Two things we do that sit outside it: live acoustic sets for the ceremony or
+> cocktail hour — several of us are working musicians, so the same person can
+> carry the day from guitar to turntable — and licensed bartenders for backyard
+> and DIY venues without their own bar staff.
 >
-> Both get quoted separately, honestly, once we know your date and headcount.
+> The acoustic set is a flat $400. Bartending starts at $400 and gets quoted
+> fully once we know your date and headcount.
 >
 > Book a 30-minute call with us and we'll price the whole thing out loud — no
 > menu, no pressure. Link in bio.
@@ -104,12 +105,15 @@ drifted somewhere else, tell me and I'll re-cut them.
 
 ## Notes
 
-- **Hashtags are all national.** Once the service area is settled, swap three or
-  four of them for local tags — those are what actually reach couples who can
-  book you.
+- **Hashtags are all national.** The service area is settled now (two hours
+  around Columbus, IN), so when posting, swap three or four national tags per
+  post for local ones — #indianapoliswedding #indywedding #bloomingtonindiana
+  #columbusindiana #browncountyindiana #louisvillewedding #cincinnatiwedding
+  #indianabride #kentuckybride — those reach couples who can actually book.
 - **"Link in bio"** assumes the bio points at crossroadsweddingco.com. All four
   captions now ask for the 30-minute call, so once the booking page is live,
   pointing the bio link straight at it will convert better than the homepage.
-- Every claim here comes off the website — the rate, what's included, bar and
-  acoustic being quoted separately, the call length. Nothing invented. If any of
-  it is wrong, the website is wrong too and both should change together.
+- Every claim here comes off the website — the rate, what's included, the flat
+  $400 acoustic set, bar service from $400 quoted fully at intake, the call
+  length. Nothing invented. If any of it is wrong, the website is wrong too and
+  both should change together.

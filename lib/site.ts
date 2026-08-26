@@ -18,6 +18,22 @@ export const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
 
 export const DJ_DAY_RATE_USD = 1000;
 
+// $500 locks the date; the balance is collected closer to the event.
+export const DEPOSIT_USD = 500;
+
+// Add-on pricing (owner-confirmed 2026-08-27): acoustic is flat, bartending is
+// a floor with the real quote settled on the intro call.
+export const ACOUSTIC_ADDON_USD = 400;
+export const BARTENDER_MIN_USD = 400;
+
+// Venues past ~60 minutes of Columbus carry a travel surcharge, quoted up
+// front and paid directly to the talent driving (docs/MASTER_SPEC_AND_STRATEGY.md §1.1).
+export const TRAVEL_SURCHARGE_RANGE = "$100–$150";
+
+export const HOME_BASE = "Columbus, Indiana";
+export const SERVICE_RADIUS_BLURB =
+  "Based in Columbus, Indiana — serving couples within about two hours: Indianapolis, Bloomington, Nashville, Louisville, and Cincinnati.";
+
 export const INTRO_CALL_LENGTH = "30-minute";
 
 // Booking page for the intro call. Set NEXT_PUBLIC_BOOKING_URL in Vercel to
@@ -38,14 +54,15 @@ export const SERVICE_OFFERS = [
   {
     name: "Live Acoustic Sets",
     description:
-      "A live acoustic set for the ceremony or cocktail hour, played by the same person running the decks.",
-    priceUsd: null,
+      "A live acoustic set for the ceremony or cocktail hour, played by the same person running the decks. Flat $400.",
+    priceUsd: ACOUSTIC_ADDON_USD,
   },
   {
     name: "Bar Service",
     description:
-      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff.",
+      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. From $400, fully quoted at intake.",
     priceUsd: null,
+    minPriceUsd: BARTENDER_MIN_USD,
   },
   {
     name: "Day-Of Coordination",
@@ -53,4 +70,9 @@ export const SERVICE_OFFERS = [
       "Calling cues, cueing the wedding party, and keeping the run of show moving on the day itself.",
     priceUsd: null,
   },
-] as const;
+] as const satisfies ReadonlyArray<{
+  name: string;
+  description: string;
+  priceUsd: number | null;
+  minPriceUsd?: number;
+}>;
