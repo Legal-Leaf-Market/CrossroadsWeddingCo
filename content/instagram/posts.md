@@ -66,12 +66,13 @@ drifted somewhere else, tell me and I'll re-cut them.
 > want to build a menu designed to make the cheapest option feel sad. So there's
 > one day rate for DJ and MC, and that's the whole conversation.
 >
-> Two things we do that sit outside it: licensed bartenders for backyard and
-> DIY venues without their own bar staff, and live acoustic sets for the
-> ceremony or cocktail hour — several of us are working musicians, so the same
-> person can carry the day from guitar to turntable.
+> Two things we do that sit outside it: live acoustic sets for the ceremony or
+> cocktail hour — several of us are working musicians, so the same person can
+> carry the day from guitar to turntable — and licensed bartenders for backyard
+> and DIY venues without their own bar staff.
 >
-> Both get quoted separately, honestly, once we know your date and headcount.
+> The acoustic set is a flat $400. Bartending starts at $400 and gets quoted
+> fully once we know your date and headcount.
 >
 > Book a 30-minute call with us and we'll price the whole thing out loud — no
 > menu, no pressure. Link in bio.

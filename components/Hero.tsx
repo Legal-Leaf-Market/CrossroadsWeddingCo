@@ -31,10 +31,10 @@ export default function Hero() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <a
-              href="#contact"
+              href="/book"
               className="rounded-full bg-terracotta px-6 py-3 text-sm font-semibold text-cream hover:bg-terracotta-dark"
             >
-              Get a quote by email
+              Check your date
             </a>
             <a
               href="#pricing"
