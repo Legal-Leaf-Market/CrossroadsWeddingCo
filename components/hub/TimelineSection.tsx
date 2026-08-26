@@ -4,8 +4,8 @@ import { useRef, useState } from "react";
 import { TIME_RE } from "@/lib/hub-constants";
 import {
   hubInput,
-  hubSave,
   RemoveButton,
+  revAwareSave,
   SaveBadge,
   SectionCard,
   useAutosave,
@@ -53,34 +53,26 @@ export default function TimelineSection({
   const [items, setItems] = useState<TimelineRow[]>(initial);
   const [armedRemove, setArmedRemove] = useState<number | null>(null);
   const rev = useRef(initialRev);
+  const sentSaveIds = useRef<string[]>([]);
 
-  const save: SaveFn = async ({ keepalive, flush }) => {
+  const save: SaveFn = async ({ keepalive }) => {
     if (items.some((i) => !TIME_RE.test(i.startTime))) {
       return { ok: false, noRetry: true, message: "Finish the highlighted time so we can save" };
     }
-    const out = await hubSave(
-      `/api/hub/${token}/timeline`,
-      "PUT",
-      { rev: rev.current, items },
-      { keepalive },
-    );
-    if (out.ok) {
-      const body = out.body as { rev?: number } | null;
-      if (typeof body?.rev === "number") rev.current = body.rev;
-      return { ok: true };
-    }
-    if (out.status === 409) {
-      // A flush save racing our own in-flight request must not apply the 409
-      // snapshot: it may be losing to that older request, and replacing local
-      // rows here would erase the newest edits.
-      if (!flush) {
-        const body = out.body as { rev: number; items: TimelineRow[] };
-        rev.current = body.rev;
-        setItems(body.items);
-      }
-      return { ok: false, conflict: true, message: out.message };
-    }
-    return { ok: false, message: out.message };
+    return revAwareSave({
+      path: `/api/hub/${token}/timeline`,
+      payload: { items },
+      rev,
+      sentSaveIds,
+      keepalive,
+      onConflict: (body) => {
+        const b = body as { items: TimelineRow[] };
+        setItems(b.items);
+        // The rows just changed under any armed remove button; disarm so the
+        // confirm tap cannot delete whichever row slid into that index.
+        setArmedRemove(null);
+      },
+    });
   };
   const { state, message, touch } = useAutosave(save);
 
@@ -89,10 +81,11 @@ export default function TimelineSection({
     touch();
   }
   function move(index: number, delta: -1 | 1) {
+    const j = index + delta;
+    // A boundary tap changes nothing; saving it would only bump the rev.
+    if (j < 0 || j >= items.length) return;
     setItems((rows) => {
       const next = [...rows];
-      const j = index + delta;
-      if (j < 0 || j >= next.length) return rows;
       [next[index], next[j]] = [next[j], next[index]];
       return next;
     });

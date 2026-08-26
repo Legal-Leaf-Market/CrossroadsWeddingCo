@@ -1,6 +1,13 @@
 "use client";
 
+import { useRef } from "react";
+
 export default function PrintButton() {
+  // Captured on the first click, before any masking; later clicks reuse it,
+  // so printing again while the URL is still masked can never capture the
+  // masked path as the "real" URL and strand the page on it.
+  const realHref = useRef<string | null>(null);
+
   return (
     <button
       type="button"
@@ -11,7 +18,8 @@ export default function PrintButton() {
         // finally would defeat the mask where window.print() returns before
         // the dialog (Safari), so restoration waits for afterprint, with a
         // timeout fallback in case that event never fires.
-        const real = window.location.href;
+        if (realHref.current === null) realHref.current = window.location.href;
+        const real = realHref.current;
         let restored = false;
         const restore = () => {
           if (restored) return;

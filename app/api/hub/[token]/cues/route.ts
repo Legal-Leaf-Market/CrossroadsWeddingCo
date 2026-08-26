@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { musicCues } from "@/lib/db/schema";
-import { CUE_TYPES, getWeddingByToken, withSectionRev } from "@/lib/hub";
+import { CUE_TYPES, getWeddingByToken, withSectionRev, type Tx } from "@/lib/hub";
 import { CONFLICT_MESSAGE } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
@@ -13,6 +13,7 @@ const cueTypeValues = CUE_TYPES.map((c) => c.type) as [string, ...string[]];
 
 const schema = z.object({
   rev: z.number().int().min(0).optional().default(0),
+  saveId: z.string().max(64).optional().default(""),
   cues: z
     .array(
       z.object({
@@ -26,8 +27,8 @@ const schema = z.object({
     .max(CUE_TYPES.length),
 });
 
-async function currentCues(weddingId: string) {
-  const rows = await db.select().from(musicCues).where(eq(musicCues.weddingId, weddingId));
+async function currentCues(ex: Tx | typeof db, weddingId: string) {
+  const rows = await ex.select().from(musicCues).where(eq(musicCues.weddingId, weddingId));
   return rows.map((c) => ({
     cueType: c.cueType,
     trackTitle: c.trackTitle,
@@ -56,25 +57,32 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
   // visible "cleared" state, not a hidden drop. A row with only an artist
   // typed so far still counts as filled and must round-trip.
   const filled = parsed.data.cues.filter((c) => c.trackTitle.length > 0 || c.artist.length > 0);
-  const result = await withSectionRev(wedding.id, "cues", parsed.data.rev, async (tx) => {
-    await tx.delete(musicCues).where(eq(musicCues.weddingId, wedding.id));
-    if (filled.length > 0) {
-      await tx.insert(musicCues).values(
-        filled.map((c) => ({
-          weddingId: wedding.id,
-          cueType: c.cueType,
-          trackTitle: c.trackTitle,
-          artist: c.artist,
-          timeCue: c.timeCue || null,
-          isLivePerformance: c.isLivePerformance,
-        })),
-      );
-    }
-  });
+  const result = await withSectionRev(
+    wedding.id,
+    "cues",
+    parsed.data.rev,
+    parsed.data.saveId,
+    async (tx) => {
+      await tx.delete(musicCues).where(eq(musicCues.weddingId, wedding.id));
+      if (filled.length > 0) {
+        await tx.insert(musicCues).values(
+          filled.map((c) => ({
+            weddingId: wedding.id,
+            cueType: c.cueType,
+            trackTitle: c.trackTitle,
+            artist: c.artist,
+            timeCue: c.timeCue || null,
+            isLivePerformance: c.isLivePerformance,
+          })),
+        );
+      }
+    },
+    (tx) => currentCues(tx, wedding.id),
+  );
 
   if (result.conflict) {
     return NextResponse.json(
-      { error: CONFLICT_MESSAGE, rev: result.rev, cues: await currentCues(wedding.id) },
+      { error: CONFLICT_MESSAGE, rev: result.rev, lastSaveId: result.lastSaveId, cues: result.current },
       { status: 409, headers: { "Cache-Control": "no-store" } },
     );
   }

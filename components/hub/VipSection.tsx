@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import {
   hubInput,
-  hubSave,
   RemoveButton,
+  revAwareSave,
   SaveBadge,
   SectionCard,
   useAutosave,
@@ -42,32 +42,24 @@ export default function VipSection({
   const [vips, setVips] = useState<VipRow[]>(initial);
   const [armedRemove, setArmedRemove] = useState<number | null>(null);
   const rev = useRef(initialRev);
+  const sentSaveIds = useRef<string[]>([]);
 
   // Every visible row is sent as-is; the server accepts partial rows so
   // nothing the couple can see is silently dropped from a save.
-  const save: SaveFn = async ({ keepalive, flush }) => {
-    const out = await hubSave(
-      `/api/hub/${token}/vips`,
-      "PUT",
-      { rev: rev.current, vips },
-      { keepalive },
-    );
-    if (out.ok) {
-      const body = out.body as { rev?: number } | null;
-      if (typeof body?.rev === "number") rev.current = body.rev;
-      return { ok: true };
-    }
-    if (out.status === 409) {
-      // Flush saves must not apply the 409 snapshot; see TimelineSection.
-      if (!flush) {
-        const body = out.body as { rev: number; vips: VipRow[] };
-        rev.current = body.rev;
-        setVips(body.vips);
-      }
-      return { ok: false, conflict: true, message: out.message };
-    }
-    return { ok: false, message: out.message };
-  };
+  const save: SaveFn = ({ keepalive }) =>
+    revAwareSave({
+      path: `/api/hub/${token}/vips`,
+      payload: { vips },
+      rev,
+      sentSaveIds,
+      keepalive,
+      onConflict: (body) => {
+        const b = body as { vips: VipRow[] };
+        setVips(b.vips);
+        // Disarm: the rows just changed under any armed remove button.
+        setArmedRemove(null);
+      },
+    });
   const { state, message, touch } = useAutosave(save);
 
   function update(index: number, patch: Partial<VipRow>) {

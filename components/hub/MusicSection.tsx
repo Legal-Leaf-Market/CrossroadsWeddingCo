@@ -6,6 +6,7 @@ import {
   hubInput,
   hubSave,
   RemoveButton,
+  revAwareSave,
   SaveBadge,
   SectionCard,
   useAutosave,
@@ -45,14 +46,19 @@ function TrackList({
   rows,
   setRows,
   onTouched,
+  armedRemove,
+  setArmedRemove,
 }: {
   label: string;
   hint: string;
   rows: TrackRow[];
   setRows: React.Dispatch<React.SetStateAction<TrackRow[]>>;
   onTouched: () => void;
+  // Armed state lives with the parent so a 409 refresh that swaps the rows
+  // can disarm a pending "Sure?" before it deletes the wrong track.
+  armedRemove: number | null;
+  setArmedRemove: (next: number | null) => void;
 }) {
-  const [armedRemove, setArmedRemove] = useState<number | null>(null);
   return (
     <div>
       <h3 className="text-sm font-semibold text-charcoal">{label}</h3>
@@ -143,63 +149,48 @@ export default function MusicSection({
   const [mustPlay, setMustPlay] = useState<TrackRow[]>(initialMustPlay);
   const [doNotPlay, setDoNotPlay] = useState<TrackRow[]>(initialDoNotPlay);
   const [playlistUrl, setPlaylistUrl] = useState(initialPlaylistUrl);
+  const [armedMust, setArmedMust] = useState<number | null>(null);
+  const [armedDoNot, setArmedDoNot] = useState<number | null>(null);
   const cuesRev = useRef(initialCuesRev);
   const playlistsRev = useRef(initialPlaylistsRev);
+  const cuesSaveIds = useRef<string[]>([]);
+  const playlistsSaveIds = useRef<string[]>([]);
 
-  const saveCues: SaveFn = async ({ keepalive, flush }) => {
-    const out = await hubSave(
-      `/api/hub/${token}/cues`,
-      "PUT",
-      { rev: cuesRev.current, cues },
-      { keepalive },
-    );
-    if (out.ok) {
-      const body = out.body as { rev?: number } | null;
-      if (typeof body?.rev === "number") cuesRev.current = body.rev;
-      return { ok: true };
-    }
-    if (out.status === 409) {
-      // Flush saves must not apply the 409 snapshot; see TimelineSection.
-      if (!flush) {
-        const body = out.body as { rev: number; cues: CueRow[] };
-        cuesRev.current = body.rev;
-        setCues(toGrid(body.cues));
-      }
-      return { ok: false, conflict: true, message: out.message };
-    }
-    return { ok: false, message: out.message };
-  };
+  const saveCues: SaveFn = ({ keepalive }) =>
+    revAwareSave({
+      path: `/api/hub/${token}/cues`,
+      payload: { cues },
+      rev: cuesRev,
+      sentSaveIds: cuesSaveIds,
+      keepalive,
+      onConflict: (body) => {
+        const b = body as { cues: CueRow[] };
+        setCues(toGrid(b.cues));
+      },
+    });
 
-  const saveLists: SaveFn = async ({ keepalive, flush }) => {
-    const out = await hubSave(
-      `/api/hub/${token}/playlists`,
-      "PUT",
-      { rev: playlistsRev.current, mustPlay, doNotPlay },
-      { keepalive },
-    );
-    if (out.ok) {
-      const body = out.body as { rev?: number } | null;
-      if (typeof body?.rev === "number") playlistsRev.current = body.rev;
-      return { ok: true };
-    }
-    if (out.status === 409) {
-      // Flush saves must not apply the 409 snapshot; see TimelineSection.
-      if (!flush) {
-        const body = out.body as { rev: number; mustPlay: TrackRow[]; doNotPlay: TrackRow[] };
-        playlistsRev.current = body.rev;
-        setMustPlay(body.mustPlay);
-        setDoNotPlay(body.doNotPlay);
-      }
-      return { ok: false, conflict: true, message: out.message };
-    }
-    return { ok: false, message: out.message };
-  };
+  const saveLists: SaveFn = ({ keepalive }) =>
+    revAwareSave({
+      path: `/api/hub/${token}/playlists`,
+      payload: { mustPlay, doNotPlay },
+      rev: playlistsRev,
+      sentSaveIds: playlistsSaveIds,
+      keepalive,
+      onConflict: (body) => {
+        const b = body as { mustPlay: TrackRow[]; doNotPlay: TrackRow[] };
+        setMustPlay(b.mustPlay);
+        setDoNotPlay(b.doNotPlay);
+        // Disarm: the rows just changed under any armed remove button.
+        setArmedMust(null);
+        setArmedDoNot(null);
+      },
+    });
 
   const saveUrl: SaveFn = async ({ keepalive }) => {
     const out = await hubSave(
       `/api/hub/${token}/details`,
       "PATCH",
-      { spotifyPlaylistUrl: playlistUrl },
+      { spotifyPlaylistUrl: playlistUrl.trim() },
       { keepalive },
     );
     return out.ok ? { ok: true } : { ok: false, message: out.message };
@@ -287,6 +278,8 @@ export default function MusicSection({
             rows={mustPlay}
             setRows={setMustPlay}
             onTouched={listSave.touch}
+            armedRemove={armedMust}
+            setArmedRemove={setArmedMust}
           />
           <TrackList
             label="Do not play"
@@ -294,6 +287,8 @@ export default function MusicSection({
             rows={doNotPlay}
             setRows={setDoNotPlay}
             onTouched={listSave.touch}
+            armedRemove={armedDoNot}
+            setArmedRemove={setArmedDoNot}
           />
         </div>
       </SectionCard>

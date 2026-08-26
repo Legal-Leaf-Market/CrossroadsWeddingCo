@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { playlistCurations } from "@/lib/db/schema";
-import { getWeddingByToken, withSectionRev } from "@/lib/hub";
+import { getWeddingByToken, withSectionRev, type Tx } from "@/lib/hub";
 import { CONFLICT_MESSAGE } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
@@ -18,6 +18,7 @@ const track = z.object({
 
 const schema = z.object({
   rev: z.number().int().min(0).optional().default(0),
+  saveId: z.string().max(64).optional().default(""),
   mustPlay: z.array(track).max(100),
   doNotPlay: z.array(track).max(100),
 });
@@ -31,8 +32,8 @@ function toClient(rows: { category: string; trackTitle: string; artist: string }
     }));
 }
 
-async function currentLists(weddingId: string) {
-  const rows = await db
+async function currentLists(ex: Tx | typeof db, weddingId: string) {
+  const rows = await ex
     .select()
     .from(playlistCurations)
     .where(
@@ -76,21 +77,28 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
       artist: t.artist,
     })),
   ];
-  const result = await withSectionRev(wedding.id, "playlists", parsed.data.rev, async (tx) => {
-    await tx
-      .delete(playlistCurations)
-      .where(
-        and(
-          eq(playlistCurations.weddingId, wedding.id),
-          inArray(playlistCurations.category, ["must_play", "do_not_play"]),
-        ),
-      );
-    if (rows.length > 0) await tx.insert(playlistCurations).values(rows);
-  });
+  const result = await withSectionRev(
+    wedding.id,
+    "playlists",
+    parsed.data.rev,
+    parsed.data.saveId,
+    async (tx) => {
+      await tx
+        .delete(playlistCurations)
+        .where(
+          and(
+            eq(playlistCurations.weddingId, wedding.id),
+            inArray(playlistCurations.category, ["must_play", "do_not_play"]),
+          ),
+        );
+      if (rows.length > 0) await tx.insert(playlistCurations).values(rows);
+    },
+    (tx) => currentLists(tx, wedding.id),
+  );
 
   if (result.conflict) {
     return NextResponse.json(
-      { error: CONFLICT_MESSAGE, rev: result.rev, ...(await currentLists(wedding.id)) },
+      { error: CONFLICT_MESSAGE, rev: result.rev, lastSaveId: result.lastSaveId, ...result.current },
       { status: 409, headers: { "Cache-Control": "no-store" } },
     );
   }

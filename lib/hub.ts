@@ -18,37 +18,60 @@ export { CUE_TYPES, TIMELINE_CATEGORIES, TOKEN_RE, daysOut, type CueType } from 
 /** The hub sections protected by per-section revision counters. */
 export type SectionKey = "timeline" | "cues" | "vips" | "playlists";
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Optimistic-concurrency gate for the replace-all hub saves. Locks the
  * wedding row, compares the client's revision for `section` with the stored
- * one, and either reports a conflict (caller answers 409 with the current
- * rows) or runs `write` and bumps the revision, all in one transaction. This
- * is what stops a stale tab from silently wiping rows another device saved.
+ * one, and either reports a conflict or runs `write` and bumps the revision,
+ * all in one transaction. This is what stops a stale tab from silently wiping
+ * rows another device saved.
+ *
+ * On a conflict the result carries the save id of the commit that currently
+ * holds the section, plus the current rows (read inside the same transaction
+ * so rev and rows can never disagree). The save id lets a client whose
+ * success response was lost recognize its own commit and retry with the new
+ * rev, instead of mistaking itself for another device.
  */
-export async function withSectionRev(
+export async function withSectionRev<T>(
   weddingId: string,
   section: SectionKey,
   clientRev: number,
+  saveId: string,
   write: (tx: Tx) => Promise<void>,
-): Promise<{ conflict: boolean; rev: number }> {
+  readCurrent: (tx: Tx) => Promise<T>,
+): Promise<
+  | { conflict: false; rev: number }
+  | { conflict: true; rev: number; lastSaveId: string | null; current: T }
+> {
   return db.transaction(async (tx) => {
     const locked = await tx.execute(
       sql`select coalesce(hub_section_revs, '{}'::jsonb) as revs from weddings where id = ${weddingId} for update`,
     );
     const revs = (locked.rows[0]?.revs ?? {}) as Record<string, unknown>;
+    const sidKey = `${section}_sid`;
     const current = typeof revs[section] === "number" ? (revs[section] as number) : 0;
-    if (clientRev !== current) return { conflict: true, rev: current };
+    if (clientRev !== current) {
+      return {
+        conflict: true as const,
+        rev: current,
+        lastSaveId: typeof revs[sidKey] === "string" ? (revs[sidKey] as string) : null,
+        current: await readCurrent(tx),
+      };
+    }
     await write(tx);
     const next = current + 1;
     await tx.execute(
       sql`update weddings
-          set hub_section_revs = jsonb_set(coalesce(hub_section_revs, '{}'::jsonb), array[${section}::text], to_jsonb(${next}::int)),
+          set hub_section_revs = jsonb_set(
+                jsonb_set(coalesce(hub_section_revs, '{}'::jsonb), array[${section}::text], to_jsonb(${next}::int)),
+                array[${sidKey}::text],
+                to_jsonb(${saveId}::text)
+              ),
               updated_at = now()
           where id = ${weddingId}`,
     );
-    return { conflict: false, rev: next };
+    return { conflict: false as const, rev: next };
   });
 }
 

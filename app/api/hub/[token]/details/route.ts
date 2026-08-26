@@ -11,7 +11,11 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   venueAddress: z.string().trim().max(2000).optional(),
-  venueContactEmail: z.union([z.literal(""), z.email().max(255)]).optional(),
+  // Deliberately not z.email(): format is enforced client-side for UX, and a
+  // strict server check whose regex differs from the client's would 400 the
+  // whole PATCH and block every other field from saving. A malformed value
+  // here degrades gracefully (a contact we follow up on the call).
+  venueContactEmail: z.string().trim().max(255).optional(),
   contactPhone: z.string().trim().max(50).optional(),
   spotifyPlaylistUrl: z.string().trim().max(500).optional(),
   vibeNotes: z.string().trim().max(5000).optional(),

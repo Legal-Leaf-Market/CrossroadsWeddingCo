@@ -3,7 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { timelineItems } from "@/lib/db/schema";
-import { getWeddingByToken, TIMELINE_CATEGORIES, withSectionRev } from "@/lib/hub";
+import { getWeddingByToken, TIMELINE_CATEGORIES, withSectionRev, type Tx } from "@/lib/hub";
 import { CONFLICT_MESSAGE, TIME_RE } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   rev: z.number().int().min(0).optional().default(0),
+  saveId: z.string().max(64).optional().default(""),
   items: z
     .array(
       z.object({
@@ -26,8 +27,8 @@ const schema = z.object({
     .max(60),
 });
 
-async function currentItems(weddingId: string) {
-  const rows = await db
+async function currentItems(ex: Tx | typeof db, weddingId: string) {
+  const rows = await ex
     .select()
     .from(timelineItems)
     .where(eq(timelineItems.weddingId, weddingId))
@@ -59,26 +60,33 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
 
   // Replace-all under the section revision: the client owns ordering, the
   // server owns scoping, and a stale snapshot gets a 409 instead of a wipe.
-  const result = await withSectionRev(wedding.id, "timeline", parsed.data.rev, async (tx) => {
-    await tx.delete(timelineItems).where(eq(timelineItems.weddingId, wedding.id));
-    if (parsed.data.items.length > 0) {
-      await tx.insert(timelineItems).values(
-        parsed.data.items.map((item, index) => ({
-          weddingId: wedding.id,
-          orderIndex: index,
-          title: item.title,
-          category: item.category,
-          scheduledStartTime: item.startTime,
-          estimatedDurationMinutes: item.durationMinutes,
-          mcNotes: item.mcNotes || null,
-        })),
-      );
-    }
-  });
+  const result = await withSectionRev(
+    wedding.id,
+    "timeline",
+    parsed.data.rev,
+    parsed.data.saveId,
+    async (tx) => {
+      await tx.delete(timelineItems).where(eq(timelineItems.weddingId, wedding.id));
+      if (parsed.data.items.length > 0) {
+        await tx.insert(timelineItems).values(
+          parsed.data.items.map((item, index) => ({
+            weddingId: wedding.id,
+            orderIndex: index,
+            title: item.title,
+            category: item.category,
+            scheduledStartTime: item.startTime,
+            estimatedDurationMinutes: item.durationMinutes,
+            mcNotes: item.mcNotes || null,
+          })),
+        );
+      }
+    },
+    (tx) => currentItems(tx, wedding.id),
+  );
 
   if (result.conflict) {
     return NextResponse.json(
-      { error: CONFLICT_MESSAGE, rev: result.rev, items: await currentItems(wedding.id) },
+      { error: CONFLICT_MESSAGE, rev: result.rev, lastSaveId: result.lastSaveId, items: result.current },
       { status: 409, headers: { "Cache-Control": "no-store" } },
     );
   }

@@ -3,7 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { vipRoster } from "@/lib/db/schema";
-import { getWeddingByToken, withSectionRev } from "@/lib/hub";
+import { getWeddingByToken, withSectionRev, type Tx } from "@/lib/hub";
 import { CONFLICT_MESSAGE } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   rev: z.number().int().min(0).optional().default(0),
+  saveId: z.string().max(64).optional().default(""),
   vips: z
     .array(
       z.object({
@@ -25,8 +26,8 @@ const schema = z.object({
     .max(40),
 });
 
-async function currentVips(weddingId: string) {
-  const rows = await db
+async function currentVips(ex: Tx | typeof db, weddingId: string) {
+  const rows = await ex
     .select()
     .from(vipRoster)
     .where(eq(vipRoster.weddingId, weddingId))
@@ -55,25 +56,32 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const result = await withSectionRev(wedding.id, "vips", parsed.data.rev, async (tx) => {
-    await tx.delete(vipRoster).where(eq(vipRoster.weddingId, wedding.id));
-    if (parsed.data.vips.length > 0) {
-      await tx.insert(vipRoster).values(
-        parsed.data.vips.map((v, index) => ({
-          weddingId: wedding.id,
-          orderIndex: index,
-          role: v.role,
-          fullName: v.fullName,
-          phoneticSpelling: v.phoneticSpelling,
-          entranceSongOverride: v.entranceSongOverride || null,
-        })),
-      );
-    }
-  });
+  const result = await withSectionRev(
+    wedding.id,
+    "vips",
+    parsed.data.rev,
+    parsed.data.saveId,
+    async (tx) => {
+      await tx.delete(vipRoster).where(eq(vipRoster.weddingId, wedding.id));
+      if (parsed.data.vips.length > 0) {
+        await tx.insert(vipRoster).values(
+          parsed.data.vips.map((v, index) => ({
+            weddingId: wedding.id,
+            orderIndex: index,
+            role: v.role,
+            fullName: v.fullName,
+            phoneticSpelling: v.phoneticSpelling,
+            entranceSongOverride: v.entranceSongOverride || null,
+          })),
+        );
+      }
+    },
+    (tx) => currentVips(tx, wedding.id),
+  );
 
   if (result.conflict) {
     return NextResponse.json(
-      { error: CONFLICT_MESSAGE, rev: result.rev, vips: await currentVips(wedding.id) },
+      { error: CONFLICT_MESSAGE, rev: result.rev, lastSaveId: result.lastSaveId, vips: result.current },
       { status: 409, headers: { "Cache-Control": "no-store" } },
     );
   }

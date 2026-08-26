@@ -11,25 +11,24 @@ export type SaveResult =
   | { ok: true }
   | { ok: false; message?: string; conflict?: boolean; noRetry?: boolean };
 
-/**
- * Section save callback. `keepalive` is true when flushing on page hide.
- * `flush` marks a fire-and-forget hide-time save racing an in-flight one:
- * sections must NOT apply 409 side effects (state refresh, rev update) for
- * it, or losing the race against their own older request would clobber the
- * newest local rows.
- */
-export type SaveFn = (opts: { keepalive: boolean; flush?: boolean }) => Promise<SaveResult>;
+/** Section save callback. `keepalive` is true for hide-time flush saves. */
+export type SaveFn = (opts: { keepalive: boolean }) => Promise<SaveResult>;
 
 const MAX_QUIET_RETRIES = 3;
 
 /**
  * Debounced autosave: call `touch()` after every edit; `save` fires once the
- * edits pause. Guarantees: saves never overlap (promise chain), a stale
- * response never wins the badge (sequence counter), pending edits are flushed
- * on pagehide/visibility-hidden (directly, with keepalive, when an older save
- * is still in flight), failures retry quietly a bounded number of times, and
- * a 409 conflict always surfaces: it cancels queued work so a follow-up save
- * can never re-commit the other device's rows under a false Saved badge.
+ * edits pause. The design is deliberately simple: every save runs on one
+ * promise chain (never two requests in flight from this hook), a sequence
+ * counter keeps stale responses from winning the badge, and a completed-seq
+ * watermark tells the hide-time flush whether anything is actually unsaved.
+ * The flush queues a chained keepalive save whenever the newest edit has not
+ * been confirmed saved: pending debounce, queued behind an in-flight save,
+ * or parked in the retry window. There is intentionally no fire-and-forget
+ * side channel; racing our own in-flight request created worse failure modes
+ * than the narrow one it closed (a tab killed mid-flight), and that case is
+ * covered by keepalive on the in-flight request itself plus self-conflict
+ * detection (see revAwareSave) when the response is lost.
  */
 export function useAutosave(save: SaveFn, delay = 700) {
   const [state, setState] = useState<SaveState>("idle");
@@ -37,8 +36,8 @@ export function useAutosave(save: SaveFn, delay = 700) {
   const saveRef = useRef(save);
   saveRef.current = save;
   const seq = useRef(0);
+  const lastOkSeq = useRef(0);
   const chain = useRef<Promise<void>>(Promise.resolve());
-  const busy = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retries = useRef(0);
@@ -47,14 +46,14 @@ export function useAutosave(save: SaveFn, delay = 700) {
     chain.current = chain.current.then(async () => {
       // A newer edit scheduled its own save; let that one carry the data.
       if (seq.current !== mySeq) return;
-      busy.current = true;
+      // This state already reached the server (a flush save queued behind
+      // the save that then succeeded); a re-send would only bump the rev.
+      if (lastOkSeq.current >= mySeq) return;
       let result: SaveResult;
       try {
         result = await saveRef.current({ keepalive });
       } catch {
         result = { ok: false };
-      } finally {
-        busy.current = false;
       }
       if (!result.ok && result.conflict) {
         // The section already replaced its rows with the server's; anything
@@ -64,6 +63,7 @@ export function useAutosave(save: SaveFn, delay = 700) {
         // Saved, hiding that the other device's version now stands.
         retries.current = 0;
         seq.current += 1;
+        lastOkSeq.current = seq.current;
         if (timer.current) {
           clearTimeout(timer.current);
           timer.current = null;
@@ -80,6 +80,7 @@ export function useAutosave(save: SaveFn, delay = 700) {
       if (seq.current !== mySeq) return;
       if (result.ok) {
         retries.current = 0;
+        if (mySeq > lastOkSeq.current) lastOkSeq.current = mySeq;
         setState("saved");
         setMessage(null);
       } else {
@@ -106,29 +107,31 @@ export function useAutosave(save: SaveFn, delay = 700) {
     if (timer.current) clearTimeout(timer.current);
     if (retryTimer.current) clearTimeout(retryTimer.current);
     timer.current = setTimeout(() => {
-      // Null the handle so flush-on-hide can tell a pending debounce from a
-      // finished one; a stale truthy handle would re-send a full replace-all
-      // (and bump the section rev) on every later tab switch.
+      // Null the handle so a fired debounce is distinguishable from a
+      // pending one; flush() keys off the watermark, not this handle.
       timer.current = null;
       run(mySeq);
     }, delay);
   }, [delay, run]);
 
-  // Flush the pending debounce when the page hides or unloads, so the last
-  // keystrokes before a tab switch or navigation still reach the server.
+  // When the page hides or unloads, save the newest state if it is not
+  // already confirmed saved: cancel the debounce and retry timers and queue
+  // an immediate keepalive save. If a save is mid-flight the queued one runs
+  // right after it (and skips itself if that save already confirmed this
+  // state); if the tab is frozen before it runs, the in-flight keepalive
+  // request still completes and self-conflict detection reconciles the rev
+  // when the tab resumes.
   useEffect(() => {
     const flush = () => {
-      if (!timer.current) return;
-      clearTimeout(timer.current);
-      timer.current = null;
-      if (busy.current) {
-        // An older save is mid-flight; the chained run below would queue
-        // behind it, and a frozen mobile tab never resumes to send it. Fire
-        // the newest state onto the wire right now with keepalive; flush mode
-        // keeps its possible 409 from clobbering local rows if it loses the
-        // race against our own in-flight request.
-        void saveRef.current({ keepalive: true, flush: true }).catch(() => {});
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
       }
+      if (retryTimer.current) {
+        clearTimeout(retryTimer.current);
+        retryTimer.current = null;
+      }
+      if (seq.current === lastOkSeq.current) return;
       run(seq.current, true);
     };
     const onVisibility = () => {
@@ -193,8 +196,9 @@ export function SectionCard({
 
 /**
  * Two-tap destructive button, controlled by the parent: rows are index-keyed,
- * so the armed flag must live with the list and be cleared on any mutation.
- * An armed flag held inside the button would survive reindexing and delete
+ * so the armed flag must live with the list and be cleared on ANY list
+ * mutation, including a 409 refresh swapping in another device's rows. An
+ * armed flag held inside the button would survive reindexing and delete
  * whichever row slid into this position. Auto-disarms after 3 seconds. Sized
  * to a 40px touch target for phone thumbs.
  */
@@ -241,11 +245,15 @@ export function RemoveButton({
 
 export type HubSaveOutcome = { ok: boolean; status: number; message?: string; body?: unknown };
 
+// Browsers cap the total in-flight keepalive body budget around 64KB; a
+// larger body makes fetch throw before dispatch. Deciding by size up front
+// avoids a throw-then-refetch fallback, which could double-send a request
+// that failed for an unrelated reason.
+const KEEPALIVE_BODY_LIMIT = 60_000;
+
 /**
  * PUT/PATCH JSON to a hub endpoint. Parses the response body so callers can
  * surface the server's error message and react to 409 revision conflicts.
- * `keepalive` keeps a flush-on-unload request alive past navigation; some
- * browsers cap keepalive bodies at 64KB, so it falls back to a plain fetch.
  */
 export async function hubSave(
   path: string,
@@ -253,22 +261,14 @@ export async function hubSave(
   body: unknown,
   opts?: { keepalive?: boolean },
 ): Promise<HubSaveOutcome> {
-  const init: RequestInit = {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  };
+  const payload = JSON.stringify(body);
   try {
-    let res: Response;
-    if (opts?.keepalive) {
-      try {
-        res = await fetch(path, { ...init, keepalive: true });
-      } catch {
-        res = await fetch(path, init);
-      }
-    } else {
-      res = await fetch(path, init);
-    }
+    const res = await fetch(path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: Boolean(opts?.keepalive) && payload.length < KEEPALIVE_BODY_LIMIT,
+    });
     const parsed: unknown = await res.json().catch(() => null);
     const message =
       parsed !== null &&
@@ -281,4 +281,50 @@ export async function hubSave(
   } catch {
     return { ok: false, status: 0 };
   }
+}
+
+/**
+ * Save a rev-guarded section. Adds a per-request save id so the server can
+ * echo, on a 409, whose commit currently holds the section. If that id is one
+ * WE sent, this is our own earlier commit whose response was lost (mobile
+ * networks do that): adopt the server's rev and report a plain retryable
+ * failure so the quiet retry re-sends the newest rows, instead of treating it
+ * as another device's edit and rolling local rows back to our own older
+ * snapshot. Only an id we did not send is a real conflict, and only then does
+ * `onConflict` replace local state with the server's rows.
+ */
+export async function revAwareSave(opts: {
+  path: string;
+  payload: Record<string, unknown>;
+  rev: React.MutableRefObject<number>;
+  sentSaveIds: React.MutableRefObject<string[]>;
+  keepalive: boolean;
+  onConflict: (body: unknown) => void;
+}): Promise<SaveResult> {
+  const saveId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`;
+  opts.sentSaveIds.current = [...opts.sentSaveIds.current.slice(-7), saveId];
+  const out = await hubSave(
+    opts.path,
+    "PUT",
+    { ...opts.payload, rev: opts.rev.current, saveId },
+    { keepalive: opts.keepalive },
+  );
+  if (out.ok) {
+    const body = out.body as { rev?: number } | null;
+    if (typeof body?.rev === "number") opts.rev.current = body.rev;
+    return { ok: true };
+  }
+  if (out.status === 409) {
+    const body = out.body as { rev?: number; lastSaveId?: string } | null;
+    if (typeof body?.rev === "number") opts.rev.current = body.rev;
+    if (typeof body?.lastSaveId === "string" && opts.sentSaveIds.current.includes(body.lastSaveId)) {
+      return { ok: false };
+    }
+    opts.onConflict(out.body);
+    return { ok: false, conflict: true, message: out.message };
+  }
+  return { ok: false, message: out.message };
 }
