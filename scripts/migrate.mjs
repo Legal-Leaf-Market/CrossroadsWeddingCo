@@ -11,7 +11,9 @@ import { dirname, join } from "node:path";
 import pg from "pg";
 
 const CANDIDATES = ["DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL", "NEON_DATABASE_URL"];
-const found = CANDIDATES.map((name) => [name, process.env[name]]).find(([, v]) => v);
+// Case-insensitive: production had the variable saved as Database_URL.
+const wanted = new Set(CANDIDATES.map((n) => n.toLowerCase()));
+const found = Object.entries(process.env).find(([name, v]) => v && wanted.has(name.toLowerCase()));
 if (!found) {
   // Names only, never values: which env keys even look database-related here?
   const visible = Object.keys(process.env).filter((k) => /DATABASE|POSTGRES|NEON|PG/i.test(k)).sort();
