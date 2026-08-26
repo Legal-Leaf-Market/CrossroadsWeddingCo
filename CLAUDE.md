@@ -436,7 +436,7 @@ decisions absorbed from it:
 - **Phase 1 (live 2026-08-26):** flat-rate site, city pages, booking flow writing `weddings`
   rows (legacy `leads` fallback), Resend emails from jake@, Stripe scaffolded and gated,
   schema self-applying at build.
-- **Phase 2 (built 2026-08-26):** client planning hub at `/hub/[token]` (48-hex magic link
+- **Phase 2 (live 2026-08-26):** client planning hub at `/hub/[token]` (48-hex magic link
   minted at booking, emailed to the couple). Four autosaving sections (debounced 700ms PUT
   replace-all APIs under `/api/hub/[token]/*`), print run sheet at `/hub/[token]/runsheet`,
   per-wedding PWA manifest, portal-gated Spotify track search (501 until keys exist). Booking
