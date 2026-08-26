@@ -4,7 +4,7 @@ import DetailsSection from "@/components/hub/DetailsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
-import { SITE_NAME } from "@/lib/site";
+import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 // Dev-only layout preview of the planning hub, rendered with sample data so the
 // portal can be screenshotted and measured without a database. Returns 404 in
@@ -57,6 +57,7 @@ export default function HubPreviewPage() {
         />
         <TimelineSection
           token={SAMPLE_TOKEN}
+          initialRev={0}
           initial={[
             { title: "Guests arrive, prelude music", category: "pre_ceremony", startTime: "16:00", durationMinutes: 30, mcNotes: "" },
             { title: "Processional", category: "ceremony", startTime: "16:30", durationMinutes: 5, mcNotes: "" },
@@ -72,6 +73,8 @@ export default function HubPreviewPage() {
         />
         <MusicSection
           token={SAMPLE_TOKEN}
+          initialCuesRev={0}
+          initialPlaylistsRev={0}
           initialCues={[
             { cueType: "processional", trackTitle: "Can't Help Falling in Love", artist: "Kina Grannis", isLivePerformance: true },
             { cueType: "first_dance", trackTitle: "Lover", artist: "Taylor Swift", isLivePerformance: false },
@@ -85,13 +88,14 @@ export default function HubPreviewPage() {
         />
         <VipSection
           token={SAMPLE_TOKEN}
+          initialRev={0}
           initial={[
             { role: "Maid of Honor", fullName: "Siobhan Nguyen", phoneticSpelling: "shi-VAWN NWIN", entranceSongOverride: "" },
             { role: "Best Man", fullName: "Marcus Hayes", phoneticSpelling: "MAR-kus HAYZ", entranceSongOverride: "" },
           ]}
         />
         <p className="pb-8 text-center text-xs text-ink/40">
-          Questions any time: jake@crossroadsweddingco.com
+          Questions any time: {EMAIL_FROM_ADDRESS}
         </p>
       </main>
     </div>

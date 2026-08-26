@@ -4,15 +4,24 @@ import DetailsSection from "@/components/hub/DetailsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
-import { daysOut, getPortalData } from "@/lib/hub";
-import { SITE_NAME } from "@/lib/site";
+import { daysOut, getPortalData, TOKEN_RE } from "@/lib/hub";
+import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Your planning hub",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  return {
+    title: "Your planning hub",
+    robots: { index: false, follow: false },
+    // Per-wedding manifest so a pinned home-screen icon opens this hub.
+    ...(TOKEN_RE.test(token) ? { manifest: `/hub/${token}/manifest.webmanifest` } : {}),
+  };
+}
 
 function formatDate(iso: string): string {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
@@ -30,6 +39,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   if (!data) notFound();
   const { wedding, timeline, cues, vips, playlists } = data;
   const days = daysOut(wedding.eventDate);
+  const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
 
   return (
     <div className="min-h-screen bg-cream">
@@ -76,6 +86,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
         />
         <TimelineSection
           token={token}
+          initialRev={revs.timeline ?? 0}
           initial={timeline.map((item) => ({
             title: item.title,
             category: item.category ?? "reception",
@@ -86,6 +97,8 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
         />
         <MusicSection
           token={token}
+          initialCuesRev={revs.cues ?? 0}
+          initialPlaylistsRev={revs.playlists ?? 0}
           initialCues={cues.map((cue) => ({
             cueType: cue.cueType,
             trackTitle: cue.trackTitle,
@@ -102,6 +115,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
         />
         <VipSection
           token={token}
+          initialRev={revs.vips ?? 0}
           initial={vips.map((v) => ({
             role: v.role,
             fullName: v.fullName,
@@ -110,7 +124,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           }))}
         />
         <p className="pb-8 text-center text-xs text-ink/40">
-          Questions any time: jake@crossroadsweddingco.com
+          Questions any time: {EMAIL_FROM_ADDRESS}
         </p>
       </main>
     </div>

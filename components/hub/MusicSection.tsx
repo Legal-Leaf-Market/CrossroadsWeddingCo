@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CUE_TYPES } from "@/lib/hub-constants";
-import { hubInput, hubSave, SaveBadge, SectionCard, useAutosave } from "./shared";
+import {
+  hubInput,
+  hubSave,
+  RemoveButton,
+  SaveBadge,
+  SectionCard,
+  useAutosave,
+  type SaveFn,
+  type SaveState,
+} from "./shared";
 
 export type CueRow = {
   cueType: string;
@@ -13,6 +22,22 @@ export type CueRow = {
 
 export type TrackRow = { trackTitle: string; artist: string };
 
+/**
+ * The playlist card runs two saves (the track lists and the playlist URL);
+ * its one badge must never let a green Saved from one hide a failure in the
+ * other, so the worse state always wins.
+ */
+function combineBadge(
+  a: { state: SaveState; message: string | null },
+  b: { state: SaveState; message: string | null },
+): { state: SaveState; message: string | null } {
+  const order: SaveState[] = ["conflict", "error", "saving", "saved", "idle"];
+  for (const state of order) {
+    if (a.state === state) return a;
+    if (b.state === state) return b;
+  }
+  return a;
+}
 
 function TrackList({
   label,
@@ -33,11 +58,12 @@ function TrackList({
       <p className="mb-2 text-xs text-ink/50">{hint}</p>
       <ul className="space-y-2">
         {rows.map((row, index) => (
-          <li key={index} className="flex gap-2">
+          <li key={index} className="flex items-center gap-2">
             <input
               aria-label={`${label} track`}
               className={`${hubInput} flex-1`}
               value={row.trackTitle}
+              maxLength={255}
               onChange={(e) => {
                 setRows((r) => r.map((t, i) => (i === index ? { ...t, trackTitle: e.target.value } : t)));
                 onTouched();
@@ -48,23 +74,20 @@ function TrackList({
               aria-label={`${label} artist`}
               className={`${hubInput} flex-1`}
               value={row.artist}
+              maxLength={255}
               onChange={(e) => {
                 setRows((r) => r.map((t, i) => (i === index ? { ...t, artist: e.target.value } : t)));
                 onTouched();
               }}
               placeholder="Artist"
             />
-            <button
-              type="button"
-              aria-label="Remove track"
-              onClick={() => {
+            <RemoveButton
+              label="Remove track"
+              onRemove={() => {
                 setRows((r) => r.filter((_, i) => i !== index));
                 onTouched();
               }}
-              className="rounded px-2 text-ink/50 hover:text-terracotta-dark"
-            >
-              ✕
-            </button>
+            />
           </li>
         ))}
       </ul>
@@ -87,37 +110,93 @@ export default function MusicSection({
   initialMustPlay,
   initialDoNotPlay,
   initialPlaylistUrl,
+  initialCuesRev,
+  initialPlaylistsRev,
 }: {
   token: string;
   initialCues: CueRow[];
   initialMustPlay: TrackRow[];
   initialDoNotPlay: TrackRow[];
   initialPlaylistUrl: string;
+  initialCuesRev: number;
+  initialPlaylistsRev: number;
 }) {
-  const [cues, setCues] = useState<CueRow[]>(
+  const toGrid = (rows: CueRow[]) =>
     CUE_TYPES.map(
       (ct) =>
-        initialCues.find((c) => c.cueType === ct.type) ?? {
+        rows.find((c) => c.cueType === ct.type) ?? {
           cueType: ct.type,
           trackTitle: "",
           artist: "",
           isLivePerformance: false,
         },
-    ),
-  );
+    );
+  const [cues, setCues] = useState<CueRow[]>(toGrid(initialCues));
   const [mustPlay, setMustPlay] = useState<TrackRow[]>(initialMustPlay);
   const [doNotPlay, setDoNotPlay] = useState<TrackRow[]>(initialDoNotPlay);
   const [playlistUrl, setPlaylistUrl] = useState(initialPlaylistUrl);
+  const cuesRev = useRef(initialCuesRev);
+  const playlistsRev = useRef(initialPlaylistsRev);
 
-  const cueSave = useAutosave(() => hubSave(`/api/hub/${token}/cues`, "PUT", { cues }));
-  const listSave = useAutosave(() =>
-    hubSave(`/api/hub/${token}/playlists`, "PUT", {
-      mustPlay: mustPlay.filter((t) => t.trackTitle.trim()),
-      doNotPlay: doNotPlay.filter((t) => t.trackTitle.trim()),
-    }),
-  );
-  const urlSave = useAutosave(() =>
-    hubSave(`/api/hub/${token}/details`, "PATCH", { spotifyPlaylistUrl: playlistUrl }),
+  const saveCues: SaveFn = async ({ keepalive }) => {
+    const out = await hubSave(
+      `/api/hub/${token}/cues`,
+      "PUT",
+      { rev: cuesRev.current, cues },
+      { keepalive },
+    );
+    if (out.ok) {
+      const body = out.body as { rev?: number } | null;
+      if (typeof body?.rev === "number") cuesRev.current = body.rev;
+      return { ok: true };
+    }
+    if (out.status === 409) {
+      const body = out.body as { rev: number; cues: CueRow[] };
+      cuesRev.current = body.rev;
+      setCues(toGrid(body.cues));
+      return { ok: false, conflict: true, message: out.message };
+    }
+    return { ok: false, message: out.message };
+  };
+
+  const saveLists: SaveFn = async ({ keepalive }) => {
+    const out = await hubSave(
+      `/api/hub/${token}/playlists`,
+      "PUT",
+      { rev: playlistsRev.current, mustPlay, doNotPlay },
+      { keepalive },
+    );
+    if (out.ok) {
+      const body = out.body as { rev?: number } | null;
+      if (typeof body?.rev === "number") playlistsRev.current = body.rev;
+      return { ok: true };
+    }
+    if (out.status === 409) {
+      const body = out.body as { rev: number; mustPlay: TrackRow[]; doNotPlay: TrackRow[] };
+      playlistsRev.current = body.rev;
+      setMustPlay(body.mustPlay);
+      setDoNotPlay(body.doNotPlay);
+      return { ok: false, conflict: true, message: out.message };
+    }
+    return { ok: false, message: out.message };
+  };
+
+  const saveUrl: SaveFn = async ({ keepalive }) => {
+    const out = await hubSave(
+      `/api/hub/${token}/details`,
+      "PATCH",
+      { spotifyPlaylistUrl: playlistUrl },
+      { keepalive },
+    );
+    return out.ok ? { ok: true } : { ok: false, message: out.message };
+  };
+
+  const cueSave = useAutosave(saveCues);
+  const listSave = useAutosave(saveLists);
+  const urlSave = useAutosave(saveUrl);
+  const playlistBadge = combineBadge(
+    { state: listSave.state, message: listSave.message },
+    { state: urlSave.state, message: urlSave.message },
   );
 
   function updateCue(index: number, patch: Partial<CueRow>) {
@@ -130,7 +209,7 @@ export default function MusicSection({
       <SectionCard
         title="The big moments"
         subtitle="One track per moment. Leave anything blank and we'll pick it together on the call. Tick the guitar box for moments you want played live."
-        badge={<SaveBadge state={cueSave.state} />}
+        badge={<SaveBadge state={cueSave.state} message={cueSave.message} />}
       >
         <ul className="space-y-3">
           {cues.map((cue, index) => {
@@ -142,6 +221,7 @@ export default function MusicSection({
                   aria-label={`${meta?.label} track`}
                   className={hubInput}
                   value={cue.trackTitle}
+                  maxLength={255}
                   onChange={(e) => updateCue(index, { trackTitle: e.target.value })}
                   placeholder="Track"
                 />
@@ -149,6 +229,7 @@ export default function MusicSection({
                   aria-label={`${meta?.label} artist`}
                   className={hubInput}
                   value={cue.artist}
+                  maxLength={255}
                   onChange={(e) => updateCue(index, { artist: e.target.value })}
                   placeholder="Artist"
                 />
@@ -170,13 +251,14 @@ export default function MusicSection({
       <SectionCard
         title="Your playlist and hard lines"
         subtitle="Build the big playlist in your own Spotify and paste the share link. Must-plays are promises; the do-not-play list is law."
-        badge={<SaveBadge state={listSave.state === "idle" ? urlSave.state : listSave.state} />}
+        badge={<SaveBadge state={playlistBadge.state} message={playlistBadge.message} />}
       >
         <label className="block">
           <span className="mb-1 block text-sm font-semibold text-charcoal">Spotify playlist link</span>
           <input
             className={hubInput}
             value={playlistUrl}
+            maxLength={500}
             onChange={(e) => {
               setPlaylistUrl(e.target.value);
               urlSave.touch();

@@ -439,5 +439,27 @@ decisions absorbed from it:
 - **Phase 2 (built 2026-08-26):** client planning hub at `/hub/[token]` (48-hex magic link
   minted at booking, emailed to the couple). Four autosaving sections (debounced 700ms PUT
   replace-all APIs under `/api/hub/[token]/*`), print run sheet at `/hub/[token]/runsheet`,
-  PWA manifest, portal-gated Spotify track search (501 until keys exist). Booking
-  confirmation email and success panel now carry the hub link.
+  per-wedding PWA manifest, portal-gated Spotify track search (501 until keys exist). Booking
+  confirmation email and success panel now carry the hub link. A 32-agent adversarial review
+  confirmed 26 findings, all fixed before ship; the load-bearing outcomes:
+  - `weddings.hub_section_revs` optimistic concurrency: each replace-all route locks the
+    wedding row, compares the client's per-section revision, answers 409 with the current
+    rows on mismatch (client refreshes and says so), increments on success. This is what
+    stops one partner's stale tab from wiping the other's saved rows; keep it on any future
+    hub write route.
+  - Autosave engine (`components/hub/shared.tsx`): sequence counter + promise chain (no
+    overlapping or out-of-order replace-alls from one tab), pagehide/visibility flush with
+    keepalive, bounded quiet retries, badge never claims Saved while newer edits are unsaved,
+    server error messages surface in the badge.
+  - No silent drops: server schemas accept partially filled rows (empty titles, roles); the
+    run sheet skips blanks at render instead. Client inputs carry maxLength matching zod caps
+    and validate times before saving.
+  - The PWA manifest is per-token (`/hub/[token]/manifest.webmanifest`, start_url and scope
+    on the hub) because a global start_url "/" strands a pinned hub icon on the marketing
+    homepage. There is deliberately no global manifest.
+  - `/hub/` is deliberately NOT in robots.txt disallow: the pages carry noindex metadata and
+    a crawler must fetch to see it, else a leaked URL gets indexed URL-only. Do not "fix" by
+    re-adding the disallow.
+  - PrintButton swaps a tokenless URL into history during window.print() so browser print
+    headers do not hand the write-capable token to the venue. A real read-only share token is
+    the durable fix and belongs with Phase 3's `/live/[token]`.

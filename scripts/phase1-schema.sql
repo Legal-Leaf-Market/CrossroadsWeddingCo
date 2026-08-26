@@ -193,3 +193,8 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS raw_payload JSONB;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS target_date DATE;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS auto_provisioned_wedding_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'new';
+
+-- Phase 2 review fix: per-section revision counters for the hub's replace-all
+-- saves. A stale tab or second device must get a 409 and refresh instead of
+-- silently wiping rows the other partner just saved.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_section_revs JSONB NOT NULL DEFAULT '{}'::jsonb;

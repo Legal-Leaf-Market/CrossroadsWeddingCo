@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { hubInput, hubSave, SaveBadge, SectionCard, useAutosave } from "./shared";
+import { useRef, useState } from "react";
+import { TIME_RE } from "@/lib/hub-constants";
+import {
+  hubInput,
+  hubSave,
+  RemoveButton,
+  SaveBadge,
+  SectionCard,
+  useAutosave,
+  type SaveFn,
+} from "./shared";
 
 export type TimelineRow = {
   title: string;
@@ -35,16 +44,39 @@ const STARTER: TimelineRow[] = [
 export default function TimelineSection({
   token,
   initial,
+  initialRev,
 }: {
   token: string;
   initial: TimelineRow[];
+  initialRev: number;
 }) {
   const [items, setItems] = useState<TimelineRow[]>(initial);
-  const { state, touch } = useAutosave(() =>
-    hubSave(`/api/hub/${token}/timeline`, "PUT", {
-      items: items.filter((i) => i.title.trim().length > 0),
-    }),
-  );
+  const rev = useRef(initialRev);
+
+  const save: SaveFn = async ({ keepalive }) => {
+    if (items.some((i) => !TIME_RE.test(i.startTime))) {
+      return { ok: false, message: "Finish the highlighted time so we can save" };
+    }
+    const out = await hubSave(
+      `/api/hub/${token}/timeline`,
+      "PUT",
+      { rev: rev.current, items },
+      { keepalive },
+    );
+    if (out.ok) {
+      const body = out.body as { rev?: number } | null;
+      if (typeof body?.rev === "number") rev.current = body.rev;
+      return { ok: true };
+    }
+    if (out.status === 409) {
+      const body = out.body as { rev: number; items: TimelineRow[] };
+      rev.current = body.rev;
+      setItems(body.items);
+      return { ok: false, conflict: true, message: out.message };
+    }
+    return { ok: false, message: out.message };
+  };
+  const { state, message, touch } = useAutosave(save);
 
   function update(index: number, patch: Partial<TimelineRow>) {
     setItems((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -75,7 +107,7 @@ export default function TimelineSection({
     <SectionCard
       title="Run of show"
       subtitle="The day, block by block. We call these cues live; times are yours to shape and we fine-tune together on the intro call."
-      badge={<SaveBadge state={state} />}
+      badge={<SaveBadge state={state} message={message} />}
     >
       {items.length === 0 && (
         <button
@@ -96,6 +128,7 @@ export default function TimelineSection({
               <input
                 type="time"
                 aria-label="Start time"
+                aria-invalid={!TIME_RE.test(item.startTime) || undefined}
                 className={`${hubInput} w-auto`}
                 value={item.startTime}
                 onChange={(e) => update(index, { startTime: e.target.value })}
@@ -104,6 +137,7 @@ export default function TimelineSection({
                 aria-label="Block title"
                 className={`${hubInput} min-w-40 flex-1`}
                 value={item.title}
+                maxLength={255}
                 onChange={(e) => update(index, { title: e.target.value })}
                 placeholder="What happens"
               />
@@ -128,21 +162,40 @@ export default function TimelineSection({
                   max={600}
                   value={item.durationMinutes}
                   onChange={(e) =>
-                    update(index, { durationMinutes: Math.max(1, Number(e.target.value) || 1) })
+                    update(index, {
+                      durationMinutes: Math.min(600, Math.max(1, Number(e.target.value) || 1)),
+                    })
                   }
                 />
                 min
               </label>
-              <div className="ml-auto flex gap-1">
-                <button type="button" aria-label="Move up" onClick={() => move(index, -1)} className="rounded px-2 py-1 text-ink/50 hover:text-charcoal">↑</button>
-                <button type="button" aria-label="Move down" onClick={() => move(index, 1)} className="rounded px-2 py-1 text-ink/50 hover:text-charcoal">↓</button>
-                <button type="button" aria-label="Remove block" onClick={() => remove(index)} className="rounded px-2 py-1 text-ink/50 hover:text-terracotta-dark">✕</button>
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-label="Move up"
+                  onClick={() => move(index, -1)}
+                  className="min-h-10 min-w-10 rounded-lg px-2.5 py-2 text-ink/50 hover:bg-parchment/60 hover:text-charcoal"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label="Move down"
+                  onClick={() => move(index, 1)}
+                  className="min-h-10 min-w-10 rounded-lg px-2.5 py-2 text-ink/50 hover:bg-parchment/60 hover:text-charcoal"
+                >
+                  ↓
+                </button>
+                <span className="ml-2">
+                  <RemoveButton label="Remove block" onRemove={() => remove(index)} />
+                </span>
               </div>
             </div>
             <input
               aria-label="Notes for the MC"
               className={`${hubInput} mt-2`}
               value={item.mcNotes}
+              maxLength={2000}
               onChange={(e) => update(index, { mcNotes: e.target.value })}
               placeholder="Notes for the mic: who speaks, what to announce, what to avoid"
             />

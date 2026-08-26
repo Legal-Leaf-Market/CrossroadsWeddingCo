@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PrintButton from "@/components/hub/PrintButton";
-import { SITE_NAME } from "@/lib/site";
+import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 // Dev-only layout preview of the printable run sheet with sample data.
 // Returns 404 in production builds; the real page lives at /hub/[token]/runsheet.
@@ -110,7 +110,7 @@ export default function RunSheetPreviewPage() {
         </div>
 
         <footer className="mt-6 border-t border-parchment pt-2 text-xs text-ink/50">
-          Day-of contact: (812) 555-0142 · {SITE_NAME} · jake@crossroadsweddingco.com
+          Day-of contact: (812) 555-0142 · {SITE_NAME} · {EMAIL_FROM_ADDRESS}
         </footer>
       </div>
     </div>

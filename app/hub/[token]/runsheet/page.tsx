@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PrintButton from "@/components/hub/PrintButton";
 import { CUE_TYPES, getPortalData } from "@/lib/hub";
-import { SITE_NAME } from "@/lib/site";
+import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +23,13 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
   const data = await getPortalData(token);
   if (!data) notFound();
   const { wedding, timeline, cues, vips, playlists } = data;
-  const doNotPlay = playlists.filter((p) => p.category === "do_not_play");
-  const mustPlay = playlists.filter((p) => p.category === "must_play");
+  // The hub stores partially filled rows so nothing a couple typed is lost;
+  // the printed sheet only shows the ones with something to say.
+  const hasTrack = (p: { trackTitle: string; artist: string }) =>
+    p.trackTitle.trim() !== "" || (p.artist.trim() !== "" && p.artist !== "Unknown artist");
+  const doNotPlay = playlists.filter((p) => p.category === "do_not_play" && hasTrack(p));
+  const mustPlay = playlists.filter((p) => p.category === "must_play" && hasTrack(p));
+  const roster = vips.filter((v) => v.fullName.trim() !== "" || v.role.trim() !== "");
 
   return (
     <div className="min-h-screen bg-white p-8 text-charcoal print:p-0">
@@ -68,7 +73,7 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
                       {time12(item.scheduledStartTime.slice(0, 5))}
                     </td>
                     <td className="py-1.5 pr-3">
-                      <span className="font-semibold">{item.title}</span>
+                      <span className="font-semibold">{item.title || "Untitled block"}</span>
                       {item.mcNotes && <span className="block text-ink/60">{item.mcNotes}</span>}
                     </td>
                     <td className="w-16 py-1.5 text-right text-ink/50 whitespace-nowrap">
@@ -106,13 +111,14 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
             <h2 className="text-xs font-bold uppercase tracking-widest text-terracotta">
               Names and pronunciations
             </h2>
-            {vips.length === 0 ? (
+            {roster.length === 0 ? (
               <p className="mt-2 text-sm text-ink/50">No roster yet.</p>
             ) : (
               <ul className="mt-2 space-y-1 text-sm">
-                {vips.map((v) => (
+                {roster.map((v) => (
                   <li key={v.id}>
-                    <span className="font-semibold">{v.role}:</span> {v.fullName}
+                    {v.role ? <span className="font-semibold">{v.role}: </span> : null}
+                    {v.fullName}
                     {v.phoneticSpelling ? ` (${v.phoneticSpelling})` : ""}
                   </li>
                 ))}
@@ -152,7 +158,7 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
 
         <footer className="mt-6 border-t border-parchment pt-2 text-xs text-ink/50">
           {wedding.contactPhone ? `Day-of contact: ${wedding.contactPhone} · ` : ""}
-          {SITE_NAME} · jake@crossroadsweddingco.com
+          {SITE_NAME} · {EMAIL_FROM_ADDRESS}
         </footer>
       </div>
     </div>

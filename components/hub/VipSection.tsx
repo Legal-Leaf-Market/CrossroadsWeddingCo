@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { hubInput, hubSave, SaveBadge, SectionCard, useAutosave } from "./shared";
+import { useRef, useState } from "react";
+import {
+  hubInput,
+  hubSave,
+  RemoveButton,
+  SaveBadge,
+  SectionCard,
+  useAutosave,
+  type SaveFn,
+} from "./shared";
 
 export type VipRow = {
   role: string;
@@ -22,13 +30,41 @@ const COMMON_ROLES = [
   "Ring Bearer",
 ];
 
-export default function VipSection({ token, initial }: { token: string; initial: VipRow[] }) {
+export default function VipSection({
+  token,
+  initial,
+  initialRev,
+}: {
+  token: string;
+  initial: VipRow[];
+  initialRev: number;
+}) {
   const [vips, setVips] = useState<VipRow[]>(initial);
-  const { state, touch } = useAutosave(() =>
-    hubSave(`/api/hub/${token}/vips`, "PUT", {
-      vips: vips.filter((v) => v.fullName.trim() && v.role.trim()),
-    }),
-  );
+  const rev = useRef(initialRev);
+
+  // Every visible row is sent as-is; the server accepts partial rows so
+  // nothing the couple can see is silently dropped from a save.
+  const save: SaveFn = async ({ keepalive }) => {
+    const out = await hubSave(
+      `/api/hub/${token}/vips`,
+      "PUT",
+      { rev: rev.current, vips },
+      { keepalive },
+    );
+    if (out.ok) {
+      const body = out.body as { rev?: number } | null;
+      if (typeof body?.rev === "number") rev.current = body.rev;
+      return { ok: true };
+    }
+    if (out.status === 409) {
+      const body = out.body as { rev: number; vips: VipRow[] };
+      rev.current = body.rev;
+      setVips(body.vips);
+      return { ok: false, conflict: true, message: out.message };
+    }
+    return { ok: false, message: out.message };
+  };
+  const { state, message, touch } = useAutosave(save);
 
   function update(index: number, patch: Partial<VipRow>) {
     setVips((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -39,7 +75,7 @@ export default function VipSection({ token, initial }: { token: string; initial:
     <SectionCard
       title="Names we say out loud"
       subtitle="Wedding party and family we announce. Phonetic spellings save lives: write it how it sounds, like Siobhan (shi-VAWN)."
-      badge={<SaveBadge state={state} />}
+      badge={<SaveBadge state={state} message={message} />}
     >
       <ul className="space-y-3">
         {vips.map((vip, index) => (
@@ -48,6 +84,7 @@ export default function VipSection({ token, initial }: { token: string; initial:
               aria-label="Role"
               className={hubInput}
               value={vip.role}
+              maxLength={100}
               onChange={(e) => update(index, { role: e.target.value })}
               placeholder="Role"
               list="vip-roles"
@@ -56,6 +93,7 @@ export default function VipSection({ token, initial }: { token: string; initial:
               aria-label="Full name"
               className={hubInput}
               value={vip.fullName}
+              maxLength={255}
               onChange={(e) => update(index, { fullName: e.target.value })}
               placeholder="Full name"
             />
@@ -63,20 +101,17 @@ export default function VipSection({ token, initial }: { token: string; initial:
               aria-label="How it sounds"
               className={hubInput}
               value={vip.phoneticSpelling}
+              maxLength={255}
               onChange={(e) => update(index, { phoneticSpelling: e.target.value })}
               placeholder="How it sounds"
             />
-            <button
-              type="button"
-              aria-label="Remove person"
-              onClick={() => {
+            <RemoveButton
+              label="Remove person"
+              onRemove={() => {
                 setVips((rows) => rows.filter((_, i) => i !== index));
                 touch();
               }}
-              className="rounded px-2 py-1 text-ink/50 hover:text-terracotta-dark"
-            >
-              ✕
-            </button>
+            />
           </li>
         ))}
       </ul>

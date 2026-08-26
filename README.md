@@ -72,7 +72,9 @@ the login. The hub has four autosaving sections (venue basics, run-of-show
 timeline, music cues + playlist link + must/do-not-play lists, VIP names with
 phonetic spellings) that debounce writes to `PUT /api/hub/[token]/*` routes,
 each of which validates the token, zod-checks the body, and replaces that
-wedding's rows in a transaction. `/hub/[token]/runsheet` renders a
+wedding's rows in a transaction guarded by a per-section revision counter
+(`weddings.hub_section_revs`): a stale tab gets a 409 plus the current rows
+and refreshes instead of overwriting what the other partner saved. `/hub/[token]/runsheet` renders a
 print-optimized one-pager for the venue and crew; the PWA manifest lets couples
 pin the hub to a phone home screen.
 

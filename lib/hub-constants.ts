@@ -26,6 +26,12 @@ export const TIMELINE_CATEGORIES = [
 
 export const TOKEN_RE = /^[a-f0-9]{48}$/;
 
+/** HH:MM, 24-hour. Shared by the timeline route's zod schema and the client's pre-save guard. */
+export const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Message sent with a 409 when a hub section was changed from another tab or device. */
+export const CONFLICT_MESSAGE = "Updated from another device. Showing the latest.";
+
 /** Days until the event; negative once it has passed. */
 export function daysOut(eventDate: string): number {
   const today = new Date().toISOString().slice(0, 10);

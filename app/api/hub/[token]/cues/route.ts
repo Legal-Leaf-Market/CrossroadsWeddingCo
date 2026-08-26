@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { musicCues } from "@/lib/db/schema";
-import { CUE_TYPES, getWeddingByToken } from "@/lib/hub";
+import { CUE_TYPES, getWeddingByToken, withSectionRev } from "@/lib/hub";
+import { CONFLICT_MESSAGE } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 const cueTypeValues = CUE_TYPES.map((c) => c.type) as [string, ...string[]];
 
 const schema = z.object({
+  rev: z.number().int().min(0).optional().default(0),
   cues: z
     .array(
       z.object({
@@ -23,6 +25,16 @@ const schema = z.object({
     )
     .max(CUE_TYPES.length),
 });
+
+async function currentCues(weddingId: string) {
+  const rows = await db.select().from(musicCues).where(eq(musicCues.weddingId, weddingId));
+  return rows.map((c) => ({
+    cueType: c.cueType,
+    trackTitle: c.trackTitle,
+    artist: c.artist === "Unknown artist" ? "" : c.artist,
+    isLivePerformance: c.isLivePerformance ?? false,
+  }));
+}
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
@@ -40,10 +52,11 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  // A cue with an empty track title means "cleared": replace-all keeps the
-  // stored set exactly equal to the filled-in set.
+  // The cue grid always shows all eight moments, so an empty track title is a
+  // visible "cleared" state, not a hidden drop: the stored set stays exactly
+  // equal to the filled-in set.
   const filled = parsed.data.cues.filter((c) => c.trackTitle.length > 0);
-  await db.transaction(async (tx) => {
+  const result = await withSectionRev(wedding.id, "cues", parsed.data.rev, async (tx) => {
     await tx.delete(musicCues).where(eq(musicCues.weddingId, wedding.id));
     if (filled.length > 0) {
       await tx.insert(musicCues).values(
@@ -51,7 +64,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
           weddingId: wedding.id,
           cueType: c.cueType,
           trackTitle: c.trackTitle,
-          artist: c.artist || "Unknown artist",
+          artist: c.artist,
           timeCue: c.timeCue || null,
           isLivePerformance: c.isLivePerformance,
         })),
@@ -59,5 +72,14 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
     }
   });
 
-  return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+  if (result.conflict) {
+    return NextResponse.json(
+      { error: CONFLICT_MESSAGE, rev: result.rev, cues: await currentCues(wedding.id) },
+      { status: 409, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  return NextResponse.json(
+    { ok: true, rev: result.rev },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
