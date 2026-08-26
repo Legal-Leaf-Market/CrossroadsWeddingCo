@@ -7,10 +7,18 @@ export const hubInput =
 
 export type SaveState = "idle" | "saving" | "saved" | "error" | "conflict";
 
-export type SaveResult = { ok: true } | { ok: false; message?: string; conflict?: boolean };
+export type SaveResult =
+  | { ok: true }
+  | { ok: false; message?: string; conflict?: boolean; noRetry?: boolean };
 
-/** Section save callback. `keepalive` is true when flushing on page hide. */
-export type SaveFn = (opts: { keepalive: boolean }) => Promise<SaveResult>;
+/**
+ * Section save callback. `keepalive` is true when flushing on page hide.
+ * `flush` marks a fire-and-forget hide-time save racing an in-flight one:
+ * sections must NOT apply 409 side effects (state refresh, rev update) for
+ * it, or losing the race against their own older request would clobber the
+ * newest local rows.
+ */
+export type SaveFn = (opts: { keepalive: boolean; flush?: boolean }) => Promise<SaveResult>;
 
 const MAX_QUIET_RETRIES = 3;
 
@@ -18,8 +26,10 @@ const MAX_QUIET_RETRIES = 3;
  * Debounced autosave: call `touch()` after every edit; `save` fires once the
  * edits pause. Guarantees: saves never overlap (promise chain), a stale
  * response never wins the badge (sequence counter), pending edits are flushed
- * on pagehide/visibility-hidden, and a failed save quietly retries a few
- * times. The badge only says Saved when the latest edit is actually saved.
+ * on pagehide/visibility-hidden (directly, with keepalive, when an older save
+ * is still in flight), failures retry quietly a bounded number of times, and
+ * a 409 conflict always surfaces: it cancels queued work so a follow-up save
+ * can never re-commit the other device's rows under a false Saved badge.
  */
 export function useAutosave(save: SaveFn, delay = 700) {
   const [state, setState] = useState<SaveState>("idle");
@@ -28,6 +38,7 @@ export function useAutosave(save: SaveFn, delay = 700) {
   saveRef.current = save;
   const seq = useRef(0);
   const chain = useRef<Promise<void>>(Promise.resolve());
+  const busy = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retries = useRef(0);
@@ -36,11 +47,34 @@ export function useAutosave(save: SaveFn, delay = 700) {
     chain.current = chain.current.then(async () => {
       // A newer edit scheduled its own save; let that one carry the data.
       if (seq.current !== mySeq) return;
+      busy.current = true;
       let result: SaveResult;
       try {
         result = await saveRef.current({ keepalive });
       } catch {
         result = { ok: false };
+      } finally {
+        busy.current = false;
+      }
+      if (!result.ok && result.conflict) {
+        // The section already replaced its rows with the server's; anything
+        // typed mid-flight went with them. This must win over the newer-edit
+        // guard below, and all queued work must die here: a pending save
+        // would re-commit the replaced rows and flip the badge to a false
+        // Saved, hiding that the other device's version now stands.
+        retries.current = 0;
+        seq.current += 1;
+        if (timer.current) {
+          clearTimeout(timer.current);
+          timer.current = null;
+        }
+        if (retryTimer.current) {
+          clearTimeout(retryTimer.current);
+          retryTimer.current = null;
+        }
+        setState("conflict");
+        setMessage(result.message ?? "Updated from another device. Showing the latest.");
+        return;
       }
       // Edited while the request was in flight: stay on "saving".
       if (seq.current !== mySeq) return;
@@ -48,17 +82,16 @@ export function useAutosave(save: SaveFn, delay = 700) {
         retries.current = 0;
         setState("saved");
         setMessage(null);
-      } else if (result.conflict) {
-        retries.current = 0;
-        setState("conflict");
-        setMessage(result.message ?? "Updated from another device. Showing the latest.");
       } else {
         setState("error");
-        setMessage(result.message ?? null);
-        if (retries.current < MAX_QUIET_RETRIES) {
+        if (!result.noRetry && retries.current < MAX_QUIET_RETRIES) {
           retries.current += 1;
+          setMessage(result.message ?? null);
           if (retryTimer.current) clearTimeout(retryTimer.current);
           retryTimer.current = setTimeout(() => run(mySeq), 8000);
+        } else {
+          // No retry is coming; the badge must not promise one.
+          setMessage(result.message ?? "Check your connection, then edit again to retry");
         }
       }
     });
@@ -72,18 +105,31 @@ export function useAutosave(save: SaveFn, delay = 700) {
     setMessage(null);
     if (timer.current) clearTimeout(timer.current);
     if (retryTimer.current) clearTimeout(retryTimer.current);
-    timer.current = setTimeout(() => run(mySeq), delay);
+    timer.current = setTimeout(() => {
+      // Null the handle so flush-on-hide can tell a pending debounce from a
+      // finished one; a stale truthy handle would re-send a full replace-all
+      // (and bump the section rev) on every later tab switch.
+      timer.current = null;
+      run(mySeq);
+    }, delay);
   }, [delay, run]);
 
   // Flush the pending debounce when the page hides or unloads, so the last
   // keystrokes before a tab switch or navigation still reach the server.
   useEffect(() => {
     const flush = () => {
-      if (timer.current) {
-        clearTimeout(timer.current);
-        timer.current = null;
-        run(seq.current, true);
+      if (!timer.current) return;
+      clearTimeout(timer.current);
+      timer.current = null;
+      if (busy.current) {
+        // An older save is mid-flight; the chained run below would queue
+        // behind it, and a frozen mobile tab never resumes to send it. Fire
+        // the newest state onto the wire right now with keepalive; flush mode
+        // keeps its possible 409 from clobbering local rows if it loses the
+        // race against our own in-flight request.
+        void saveRef.current({ keepalive: true, flush: true }).catch(() => {});
       }
+      run(seq.current, true);
     };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") flush();
@@ -146,27 +192,40 @@ export function SectionCard({
 }
 
 /**
- * Two-tap destructive button: first tap arms it ("Sure?"), second tap within
- * 3 seconds removes. Sized to a 40px touch target for phone thumbs.
+ * Two-tap destructive button, controlled by the parent: rows are index-keyed,
+ * so the armed flag must live with the list and be cleared on any mutation.
+ * An armed flag held inside the button would survive reindexing and delete
+ * whichever row slid into this position. Auto-disarms after 3 seconds. Sized
+ * to a 40px touch target for phone thumbs.
  */
-export function RemoveButton({ label, onRemove }: { label: string; onRemove: () => void }) {
-  const [armed, setArmed] = useState(false);
-  const disarm = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (disarm.current) clearTimeout(disarm.current);
-  }, []);
+export function RemoveButton({
+  label,
+  armed,
+  onToggle,
+  onRemove,
+}: {
+  label: string;
+  armed: boolean;
+  onToggle: (next: boolean) => void;
+  onRemove: () => void;
+}) {
+  const toggleRef = useRef(onToggle);
+  toggleRef.current = onToggle;
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => toggleRef.current(false), 3000);
+    return () => clearTimeout(t);
+  }, [armed]);
   return (
     <button
       type="button"
       aria-label={armed ? `Tap again to ${label.toLowerCase()}` : label}
       onClick={() => {
         if (armed) {
-          if (disarm.current) clearTimeout(disarm.current);
-          setArmed(false);
+          toggleRef.current(false);
           onRemove();
         } else {
-          setArmed(true);
-          disarm.current = setTimeout(() => setArmed(false), 3000);
+          toggleRef.current(true);
         }
       }}
       className={

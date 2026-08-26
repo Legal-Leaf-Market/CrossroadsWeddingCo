@@ -52,6 +52,7 @@ function TrackList({
   setRows: React.Dispatch<React.SetStateAction<TrackRow[]>>;
   onTouched: () => void;
 }) {
+  const [armedRemove, setArmedRemove] = useState<number | null>(null);
   return (
     <div>
       <h3 className="text-sm font-semibold text-charcoal">{label}</h3>
@@ -83,8 +84,11 @@ function TrackList({
             />
             <RemoveButton
               label="Remove track"
+              armed={armedRemove === index}
+              onToggle={(next) => setArmedRemove(next ? index : null)}
               onRemove={() => {
                 setRows((r) => r.filter((_, i) => i !== index));
+                setArmedRemove(null);
                 onTouched();
               }}
             />
@@ -94,7 +98,11 @@ function TrackList({
       {rows.length < 100 && (
         <button
           type="button"
-          onClick={() => setRows((r) => [...r, { trackTitle: "", artist: "" }])}
+          onClick={() => {
+            setRows((r) => [...r, { trackTitle: "", artist: "" }]);
+            setArmedRemove(null);
+            onTouched();
+          }}
           className="mt-2 text-sm font-semibold text-terracotta hover:text-terracotta-dark"
         >
           + Add a track
@@ -138,7 +146,7 @@ export default function MusicSection({
   const cuesRev = useRef(initialCuesRev);
   const playlistsRev = useRef(initialPlaylistsRev);
 
-  const saveCues: SaveFn = async ({ keepalive }) => {
+  const saveCues: SaveFn = async ({ keepalive, flush }) => {
     const out = await hubSave(
       `/api/hub/${token}/cues`,
       "PUT",
@@ -151,15 +159,18 @@ export default function MusicSection({
       return { ok: true };
     }
     if (out.status === 409) {
-      const body = out.body as { rev: number; cues: CueRow[] };
-      cuesRev.current = body.rev;
-      setCues(toGrid(body.cues));
+      // Flush saves must not apply the 409 snapshot; see TimelineSection.
+      if (!flush) {
+        const body = out.body as { rev: number; cues: CueRow[] };
+        cuesRev.current = body.rev;
+        setCues(toGrid(body.cues));
+      }
       return { ok: false, conflict: true, message: out.message };
     }
     return { ok: false, message: out.message };
   };
 
-  const saveLists: SaveFn = async ({ keepalive }) => {
+  const saveLists: SaveFn = async ({ keepalive, flush }) => {
     const out = await hubSave(
       `/api/hub/${token}/playlists`,
       "PUT",
@@ -172,10 +183,13 @@ export default function MusicSection({
       return { ok: true };
     }
     if (out.status === 409) {
-      const body = out.body as { rev: number; mustPlay: TrackRow[]; doNotPlay: TrackRow[] };
-      playlistsRev.current = body.rev;
-      setMustPlay(body.mustPlay);
-      setDoNotPlay(body.doNotPlay);
+      // Flush saves must not apply the 409 snapshot; see TimelineSection.
+      if (!flush) {
+        const body = out.body as { rev: number; mustPlay: TrackRow[]; doNotPlay: TrackRow[] };
+        playlistsRev.current = body.rev;
+        setMustPlay(body.mustPlay);
+        setDoNotPlay(body.doNotPlay);
+      }
       return { ok: false, conflict: true, message: out.message };
     }
     return { ok: false, message: out.message };

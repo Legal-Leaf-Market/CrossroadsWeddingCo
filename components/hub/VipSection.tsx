@@ -40,11 +40,12 @@ export default function VipSection({
   initialRev: number;
 }) {
   const [vips, setVips] = useState<VipRow[]>(initial);
+  const [armedRemove, setArmedRemove] = useState<number | null>(null);
   const rev = useRef(initialRev);
 
   // Every visible row is sent as-is; the server accepts partial rows so
   // nothing the couple can see is silently dropped from a save.
-  const save: SaveFn = async ({ keepalive }) => {
+  const save: SaveFn = async ({ keepalive, flush }) => {
     const out = await hubSave(
       `/api/hub/${token}/vips`,
       "PUT",
@@ -57,9 +58,12 @@ export default function VipSection({
       return { ok: true };
     }
     if (out.status === 409) {
-      const body = out.body as { rev: number; vips: VipRow[] };
-      rev.current = body.rev;
-      setVips(body.vips);
+      // Flush saves must not apply the 409 snapshot; see TimelineSection.
+      if (!flush) {
+        const body = out.body as { rev: number; vips: VipRow[] };
+        rev.current = body.rev;
+        setVips(body.vips);
+      }
       return { ok: false, conflict: true, message: out.message };
     }
     return { ok: false, message: out.message };
@@ -107,8 +111,11 @@ export default function VipSection({
             />
             <RemoveButton
               label="Remove person"
+              armed={armedRemove === index}
+              onToggle={(next) => setArmedRemove(next ? index : null)}
               onRemove={() => {
                 setVips((rows) => rows.filter((_, i) => i !== index));
+                setArmedRemove(null);
                 touch();
               }}
             />
@@ -123,9 +130,11 @@ export default function VipSection({
       {vips.length < 40 && (
         <button
           type="button"
-          onClick={() =>
-            setVips((rows) => [...rows, { role: "", fullName: "", phoneticSpelling: "", entranceSongOverride: "" }])
-          }
+          onClick={() => {
+            setVips((rows) => [...rows, { role: "", fullName: "", phoneticSpelling: "", entranceSongOverride: "" }]);
+            setArmedRemove(null);
+            touch();
+          }}
           className="mt-4 rounded-full border border-terracotta px-4 py-2 text-sm font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
         >
           Add a person

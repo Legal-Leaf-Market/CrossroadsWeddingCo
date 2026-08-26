@@ -51,11 +51,12 @@ export default function TimelineSection({
   initialRev: number;
 }) {
   const [items, setItems] = useState<TimelineRow[]>(initial);
+  const [armedRemove, setArmedRemove] = useState<number | null>(null);
   const rev = useRef(initialRev);
 
-  const save: SaveFn = async ({ keepalive }) => {
+  const save: SaveFn = async ({ keepalive, flush }) => {
     if (items.some((i) => !TIME_RE.test(i.startTime))) {
-      return { ok: false, message: "Finish the highlighted time so we can save" };
+      return { ok: false, noRetry: true, message: "Finish the highlighted time so we can save" };
     }
     const out = await hubSave(
       `/api/hub/${token}/timeline`,
@@ -69,9 +70,14 @@ export default function TimelineSection({
       return { ok: true };
     }
     if (out.status === 409) {
-      const body = out.body as { rev: number; items: TimelineRow[] };
-      rev.current = body.rev;
-      setItems(body.items);
+      // A flush save racing our own in-flight request must not apply the 409
+      // snapshot: it may be losing to that older request, and replacing local
+      // rows here would erase the newest edits.
+      if (!flush) {
+        const body = out.body as { rev: number; items: TimelineRow[] };
+        rev.current = body.rev;
+        setItems(body.items);
+      }
       return { ok: false, conflict: true, message: out.message };
     }
     return { ok: false, message: out.message };
@@ -90,10 +96,12 @@ export default function TimelineSection({
       [next[index], next[j]] = [next[j], next[index]];
       return next;
     });
+    setArmedRemove(null);
     touch();
   }
   function remove(index: number) {
     setItems((rows) => rows.filter((_, i) => i !== index));
+    setArmedRemove(null);
     touch();
   }
   function add() {
@@ -101,6 +109,8 @@ export default function TimelineSection({
       ...rows,
       { title: "", category: "reception", startTime: "18:00", durationMinutes: 15, mcNotes: "" },
     ]);
+    setArmedRemove(null);
+    touch();
   }
 
   return (
@@ -187,7 +197,12 @@ export default function TimelineSection({
                   ↓
                 </button>
                 <span className="ml-2">
-                  <RemoveButton label="Remove block" onRemove={() => remove(index)} />
+                  <RemoveButton
+                    label="Remove block"
+                    armed={armedRemove === index}
+                    onToggle={(next) => setArmedRemove(next ? index : null)}
+                    onRemove={() => remove(index)}
+                  />
                 </span>
               </div>
             </div>

@@ -22,27 +22,42 @@ export default function DetailsSection({
   venueName: string;
 }) {
   const [details, setDetails] = useState(initial);
-  // Only fields the couple actually edited are sent, so a stale tab can
-  // never overwrite a field it never touched.
+  // Only fields the couple actually edited (and not yet saved) are sent, so a
+  // long-lived tab can never resurrect an hours-old value over a field the
+  // other phone updated in the meantime.
   const dirty = useRef<Set<keyof Details>>(new Set());
 
   const emailInvalid =
     details.venueContactEmail.trim() !== "" && !EMAIL_RE.test(details.venueContactEmail.trim());
 
   const save: SaveFn = async ({ keepalive }) => {
-    const payload: Partial<Details> = {};
-    for (const key of dirty.current) {
-      // Hold back a half-typed email; the field is marked and the rest saves.
-      if (key === "venueContactEmail" && emailInvalid) continue;
-      payload[key] = details[key];
-    }
-    if (Object.keys(payload).length === 0) {
-      return emailInvalid
-        ? { ok: false, message: "Finish the venue email so we can save it" }
+    // Hold back a half-typed email; the field is marked and the rest saves.
+    const keys = [...dirty.current].filter((k) => !(k === "venueContactEmail" && emailInvalid));
+    const heldEmail = emailInvalid && dirty.current.has("venueContactEmail");
+    if (keys.length === 0) {
+      return heldEmail
+        ? { ok: false, noRetry: true, message: "Finish the venue email so we can save it" }
         : { ok: true };
     }
+    const payload: Partial<Details> = {};
+    // Trimmed to match the server's validation, which rejects an email with
+    // stray whitespace and would otherwise block the whole PATCH.
+    for (const k of keys) payload[k] = details[k].trim();
+    // Clear before sending: an edit that lands mid-flight re-marks its field,
+    // so it is included again in the next save instead of being lost.
+    for (const k of keys) dirty.current.delete(k);
     const out = await hubSave(`/api/hub/${token}/details`, "PATCH", payload, { keepalive });
-    return out.ok ? { ok: true } : { ok: false, message: out.message };
+    if (!out.ok) {
+      for (const k of keys) dirty.current.add(k);
+      return { ok: false, message: out.message };
+    }
+    return heldEmail
+      ? {
+          ok: false,
+          noRetry: true,
+          message: "Everything except the venue email is saved; finish it and it saves too",
+        }
+      : { ok: true };
   };
   const { state, message, touch } = useAutosave(save);
 

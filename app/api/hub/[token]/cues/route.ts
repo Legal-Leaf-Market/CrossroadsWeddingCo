@@ -52,10 +52,10 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  // The cue grid always shows all eight moments, so an empty track title is a
-  // visible "cleared" state, not a hidden drop: the stored set stays exactly
-  // equal to the filled-in set.
-  const filled = parsed.data.cues.filter((c) => c.trackTitle.length > 0);
+  // The cue grid always shows all eight moments, so a fully blank row is a
+  // visible "cleared" state, not a hidden drop. A row with only an artist
+  // typed so far still counts as filled and must round-trip.
+  const filled = parsed.data.cues.filter((c) => c.trackTitle.length > 0 || c.artist.length > 0);
   const result = await withSectionRev(wedding.id, "cues", parsed.data.rev, async (tx) => {
     await tx.delete(musicCues).where(eq(musicCues.weddingId, wedding.id));
     if (filled.length > 0) {

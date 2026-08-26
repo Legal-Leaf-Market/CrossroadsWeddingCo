@@ -95,10 +95,15 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
               <ul className="mt-2 space-y-1 text-sm">
                 {CUE_TYPES.filter((ct) => cues.some((c) => c.cueType === ct.type)).map((ct) => {
                   const cue = cues.find((c) => c.cueType === ct.type)!;
+                  const track = [
+                    cue.trackTitle,
+                    cue.artist && cue.artist !== "Unknown artist" ? cue.artist : "",
+                  ]
+                    .filter(Boolean)
+                    .join(", ");
                   return (
                     <li key={ct.type}>
-                      <span className="font-semibold">{ct.label}:</span> {cue.trackTitle}
-                      {cue.artist && cue.artist !== "Unknown artist" ? `, ${cue.artist}` : ""}
+                      <span className="font-semibold">{ct.label}:</span> {track}
                       {cue.isLivePerformance ? " (live)" : ""}
                     </li>
                   );
