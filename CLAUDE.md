@@ -397,7 +397,7 @@ decisions absorbed from it:
 ### 9.4 External dependencies, status
 | Dependency | Status |
 | --- | --- |
-| Neon Postgres | Live as of 2026-08-26: Jacob added `DATABASE_URL` to Vercel after the first booking test exposed that it was missing (and that the lead form had never saved in production). The schema self-applies at build. Verify claims like this against build logs, not session lore |
+| Neon Postgres | Wired 2026-08-26 after three rounds: the Vercel variable is named `Database_URL` (mixed case, resolver matches case-insensitively and sanitizes the value), and the first two pastes were not the connection string. The schema self-applies at build; the build log prints the host it dialed. Verify claims like this against build logs, not session lore |
 | Resend | Account exists (multi-domain). Wire `RESEND_API_KEY` (+ optional `RESEND_FROM`, `RESEND_NOTIFY_TO`) into Vercel to activate booking emails |
 | Stripe | Not yet created. Checkout + webhook routes fail closed (501) until `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` exist. Connect payouts need business verification |
 | Spotify | **Priority.** Free developer app needed at developer.spotify.com, client-credentials keys unlock playlist ingestion + track search (`lib/spotify.ts`, fails closed until then) |
