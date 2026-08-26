@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // Internal tooling and endpoints: nothing a search engine should index.
-      disallow: ["/api/", "/ig-studio"],
+      disallow: ["/api/", "/ig-studio", "/hub/"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,

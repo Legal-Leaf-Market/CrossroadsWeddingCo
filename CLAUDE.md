@@ -393,12 +393,24 @@ decisions absorbed from it:
 - **Migrations** are hand-authored idempotent SQL in `scripts/phase1-schema.sql`, applied by
   `scripts/migrate.mjs` which runs at the front of `pnpm build` (skips cleanly when
   `DATABASE_URL` is unset, fails the build on real SQL errors). Additive-only by policy.
+- **Run sheet is a print-optimized page, not `@react-pdf/renderer`.** The hub links to
+  `/hub/[token]/runsheet`, styled for `window.print()`, so the browser's save-as-PDF covers
+  the venue/talent export with zero new dependencies. Revisit `@react-pdf` when the platform
+  must attach PDFs to outbound email (COI dispatch, Phase 3+).
+- **The spec's three-stage progressive intake shipped flat**: one hub page, four sections
+  (basics, timeline, music, VIPs), all visible from day one. Stage gating adds real
+  complexity and only pays off at volume; the copy tells couples to fill in what they know
+  and skip the rest.
+- **`lib/hub.ts` (server, Drizzle) is split from `lib/hub-constants.ts` (client-safe).**
+  Client components under `components/hub/` may only import the constants module; importing
+  `lib/hub.ts` drags `pg` into the client bundle and breaks the build (webpack catches it,
+  tsc does not).
 
 ### 9.4 External dependencies, status
 | Dependency | Status |
 | --- | --- |
 | Neon Postgres | Wired 2026-08-26 after three rounds: the Vercel variable is named `Database_URL` (mixed case, resolver matches case-insensitively and sanitizes the value), and the first two pastes were not the connection string. The schema self-applies at build; the build log prints the host it dialed. Verify claims like this against build logs, not session lore |
-| Resend | Account exists (multi-domain). Wire `RESEND_API_KEY` (+ optional `RESEND_FROM`, `RESEND_NOTIFY_TO`) into Vercel to activate booking emails |
+| Resend | **Live** (2026-08-26). `RESEND_API_KEY` in Vercel; sender is `jake@crossroadsweddingco.com`, confirmed received by owner. Booking confirmations + notifications flow |
 | Stripe | Not yet created. Checkout + webhook routes fail closed (501) until `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` exist. Connect payouts need business verification |
 | Spotify | **Priority.** Free developer app needed at developer.spotify.com, client-credentials keys unlock playlist ingestion + track search (`lib/spotify.ts`, fails closed until then) |
 | Twilio, The Knot / WeddingWire vendor accounts, realtime provider | Not yet created (Phases 2–4) |
@@ -417,3 +429,15 @@ decisions absorbed from it:
   (see `BookCallCard`, the IG Studio 501s, and the Stripe routes).
 - `pnpm check` (tsc) and `pnpm build` must pass before any push; layout changes get measured in
   headless Chromium (`/opt/pw-browsers/chromium-1194/...`) at 360/390/768/1280/1440 widths.
+- Layout QA for token-gated pages runs against `/hub/preview` and `/hub/preview/runsheet`:
+  dev-only sample-data twins of the portal pages that 404 in production builds.
+
+### 9.6 Phase log
+- **Phase 1 (live 2026-08-26):** flat-rate site, city pages, booking flow writing `weddings`
+  rows (legacy `leads` fallback), Resend emails from jake@, Stripe scaffolded and gated,
+  schema self-applying at build.
+- **Phase 2 (built 2026-08-26):** client planning hub at `/hub/[token]` (48-hex magic link
+  minted at booking, emailed to the couple). Four autosaving sections (debounced 700ms PUT
+  replace-all APIs under `/api/hub/[token]/*`), print run sheet at `/hub/[token]/runsheet`,
+  PWA manifest, portal-gated Spotify track search (501 until keys exist). Booking
+  confirmation email and success panel now carry the hub link.

@@ -1,0 +1,160 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import PrintButton from "@/components/hub/PrintButton";
+import { CUE_TYPES, getPortalData } from "@/lib/hub";
+import { SITE_NAME } from "@/lib/site";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Run sheet",
+  robots: { index: false, follow: false },
+};
+
+function time12(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+export default async function RunSheetPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const data = await getPortalData(token);
+  if (!data) notFound();
+  const { wedding, timeline, cues, vips, playlists } = data;
+  const doNotPlay = playlists.filter((p) => p.category === "do_not_play");
+  const mustPlay = playlists.filter((p) => p.category === "must_play");
+
+  return (
+    <div className="min-h-screen bg-white p-8 text-charcoal print:p-0">
+      <div className="mx-auto max-w-3xl">
+        <div className="flex items-start justify-between print:hidden">
+          <a href={`/hub/${token}`} className="text-sm font-semibold text-terracotta hover:text-terracotta-dark">
+            Back to your hub
+          </a>
+          <PrintButton />
+        </div>
+
+        <header className="mt-4 border-b-2 border-charcoal pb-3">
+          <div className="flex items-baseline justify-between">
+            <h1 className="text-2xl font-bold">{wedding.coupleNames}</h1>
+            <span className="text-sm font-semibold">{SITE_NAME}</span>
+          </div>
+          <p className="mt-1 text-sm">
+            {new Date(`${wedding.eventDate}T12:00:00Z`).toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+              timeZone: "UTC",
+            })}
+            {" · "}
+            {wedding.venueName}
+            {wedding.venueAddress ? ` · ${wedding.venueAddress}` : ""}
+          </p>
+        </header>
+
+        <section className="mt-5">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-terracotta">Run of show</h2>
+          {timeline.length === 0 ? (
+            <p className="mt-2 text-sm text-ink/50">No timeline yet.</p>
+          ) : (
+            <table className="mt-2 w-full text-sm">
+              <tbody>
+                {timeline.map((item) => (
+                  <tr key={item.id} className="border-b border-parchment align-top">
+                    <td className="w-20 py-1.5 pr-3 font-semibold whitespace-nowrap">
+                      {time12(item.scheduledStartTime.slice(0, 5))}
+                    </td>
+                    <td className="py-1.5 pr-3">
+                      <span className="font-semibold">{item.title}</span>
+                      {item.mcNotes && <span className="block text-ink/60">{item.mcNotes}</span>}
+                    </td>
+                    <td className="w-16 py-1.5 text-right text-ink/50 whitespace-nowrap">
+                      {item.estimatedDurationMinutes} min
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <section>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-terracotta">Key tracks</h2>
+            {cues.length === 0 ? (
+              <p className="mt-2 text-sm text-ink/50">No cues chosen yet.</p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-sm">
+                {CUE_TYPES.filter((ct) => cues.some((c) => c.cueType === ct.type)).map((ct) => {
+                  const cue = cues.find((c) => c.cueType === ct.type)!;
+                  return (
+                    <li key={ct.type}>
+                      <span className="font-semibold">{ct.label}:</span> {cue.trackTitle}
+                      {cue.artist && cue.artist !== "Unknown artist" ? `, ${cue.artist}` : ""}
+                      {cue.isLivePerformance ? " (live)" : ""}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-terracotta">
+              Names and pronunciations
+            </h2>
+            {vips.length === 0 ? (
+              <p className="mt-2 text-sm text-ink/50">No roster yet.</p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-sm">
+                {vips.map((v) => (
+                  <li key={v.id}>
+                    <span className="font-semibold">{v.role}:</span> {v.fullName}
+                    {v.phoneticSpelling ? ` (${v.phoneticSpelling})` : ""}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {(mustPlay.length > 0 || doNotPlay.length > 0) && (
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <section>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-terracotta">Must play</h2>
+              <ul className="mt-2 space-y-0.5 text-sm">
+                {mustPlay.map((t) => (
+                  <li key={t.id}>
+                    {t.trackTitle}
+                    {t.artist && t.artist !== "Unknown artist" ? `, ${t.artist}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-terracotta">
+                Do not play
+              </h2>
+              <ul className="mt-2 space-y-0.5 text-sm">
+                {doNotPlay.map((t) => (
+                  <li key={t.id}>
+                    {t.trackTitle}
+                    {t.artist && t.artist !== "Unknown artist" ? `, ${t.artist}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        )}
+
+        <footer className="mt-6 border-t border-parchment pt-2 text-xs text-ink/50">
+          {wedding.contactPhone ? `Day-of contact: ${wedding.contactPhone} · ` : ""}
+          {SITE_NAME} · jake@crossroadsweddingco.com
+        </footer>
+      </div>
+    </div>
+  );
+}

@@ -18,6 +18,7 @@ export default function BookingForm() {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [reference, setReference] = useState("");
+  const [hubPath, setHubPath] = useState<string | null>(null);
   const [addons, setAddons] = useState<string[]>([]);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
@@ -66,6 +67,7 @@ export default function BookingForm() {
         return;
       }
       setReference(json.reference ?? "");
+      setHubPath(json.hubPath ?? null);
       setStatus("success");
     } catch {
       setErrorMessage("Something went wrong. Please try again.");
@@ -88,8 +90,20 @@ export default function BookingForm() {
             A ${DEPOSIT_USD} deposit locks your date. Payment details come with the
             confirmation.
           </li>
-          <li>Then we gather the names, the schedule, and the music with you by email and on your intro call.</li>
+          <li>
+            {hubPath
+              ? "Your planning hub is ready right now: timeline, music, and the names we announce, saving as you type."
+              : "Then we gather the names, the schedule, and the music with you by email and on your intro call."}
+          </li>
         </ol>
+        {hubPath && (
+          <a
+            href={hubPath}
+            className="mt-5 inline-block rounded-full bg-terracotta px-6 py-3 text-sm font-semibold text-cream hover:bg-terracotta-dark"
+          >
+            Open your planning hub
+          </a>
+        )}
         {reference && (
           <p className="mt-4 text-sm text-cream/50">Your reference: {reference}</p>
         )}

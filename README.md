@@ -64,6 +64,22 @@ City landing pages live at `/{state}/{city}/wedding-dj` for the six markets in
 `lib/cities.ts`; each carries its own copy and Service JSON-LD, and they're all
 in the sitemap and footer.
 
+## Client planning hub
+
+Every booking mints a 48-hex `access_token` on the `weddings` row, and the
+confirmation email links the couple to `/hub/[token]`. No passwords: the link is
+the login. The hub has four autosaving sections (venue basics, run-of-show
+timeline, music cues + playlist link + must/do-not-play lists, VIP names with
+phonetic spellings) that debounce writes to `PUT /api/hub/[token]/*` routes,
+each of which validates the token, zod-checks the body, and replaces that
+wedding's rows in a transaction. `/hub/[token]/runsheet` renders a
+print-optimized one-pager for the venue and crew; the PWA manifest lets couples
+pin the hub to a phone home screen.
+
+`/hub/preview` and `/hub/preview/runsheet` are dev-only sample-data twins used
+for layout QA; they 404 in production builds. Everything under `/hub/` and
+`/api/` is disallowed in `robots.ts`.
+
 ## Layout
 
 | Path | |
@@ -72,7 +88,9 @@ in the sitemap and footer.
 | `components/` | Homepage sections |
 | `lib/site.ts` | Canonical URL, contact email, day rate, service list, the facts that appear in more than one place |
 | `lib/images.ts` | Unsplash photo IDs, named by subject |
-| `lib/db/` | Drizzle schema and pool for the leads table |
+| `lib/db/` | Drizzle schema (platform tables + legacy leads) and pool |
+| `lib/hub.ts` / `lib/hub-constants.ts` | Hub data access (server) and client-safe constants |
+| `components/hub/` | Planning hub sections (client components, autosave) |
 | `lib/cities.ts` | Service-area city data driving the landing pages, footer, and areaServed markup |
 | `lib/email.ts` / `lib/spotify.ts` | Resend + Spotify integrations, both fail closed without keys |
 | `content/instagram/` | Generated post images and their captions |

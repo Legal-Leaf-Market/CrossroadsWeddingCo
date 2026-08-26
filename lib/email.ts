@@ -18,6 +18,7 @@ type BookingEmail = {
   notes?: string;
   totalUsd: number;
   reference: string;
+  hubPath?: string;
 };
 
 export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
@@ -35,7 +36,15 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     ``,
     `1. We check the calendar and confirm availability by email within 24 hours.`,
     `2. A $${DEPOSIT_USD} deposit locks your date. We'll send payment details with the confirmation.`,
-    `3. From there we gather the names, the schedule, and the music with you by email and on your intro call.`,
+    booking.hubPath
+      ? `3. Your planning hub is ready now: ${SITE_URL}${booking.hubPath}`
+      : `3. From there we gather the names, the schedule, and the music with you by email and on your intro call.`,
+    ...(booking.hubPath
+      ? [
+          ``,
+          `The hub is where the timeline, the must-plays, and the names we announce all live. It saves as you type, and the link above is yours alone: keep it private.`,
+        ]
+      : []),
     ``,
     booking.addons.includes("bartender")
       ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before bar service. Bartending is from $${BARTENDER_MIN_USD} and gets fully quoted on your intro call (add-ons noted: ${addonLine}).`
@@ -61,6 +70,7 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     `Spotify playlist: ${booking.spotifyPlaylistUrl || "not provided"}`,
     `Quoted total: $${booking.totalUsd.toLocaleString("en-US")}`,
     `Reference: ${booking.reference}`,
+    booking.hubPath ? `Hub: ${SITE_URL}${booking.hubPath}` : `Hub: not created (leads fallback)`,
     ``,
     `Notes:`,
     booking.notes || "none",

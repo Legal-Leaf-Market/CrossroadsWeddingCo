@@ -190,7 +190,11 @@ export async function POST(req: NextRequest) {
     notes: data.notes || undefined,
     totalUsd,
     reference,
+    hubPath: stored === "weddings" ? `/hub/${accessToken}` : undefined,
   }).catch((err) => console.error("[bookings] email dispatch failed:", err));
 
-  return noStore({ ok: true, reference, totalUsd, stored });
+  // The hub link only exists when the row landed in weddings; the leads
+  // fallback has no access token to key it on.
+  const hubPath = stored === "weddings" ? `/hub/${accessToken}` : null;
+  return noStore({ ok: true, reference, totalUsd, stored, hubPath });
 }
