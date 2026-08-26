@@ -363,6 +363,21 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` exist. Write-back (collaborative playlists from
   our side) requires the OAuth authorization-code flow and ships with the Phase 2 portal.
 
+### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-27)
+A second brainstorm doc (Jacob & Jim) — same standing: steering input, not gospel. New
+decisions absorbed from it:
+- **Travel surcharge:** venues past ~60 min of Columbus carry $100–$150, quoted up front,
+  paid directly to talent. Encoded in `lib/cities.ts` (`hasTravelSurcharge`) — Louisville and
+  Cincinnati pages disclose it; the four near markets stay surcharge-free. The earlier
+  "no travel fee anywhere" copy was corrected before it ever shipped.
+- **2027 pacing:** 24 weddings cap (~2/month). Business policy, not yet software-enforced.
+- **Nic (spelled N-i-c):** apprentice partner — 6-gig progression, $2,000/month draw from
+  Jan 2027 with quarterly/year-end true-up. `talent_profiles` will gain `monthly_draw_rate`
+  when payroll tracking ships (Phase 4); partner deck lives at
+  `content/partner/crossroads-partner-brief-nic.pptx`.
+- Where the two docs disagree, the newer doc + owner's live word wins; this appendix is the
+  tiebreaker record.
+
 ### 9.3 Deviations from the spec, and why
 - **Next.js 15 / Tailwind v4**, newer than the spec's 14+. shadcn/ui is NOT installed: the site
   has an established hand-rolled design system (cream/parchment/charcoal/terracotta, Spectral +

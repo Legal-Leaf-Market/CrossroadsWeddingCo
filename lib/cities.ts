@@ -4,6 +4,8 @@
 // filtered by Google and read as spam by humans.
 
 export type City = {
+  /** Venue is past ~60 min of Columbus — travel surcharge applies. */
+  hasTravelSurcharge?: boolean;
   stateSlug: string;
   citySlug: string;
   name: string;
@@ -96,7 +98,9 @@ export const CITIES: City[] = [
       "Kentucky wedding timelines love a long cocktail hour. Add our acoustic set and it stops being the part guests endure and starts being the part they remember.",
       "Old Louisville mansions and garden venues: compact setups, discreet cabling, nothing taped across a marble floor.",
     ],
-    travelNote: "About an hour and a quarter from Columbus. No travel fee inside our two-hour radius.",
+    hasTravelSurcharge: true,
+    travelNote:
+      "About an hour and a quarter from Columbus. Venues past the one-hour mark carry a $100–$150 travel surcharge — quoted up front, and it goes directly to the crew driving.",
   },
   {
     stateSlug: "oh",
@@ -112,7 +116,9 @@ export const CITIES: City[] = [
       "Riverfront ceremonies fight barge horns and wind. Our ceremony rigs are built for outdoor audio that guests in the back row actually hear.",
       "Northern Kentucky venues — Covington, Newport — are absolutely in range. The state line is not a surcharge.",
     ],
-    travelNote: "Just under two hours from Columbus — the edge of our range, still the same flat rate.",
+    hasTravelSurcharge: true,
+    travelNote:
+      "Just under two hours from Columbus — the edge of our range. A $100–$150 travel surcharge applies, quoted up front, paid directly to the crew driving.",
   },
 ];
 

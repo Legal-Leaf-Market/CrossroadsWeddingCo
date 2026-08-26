@@ -11,6 +11,7 @@ import {
   DJ_DAY_RATE_USD,
   SITE_NAME,
   SITE_URL,
+  TRAVEL_SURCHARGE_RANGE,
 } from "@/lib/site";
 
 type Params = { state: string; city: string };
@@ -105,7 +106,11 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
         <section className="bg-parchment/40 py-16">
           <div className="mx-auto max-w-4xl px-6">
             <div className="rounded-2xl border-2 border-terracotta bg-cream p-8">
-              <h2 className="text-2xl text-charcoal">The rate is the rate, everywhere we go</h2>
+              <h2 className="text-2xl text-charcoal">
+                {data.hasTravelSurcharge
+                  ? "One flat rate, plus honest travel"
+                  : "The rate is the rate, everywhere we go"}
+              </h2>
               <p className="mt-3 text-ink/70">
                 ${DJ_DAY_RATE_USD.toLocaleString("en-US")} flat for the day: DJ and sound for
                 ceremony, cocktail hour, and reception, MC duties dialed to taste, all equipment,
@@ -118,6 +123,12 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
                 <li>
                   &bull; Bar service — from ${BARTENDER_MIN_USD}, fully quoted on your intro call
                 </li>
+                {data.hasTravelSurcharge && (
+                  <li className="sm:col-span-2">
+                    &bull; Travel — {TRAVEL_SURCHARGE_RANGE} for venues past about an hour from
+                    Columbus, quoted up front and paid directly to your crew
+                  </li>
+                )}
               </ul>
               <a
                 href="/book"

@@ -26,6 +26,10 @@ export const DEPOSIT_USD = 500;
 export const ACOUSTIC_ADDON_USD = 400;
 export const BARTENDER_MIN_USD = 400;
 
+// Venues past ~60 minutes of Columbus carry a travel surcharge, quoted up
+// front and paid directly to the talent driving (docs/MASTER_SPEC_AND_STRATEGY.md §1.1).
+export const TRAVEL_SURCHARGE_RANGE = "$100–$150";
+
 export const HOME_BASE = "Columbus, Indiana";
 export const SERVICE_RADIUS_BLURB =
   "Based in Columbus, Indiana — serving couples within about two hours: Indianapolis, Bloomington, Nashville, Louisville, and Cincinnati.";
