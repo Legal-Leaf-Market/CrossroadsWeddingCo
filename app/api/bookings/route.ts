@@ -1,8 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { leads, weddings } from "@/lib/db/schema";
+import { weddings } from "@/lib/db/schema";
 import { sendBookingEmails } from "@/lib/email";
 import { parsePlaylistId } from "@/lib/spotify";
 import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD, DJ_DAY_RATE_USD } from "@/lib/site";
@@ -140,13 +141,13 @@ export async function POST(req: NextRequest) {
     // fall back to the long-standing leads table, old columns only.
     console.error("[bookings] weddings insert failed, falling back to leads:", (err as Error).message);
     try {
-      await db.insert(leads).values({
-        name: data.coupleNames,
-        email: data.email,
-        eventDate: data.eventDate,
-        venue: data.venueName,
-        services: data.addons.join(", ") || null,
-        message: [
+      // Raw SQL against the legacy columns only. The Drizzle insert enumerates
+      // every schema column (missing ones included), so it fails on any
+      // database the migration hasn't reached yet, which is exactly when this
+      // fallback runs. Verified live 2026-08-26: this is how the first real
+      // booking test double-failed.
+      const message =
+        [
           data.notes,
           data.phone && `Phone: ${data.phone}`,
           data.venueAddress && `Address: ${data.venueAddress}`,
@@ -154,8 +155,12 @@ export async function POST(req: NextRequest) {
           `Booking reference: ${reference}`,
         ]
           .filter(Boolean)
-          .join("\n") || null,
-      });
+          .join("\n") || null;
+      await db.execute(sql`
+        insert into leads (name, email, event_date, venue, services, message)
+        values (${data.coupleNames}, ${data.email}, ${data.eventDate},
+                ${data.venueName}, ${data.addons.join(", ") || null}, ${message})
+      `);
       stored = "leads";
     } catch (fallbackErr) {
       console.error("[bookings] fallback insert failed:", (fallbackErr as Error).message);
