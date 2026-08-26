@@ -117,7 +117,7 @@ const POSTS = [
       children: [
         display(78, COLORS.charcoal, "Everything the day needs."),
         includedRow("Ceremony, cocktail hour, reception sound", COLORS.ink, COLORS.terracotta, 48),
-        includedRow("MC — as loud or as invisible as you like", COLORS.ink, COLORS.terracotta),
+        includedRow("MC as loud or as invisible as you like", COLORS.ink, COLORS.terracotta),
         includedRow("All the equipment, set up and struck", COLORS.ink, COLORS.terracotta),
         includedRow("Day-of timeline: we call the cues", COLORS.ink, COLORS.terracotta),
       ],
@@ -153,7 +153,7 @@ const POSTS = [
       children: [
         display(96, COLORS.cream, "A short call, and you\u2019ll know if we\u2019re your crew.", { maxWidth: 860 }),
         rule(COLORS.terracotta, { marginTop: 44 }),
-        bodyText(40, COLORS.muted, "Thirty minutes \u2014 your date, your venue, and what you actually need on the day. No pitch deck.", {
+        bodyText(40, COLORS.muted, "Thirty minutes: your date, your venue, and what you actually need on the day. No pitch deck.", {
           marginTop: 44,
           maxWidth: 800,
         }),

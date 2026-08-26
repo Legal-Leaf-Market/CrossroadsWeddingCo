@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { state, city } = await params;
   const data = getCity(state, city);
   if (!data) return {};
-  const title = `Wedding DJ in ${data.name}, ${data.stateAbbr} — flat $${DJ_DAY_RATE_USD.toLocaleString("en-US")}`;
+  const title = `Wedding DJ in ${data.name}, ${data.stateAbbr}: flat $${DJ_DAY_RATE_USD.toLocaleString("en-US")}`;
   const description = `${SITE_NAME} covers ${data.name}, ${data.stateName}: wedding DJ, MC, and day-of timeline coordination for one flat $${DJ_DAY_RATE_USD.toLocaleString("en-US")} day rate. Live acoustic sets and bar service available.`;
   return {
     title,
@@ -45,7 +45,7 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
     "@context": "https://schema.org",
     "@type": "Service",
     serviceType: "Wedding DJ and MC",
-    name: `${SITE_NAME} — ${data.headline}`,
+    name: `${SITE_NAME}: ${data.headline}`,
     description: data.intro,
     // Inline the essentials: a bare @id pointing at another page is a dangling
     // reference to most structured-data consumers.
@@ -128,14 +128,14 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
               </p>
               <ul className="mt-4 grid gap-2 text-sm text-ink/70 sm:grid-cols-2">
                 <li>
-                  &bull; Live acoustic set — flat ${ACOUSTIC_ADDON_USD}
+                  &bull; Live acoustic set: flat ${ACOUSTIC_ADDON_USD}
                 </li>
                 <li>
-                  &bull; Bar service — from ${BARTENDER_MIN_USD}, fully quoted on your intro call
+                  &bull; Bar service: from ${BARTENDER_MIN_USD}, fully quoted on your intro call
                 </li>
                 {data.hasTravelSurcharge && (
                   <li className="sm:col-span-2">
-                    &bull; Travel — {TRAVEL_SURCHARGE_RANGE} for venues past about an hour from
+                    &bull; Travel: {TRAVEL_SURCHARGE_RANGE} for venues past about an hour from
                     Columbus, quoted up front and paid directly to your crew
                   </li>
                 )}
@@ -158,7 +158,7 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
               {CITIES.filter((c) => c.citySlug !== data.citySlug)
                 .map((c) => c.name)
                 .join(", ")}{" "}
-              — anywhere within about two hours of Columbus, Indiana.
+              and everywhere else within about two hours of Columbus, Indiana.
             </p>
           </div>
         </section>

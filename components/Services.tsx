@@ -7,13 +7,13 @@ const SERVICES = [
     title: "Wedding DJ",
     image: IMAGES.stringLights,
     alt: "String lights glowing over an evening wedding reception",
-    body: "Ceremony sound, cocktail hour, reception, and every transition between them. We MC as much or as little as you want — some couples want a bold host, others want us invisible until it matters.",
+    body: "Ceremony sound, cocktail hour, reception, and every transition between them. We MC as much or as little as you want. Some couples want a bold host; others want us invisible until it matters.",
   },
   {
     title: "Live Acoustic Sets",
     image: IMAGES.liveMusic,
     alt: "Close-up of hands playing an acoustic guitar",
-    body: "Several of our DJs are also working musicians. Add a live acoustic set for your ceremony or cocktail hour — the same person can carry the whole day from guitar to turntable. Flat $" +
+    body: "Several of our DJs are also working musicians. Add a live acoustic set for your ceremony or cocktail hour, and the same person can carry the whole day from guitar to turntable. Flat $" +
       ACOUSTIC_ADDON_USD +
       ".",
   },
@@ -29,7 +29,7 @@ const SERVICES = [
     title: "Day-Of Coordination",
     image: IMAGES.dayOf,
     alt: "Long outdoor reception table set for a wedding dinner",
-    body: "Send us the names, the schedule, and the run of show. On the day, we're the ones calling cues, cuing the wedding party, and keeping everything moving — the unofficial coordinator role, built in.",
+    body: "Send us the names, the schedule, and the run of show. On the day, we're the ones calling cues, cuing the wedding party, and keeping everything moving. It's the unofficial coordinator role, built in.",
   },
 ];
 
@@ -40,7 +40,7 @@ export default function Services() {
         <h2 className="text-3xl text-charcoal">What we do</h2>
         <p className="mt-3 max-w-2xl text-ink/70">
           One crew, four things we're actually good at. Book one or stack all
-          four — most backyard weddings end up wanting at least two.
+          four. Most backyard weddings end up wanting at least two.
         </p>
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           {SERVICES.map((service) => (

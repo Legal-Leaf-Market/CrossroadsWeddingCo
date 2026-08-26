@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // completed can arrive with payment_status "unpaid" for async methods —
+  // completed can arrive with payment_status "unpaid" for async methods, so
   // only a paid session locks the date; async success arrives as its own event.
   if (
     event.type === "checkout.session.completed" ||

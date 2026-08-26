@@ -3,7 +3,7 @@
 // additive-only, which is what makes running it on every build safe.
 //
 // No DATABASE_URL (local dev, CI sandboxes): skip quietly.
-// Real SQL error: fail the build — deploying code against a half-applied
+// Real SQL error: fail the build. Deploying code against a half-applied
 // schema is worse than a red deploy.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -12,7 +12,7 @@ import pg from "pg";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
-  console.log("[migrate] DATABASE_URL not set — skipping schema apply.");
+  console.log("[migrate] DATABASE_URL not set, skipping schema apply.");
   process.exit(0);
 }
 

@@ -21,14 +21,14 @@ export default function About() {
           <div className="mt-6 space-y-4 text-ink/80">
             <p>
               We started out just DJing. Somewhere along the way, we became
-              the people couples handed their whole schedule to — because
+              the people couples handed their whole schedule to, because
               someone has to call the cues, and it's easier to trust the
               person already holding the microphone.
             </p>
             <p>
               We're not a full wedding-planning service, and we won't pretend
               to be. But on the day itself, give us your names, your
-              timeline, and your must-plays and must-nots — we'll run the
+              timeline, and your must-plays and must-nots, and we'll run the
               room so you don't have to think about it.
             </p>
             <p>

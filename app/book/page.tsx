@@ -19,7 +19,7 @@ export default async function BookPage({
 }: {
   searchParams: Promise<{ deposit?: string }>;
 }) {
-  // Stripe checkout returns here with ?deposit=paid|cancelled — the page must
+  // Stripe checkout returns here with ?deposit=paid|cancelled, and the page must
   // not greet someone who just paid $500 with "No payment now."
   const { deposit } = await searchParams;
   return (
@@ -30,7 +30,7 @@ export default async function BookPage({
           <div className="mx-auto max-w-3xl px-6">
             {deposit === "paid" && (
               <div role="status" className="mb-8 rounded-2xl border border-sage/60 bg-sage/10 p-6">
-                <h2 className="text-xl text-cream">Deposit received — your date is locked.</h2>
+                <h2 className="text-xl text-cream">Deposit received. Your date is locked.</h2>
                 <p className="mt-2 text-cream/70">
                   A receipt is on its way from Stripe, and we&apos;ll follow up by email with
                   everything that happens next. Thank you!
@@ -40,7 +40,7 @@ export default async function BookPage({
             {deposit === "cancelled" && (
               <div role="status" className="mb-8 rounded-2xl border border-cream/20 bg-cream/5 p-6">
                 <p className="text-cream/80">
-                  Payment was cancelled — nothing was charged. Your date request still stands,
+                  Payment was cancelled and nothing was charged. Your date request still stands,
                   and the deposit link keeps working whenever you&apos;re ready.
                 </p>
               </div>

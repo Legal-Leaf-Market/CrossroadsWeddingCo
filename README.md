@@ -1,6 +1,6 @@
 # Crossroads Wedding Co.
 
-Marketing site for Crossroads Wedding Co. — Next.js 15 (App Router), Tailwind v4,
+Marketing site for Crossroads Wedding Co.: Next.js 15 (App Router), Tailwind v4,
 deployed on Vercel.
 
 ```bash
@@ -19,7 +19,7 @@ pnpm ig:posts   # regenerate the Instagram images in content/instagram/
 | `NEXT_PUBLIC_BOOKING_URL` | The "Book a call" card | Public booking page for the intro call. See below. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URLs | Optional. Defaults to `https://crossroadsweddingco.com`; set it on staging aliases or forks so canonicals and the sitemap don't point at production. |
 | `RESEND_API_KEY` | Booking emails | Confirmation to the couple + notification to you on each booking request. Silent no-op while unset. |
-| `RESEND_FROM` | Booking emails | Optional. Defaults to `Crossroads Wedding Co. <hello@crossroadsweddingco.com>` — must be a Resend-verified domain. |
+| `RESEND_FROM` | Booking emails | Optional. Defaults to `Crossroads Wedding Co. <hello@crossroadsweddingco.com>`, must be a Resend-verified domain. |
 | `RESEND_NOTIFY_TO` | Booking emails | Optional. Defaults to `jake@crossroadsweddingco.com`. |
 | `STRIPE_SECRET_KEY` | `/api/checkout` | Deposit payments. Fails closed (501) while unset. |
 | `STRIPE_WEBHOOK_SECRET` | `/api/webhooks/stripe` | Marks deposits paid. Fails closed (501) while unset. |
@@ -36,7 +36,7 @@ requires a redeploy to take effect.
 ## Setting up the booking page
 
 The "Book a call" card in the contact section renders only when
-`NEXT_PUBLIC_BOOKING_URL` is set — until then the section falls back to the lead
+`NEXT_PUBLIC_BOOKING_URL` is set, until then the section falls back to the lead
 form and the mailto link, so there's never a dead button in production.
 
 A Google Calendar appointment schedule is free on a personal Google account and
@@ -48,7 +48,7 @@ gives you one booking page, which is all this needs:
 4. Add it as `NEXT_PUBLIC_BOOKING_URL` in the Vercel project settings, then
    redeploy
 
-Any other scheduler works the same way — the card just needs a URL. Calendly's
+Any other scheduler works the same way, the card just needs a URL. Calendly's
 free tier also covers a single event type if you'd rather use that.
 
 ## Booking flow
@@ -70,7 +70,7 @@ in the sitemap and footer.
 | --- | --- |
 | `app/` | Routes, metadata, `robots.ts`, `sitemap.ts`, generated icons and OG image |
 | `components/` | Homepage sections |
-| `lib/site.ts` | Canonical URL, contact email, day rate, service list — the facts that appear in more than one place |
+| `lib/site.ts` | Canonical URL, contact email, day rate, service list, the facts that appear in more than one place |
 | `lib/images.ts` | Unsplash photo IDs, named by subject |
 | `lib/db/` | Drizzle schema and pool for the leads table |
 | `lib/cities.ts` | Service-area city data driving the landing pages, footer, and areaServed markup |

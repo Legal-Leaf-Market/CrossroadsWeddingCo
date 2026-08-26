@@ -46,9 +46,9 @@ const bookingSchema = z.object({
   phone: z.string().trim().max(50, "That phone number is too long").optional().default(""),
   eventDate: z.string("Please pick a date").regex(/^\d{4}-\d{2}-\d{2}$/, "Please pick a date"),
   venueName: z
-    .string("Tell us the venue — 'backyard in Seymour' works")
+    .string("Tell us the venue. 'Backyard in Seymour' works")
     .trim()
-    .min(2, "Tell us the venue — 'backyard in Seymour' works")
+    .min(2, "Tell us the venue. 'Backyard in Seymour' works")
     .max(255, "That's a little long for the venue field"),
   venueAddress: z.string().trim().max(2000, "That address is too long").optional().default(""),
   addons: z.array(z.enum(["acoustic", "bartender"])).max(2).optional().default([]),
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
   if (rateLimited(ip)) {
-    return noStore({ error: "Too many requests — give it a few minutes or email us directly." }, 429);
+    return noStore({ error: "Too many requests. Give it a few minutes, or email us directly." }, 429);
   }
 
   const parsed = bookingSchema.safeParse(raw);
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
   if (data.spotifyPlaylistUrl && !parsePlaylistId(data.spotifyPlaylistUrl)) {
     return noStore(
-      { error: "That Spotify link doesn't look like a playlist — use Share → Copy link on the playlist itself" },
+      { error: "That Spotify link doesn't look like a playlist. Use Share, then Copy link, on the playlist itself." },
       400,
     );
   }
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     });
     stored = "weddings";
   } catch (err) {
-    // Schema not applied yet (or transient DB trouble): a lead is never lost —
+    // Schema not applied yet (or transient DB trouble): a lead is never lost, so
     // fall back to the long-standing leads table, old columns only.
     console.error("[bookings] weddings insert failed, falling back to leads:", (err as Error).message);
     try {
@@ -160,16 +160,16 @@ export async function POST(req: NextRequest) {
     } catch (fallbackErr) {
       console.error("[bookings] fallback insert failed:", (fallbackErr as Error).message);
       return noStore(
-        { error: "Something went wrong saving your request — please email us directly instead." },
+        { error: "Something went wrong saving your request. Please email us directly instead." },
         500,
       );
     }
   }
 
   if (!process.env.RESEND_API_KEY) {
-    // The site promises confirmation within 24 hours — without Resend the
+    // The site promises confirmation within 24 hours. Without Resend the
     // booking is only visible in the database, so shout about it in the logs.
-    console.warn(`[bookings] RESEND_API_KEY unset — booking ${reference} recorded but NO notification sent`);
+    console.warn(`[bookings] RESEND_API_KEY unset: booking ${reference} recorded but NO notification sent`);
   }
 
   // Fire-and-forget: email failure must never fail the booking.

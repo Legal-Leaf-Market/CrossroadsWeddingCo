@@ -32,7 +32,7 @@ export const TRAVEL_SURCHARGE_RANGE = "$100–$150";
 
 export const HOME_BASE = "Columbus, Indiana";
 export const SERVICE_RADIUS_BLURB =
-  "Based in Columbus, Indiana — serving couples within about two hours: Indianapolis, Bloomington, Nashville, Louisville, and Cincinnati.";
+  "Based in Columbus, Indiana, serving couples within about two hours: Indianapolis, Bloomington, Nashville, Louisville, and Cincinnati.";
 
 export const INTRO_CALL_LENGTH = "30-minute";
 

@@ -38,13 +38,13 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     `3. From there we gather the names, the schedule, and the music with you by email and on your intro call.`,
     ``,
     booking.addons.includes("bartender")
-      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before bar service — bartending is from $${BARTENDER_MIN_USD} and gets fully quoted on your intro call (add-ons noted: ${addonLine}).`
+      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before bar service. Bartending is from $${BARTENDER_MIN_USD} and gets fully quoted on your intro call (add-ons noted: ${addonLine}).`
       : `Your quote: $${booking.totalUsd.toLocaleString("en-US")} (add-ons noted: ${addonLine}).`,
     `Reference: ${booking.reference}`,
     ``,
     `Questions in the meantime? Just reply to this email.`,
     ``,
-    `— ${SITE_NAME}`,
+    `${SITE_NAME}`,
     SITE_URL,
   ].join("\n");
 
@@ -53,31 +53,31 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     ``,
     `Couple: ${booking.coupleNames}`,
     `Email: ${booking.email}`,
-    `Phone: ${booking.phone || "—"}`,
+    `Phone: ${booking.phone || "not provided"}`,
     `Date: ${booking.eventDate}`,
     `Venue: ${booking.venueName}`,
-    `Address: ${booking.venueAddress || "—"}`,
+    `Address: ${booking.venueAddress || "not provided"}`,
     `Add-ons: ${addonLine}`,
-    `Spotify playlist: ${booking.spotifyPlaylistUrl || "—"}`,
+    `Spotify playlist: ${booking.spotifyPlaylistUrl || "not provided"}`,
     `Quoted total: $${booking.totalUsd.toLocaleString("en-US")}`,
     `Reference: ${booking.reference}`,
     ``,
     `Notes:`,
-    booking.notes || "—",
+    booking.notes || "none",
   ].join("\n");
 
-  // Email failure must never fail the booking — log and move on.
+  // Email failure must never fail the booking. Log and move on.
   const results = await Promise.allSettled([
     resend.emails.send({
       from: FROM,
       to: booking.email,
-      subject: `Got your date request — ${SITE_NAME}`,
+      subject: `We got your date request`,
       text: confirmation,
     }),
     resend.emails.send({
       from: FROM,
       to: NOTIFY_TO,
-      subject: `New booking request: ${booking.coupleNames} — ${booking.eventDate}`,
+      subject: `New booking request: ${booking.coupleNames}, ${booking.eventDate}`,
       text: notification,
     }),
   ]);

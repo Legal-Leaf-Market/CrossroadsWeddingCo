@@ -27,7 +27,7 @@ export default function Hero() {
           <p className="mt-6 max-w-xl text-lg text-cream/80">
             Give us the names, the schedule, and the vibe. We handle the
             microphone, the playlist, the timeline, and the awkward silences
-            — so you can actually be at your own wedding.
+            so you can actually be at your own wedding.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <a

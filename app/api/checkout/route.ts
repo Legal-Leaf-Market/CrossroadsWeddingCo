@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Creates a Stripe Checkout session for the $500 date-lock deposit.
-// Fails closed until STRIPE_SECRET_KEY exists (CLAUDE.md §9.4) — the booking
+// Fails closed until STRIPE_SECRET_KEY exists (CLAUDE.md §9.4): the booking
 // UI never renders a payment control while this returns 501.
 export async function POST(req: NextRequest) {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const stripe = new Stripe(key);
   // Idempotency key pinned to the wedding: concurrent or repeated clicks get
-  // the same Checkout session back instead of minting parallel ones — the
+  // the same Checkout session back instead of minting parallel ones. It is the
   // simplest guard against a double-charged deposit.
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
           currency: "usd",
           unit_amount: DEPOSIT_USD * 100,
           product_data: {
-            name: `${SITE_NAME} — date-lock deposit`,
+            name: `${SITE_NAME}: date-lock deposit`,
             description: `Locks ${wedding.eventDate} for ${wedding.coupleNames}. Non-refundable; applied to the total.`,
           },
         },

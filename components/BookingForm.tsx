@@ -21,7 +21,7 @@ export default function BookingForm() {
   const [addons, setAddons] = useState<string[]>([]);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
-  // Screen readers lose their place when the form unmounts — land focus on
+  // Screen readers lose their place when the form unmounts, so land focus on
   // the confirmation heading so the outcome is announced.
   useEffect(() => {
     if (status === "success") successHeadingRef.current?.focus();
@@ -85,7 +85,7 @@ export default function BookingForm() {
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-cream/70">
           <li>We check the calendar and confirm availability by email within 24 hours.</li>
           <li>
-            A ${DEPOSIT_USD} deposit locks your date — payment details come with the
+            A ${DEPOSIT_USD} deposit locks your date. Payment details come with the
             confirmation.
           </li>
           <li>Then we gather the names, the schedule, and the music with you by email and on your intro call.</li>
@@ -167,7 +167,7 @@ export default function BookingForm() {
             />
             <span className="font-semibold text-cream">Bar service</span>
             <span className="mt-1 block text-sm text-cream/60">
-              Licensed bartenders. From ${BARTENDER_MIN_USD} — fully quoted on your intro call.
+              Licensed bartenders. From ${BARTENDER_MIN_USD}, fully quoted on your intro call.
             </span>
           </label>
         </div>
@@ -180,7 +180,7 @@ export default function BookingForm() {
         <input
           name="spotifyPlaylistUrl"
           className={inputClass}
-          placeholder="Paste a share link — build it in your own Spotify"
+          placeholder="Paste a share link from your own Spotify"
         />
         <span className="mt-1 block text-xs text-cream/50">
           Already collecting must-plays? Share the playlist and it follows your booking all the
@@ -220,7 +220,7 @@ export default function BookingForm() {
           <span>${totalUsd.toLocaleString("en-US")}</span>
         </div>
         <p className="mt-2 text-xs text-cream/50">
-          ${DEPOSIT_USD} deposit locks the date once we confirm availability — it&apos;s
+          ${DEPOSIT_USD} deposit locks the date once we confirm availability. It&apos;s
           non-refundable and comes off your total. No payment now.
         </p>
       </div>

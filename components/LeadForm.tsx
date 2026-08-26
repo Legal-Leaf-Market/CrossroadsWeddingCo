@@ -65,7 +65,7 @@ export default function LeadForm() {
   if (status === "success") {
     return (
       <div className="rounded-2xl border border-cream/20 bg-cream/5 p-8 text-center">
-        <h3 className="text-xl text-cream">Got it — thank you!</h3>
+        <h3 className="text-xl text-cream">Got it. Thank you!</h3>
         <p className="mt-2 text-cream/70">
           We'll get back to you by email shortly.
         </p>

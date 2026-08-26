@@ -338,7 +338,7 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
 
 ---
 
-## 9. Implementation Notes — Repo Reality (maintained by Claude Code)
+## 9. Implementation Notes: Repo Reality (maintained by Claude Code)
 
 ### 9.1 Corrections to the original spec
 1. **COI:** A Certificate of Insurance is issued by the insurer. The platform stores the real
@@ -353,25 +353,25 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   flag with a $400 floor and quoted on the intro call.
 - **Intro call:** 30 minutes, booked via the contact-section card
   (`NEXT_PUBLIC_BOOKING_URL`, Google Calendar appointment schedule).
-- **Service area:** based in Columbus, Indiana; two-hour radius — Indianapolis, Bloomington,
+- **Service area:** based in Columbus, Indiana; two-hour radius, Indianapolis, Bloomington,
   Nashville (IN), Louisville (KY), Cincinnati (OH). Encoded in `lib/cities.ts` and the
   homepage `areaServed` structured data.
 - **Spotify is a priority integration (2026-08-26, Jacob):** the target market curates its own
   playlists in Spotify, so the platform meets them there. Flow: couples build the playlist in
-  their own account and share the link — captured at booking (`weddings.spotify_playlist_url`,
+  their own account and share the link, captured at booking (`weddings.spotify_playlist_url`,
   no API needed), ingested into `playlist_curations` via the client-credentials API once
   `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` exist. Write-back (collaborative playlists from
   our side) requires the OAuth authorization-code flow and ships with the Phase 2 portal.
 
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
-A second brainstorm doc (Jacob & Jim) — same standing: steering input, not gospel. New
+A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:
 - **Travel surcharge:** venues past ~60 min of Columbus carry $100–$150, quoted up front,
-  paid directly to talent. Encoded in `lib/cities.ts` (`hasTravelSurcharge`) — Louisville and
+  paid directly to talent. Encoded in `lib/cities.ts` (`hasTravelSurcharge`), Louisville and
   Cincinnati pages disclose it; the four near markets stay surcharge-free. The earlier
   "no travel fee anywhere" copy was corrected before it ever shipped.
 - **2027 pacing:** 24 weddings cap (~2/month). Business policy, not yet software-enforced.
-- **Nic (spelled N-i-c):** apprentice partner — 6-gig progression, $2,000/month draw from
+- **Nic (spelled N-i-c):** apprentice partner, 6-gig progression, $2,000/month draw from
   Jan 2027 with quarterly/year-end true-up. `talent_profiles` will gain `monthly_draw_rate`
   when payroll tracking ships (Phase 4); partner deck lives at
   `content/partner/crossroads-partner-brief-nic.pptx`.
@@ -386,25 +386,31 @@ decisions absorbed from it:
 - **`leads` table extended additively**, not replaced. It predates the spec, holds production
   rows, and keeps its serial PK. Spec columns (`tenant_id`, `source`, `raw_payload`,
   `target_date`, `status`, `phone`) were added via `ALTER TABLE ... IF NOT EXISTS`. The spec's
-  `bride_name` does not exist — the live table's neutral `name` covers it.
-- **`weddings` gains `contact_email` / `contact_phone`** — inquiry-stage bookings arrive before
+  `bride_name` does not exist, the live table's neutral `name` covers it.
+- **`weddings` gains `contact_email` / `contact_phone`**, inquiry-stage bookings arrive before
   any `users` row exists, so the contact must live on the wedding record. `venue_address` is
   nullable for the same reason.
 - **Migrations** are hand-authored idempotent SQL in `scripts/phase1-schema.sql`, applied by
   `scripts/migrate.mjs` which runs at the front of `pnpm build` (skips cleanly when
   `DATABASE_URL` is unset, fails the build on real SQL errors). Additive-only by policy.
 
-### 9.4 External dependencies — status
+### 9.4 External dependencies, status
 | Dependency | Status |
 | --- | --- |
 | Neon Postgres | Live (`DATABASE_URL` in Vercel) |
 | Resend | Account exists (multi-domain). Wire `RESEND_API_KEY` (+ optional `RESEND_FROM`, `RESEND_NOTIFY_TO`) into Vercel to activate booking emails |
 | Stripe | Not yet created. Checkout + webhook routes fail closed (501) until `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` exist. Connect payouts need business verification |
-| Spotify | **Priority.** Free developer app needed at developer.spotify.com — client-credentials keys unlock playlist ingestion + track search (`lib/spotify.ts`, fails closed until then) |
+| Spotify | **Priority.** Free developer app needed at developer.spotify.com, client-credentials keys unlock playlist ingestion + track search (`lib/spotify.ts`, fails closed until then) |
 | Twilio, The Knot / WeddingWire vendor accounts, realtime provider | Not yet created (Phases 2–4) |
 
 ### 9.5 Standing conventions in this repo
-- Business facts (rates, deposit, contact, service area) live in `lib/site.ts` — never hardcode
+- **No em dashes, anywhere a human reads (owner directive, 2026-08-26, given twice;
+  do not make Jacob say it a third time).** Site copy, emails, error messages, titles,
+  metadata, social captions, generated images, decks, and docs: restructure the sentence
+  (period, comma, colon, parentheses) instead of dropping in an em dash. The one allowed
+  dash is the short en dash inside numeric ranges ($100–$150, 2–3). This applies to all
+  future writing in this repo.
+- Business facts (rates, deposit, contact, service area) live in `lib/site.ts`, never hardcode
   them in components; the JSON-LD reads the same constants, and price drift between visible copy
   and structured data is a Google penalty.
 - Every externally-gated feature fails closed and renders nothing rather than a dead control

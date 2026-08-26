@@ -4,7 +4,7 @@ import { SITE_NAME } from "@/lib/site";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt =
-  "Crossroads Wedding Co. — the DJ and music crew that also quietly runs your day";
+  "Crossroads Wedding Co., the DJ and music crew that also quietly runs your day";
 
 // Satori can't read the fonts next/font bundles, so pull the same two faces the
 // site uses straight from Google Fonts. The legacy UA makes the CSS endpoint
