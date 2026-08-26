@@ -30,7 +30,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- To add an enum value later, append an ALTER TYPE ... ADD VALUE IF NOT EXISTS
--- line below — editing the CREATE TYPE lists above never reaches a database
+-- line below. Editing the CREATE TYPE lists above never reaches a database
 -- where the type already exists (duplicate_object is swallowed by design).
 
 CREATE TABLE IF NOT EXISTS tenants (
@@ -193,3 +193,8 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS raw_payload JSONB;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS target_date DATE;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS auto_provisioned_wedding_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'new';
+
+-- Phase 2 review fix: per-section revision counters for the hub's replace-all
+-- saves. A stale tab or second device must get a 409 and refresh instead of
+-- silently wiping rows the other partner just saved.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_section_revs JSONB NOT NULL DEFAULT '{}'::jsonb;

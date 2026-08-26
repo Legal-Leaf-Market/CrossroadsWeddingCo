@@ -121,6 +121,9 @@ export const weddings = pgTable(
     packageType: varchar("package_type", { length: 100 }).default("standard_dj_mc"),
     addons: jsonb("addons").default([]),
     spotifyPlaylistUrl: varchar("spotify_playlist_url", { length: 500 }),
+    // Per-section revision counters ({"timeline": 3, ...}) backing the hub's
+    // optimistic concurrency; bumped inside each replace-all transaction.
+    hubSectionRevs: jsonb("hub_section_revs").notNull().default({}),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull().default("1000.00"),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),
