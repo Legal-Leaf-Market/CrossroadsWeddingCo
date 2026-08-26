@@ -1,9 +1,8 @@
 // One place decides which env var holds the Postgres connection string.
-// Vercel's Neon integration writes DATABASE_URL, manual setups use POSTGRES_URL
-// or their own casing (production had Database_URL on 2026-08-26), so match the
-// candidate names case-insensitively. The value is sanitized too: real-world
-// pastes arrive wrapped in quotes, prefixed with DATABASE_URL=, or inside a
-// psql command, and none of that should silently disable the database.
+// Matching is case-insensitive (production had Database_URL), values are
+// sanitized (pastes arrive quoted, prefixed, or as psql commands), and when
+// several matching variables exist, the first one that actually contains a
+// postgres:// URL wins, so a broken leftover variable can't shadow a good one.
 export const DB_URL_CANDIDATES = [
   "DATABASE_URL",
   "POSTGRES_URL",
@@ -18,11 +17,12 @@ export function sanitizeDatabaseUrl(raw: string): string | null {
 }
 
 export function resolveDatabaseUrl(): { name: string; url: string } | null {
-  const wanted = new Set(DB_URL_CANDIDATES.map((n) => n.toLowerCase()));
-  for (const [name, value] of Object.entries(process.env)) {
-    if (value && wanted.has(name.toLowerCase())) {
-      const url = sanitizeDatabaseUrl(value);
-      if (url) return { name, url };
+  for (const candidate of DB_URL_CANDIDATES) {
+    for (const [name, value] of Object.entries(process.env)) {
+      if (value && name.toLowerCase() === candidate.toLowerCase()) {
+        const url = sanitizeDatabaseUrl(value);
+        if (url) return { name, url };
+      }
     }
   }
   return null;

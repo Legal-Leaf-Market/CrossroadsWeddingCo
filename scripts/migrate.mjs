@@ -11,26 +11,33 @@ import { dirname, join } from "node:path";
 import pg from "pg";
 
 const CANDIDATES = ["DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL", "NEON_DATABASE_URL"];
-// Case-insensitive: production had the variable saved as Database_URL. The
-// value is sanitized because pastes arrive quoted, prefixed, or as a psql
-// command; extract the first postgres:// URL from whatever is there.
-const wanted = new Set(CANDIDATES.map((n) => n.toLowerCase()));
-const entry = Object.entries(process.env).find(([name, v]) => v && wanted.has(name.toLowerCase()));
-const sanitized = entry ? entry[1].match(/postgres(?:ql)?:\/\/[^\s"']+/)?.[0] : undefined;
-if (entry && !sanitized) {
-  console.error(`[migrate] FAILED: env var ${entry[0]} exists but contains no postgres:// URL. Re-paste the plain connection string from the Neon dashboard.`);
+// Case-insensitive name match, sanitized value, and when several matching
+// variables exist, the first one that actually contains a postgres:// URL
+// wins, so a broken leftover variable can't shadow a freshly added good one.
+const matches = [];
+for (const candidate of CANDIDATES) {
+  for (const [name, value] of Object.entries(process.env)) {
+    if (value && name.toLowerCase() === candidate.toLowerCase()) {
+      matches.push([name, value, value.match(/postgres(?:ql)?:\/\/[^\s"']+/)?.[0]]);
+    }
+  }
+}
+const found = matches.find(([, , url]) => url);
+if (matches.length && !found) {
+  const shape = matches.map(([name, value]) => `${name} (${value.length} chars)`).join(", ");
+  console.error(`[migrate] FAILED: found ${shape}, but none contain a postgres:// URL.`);
+  console.error("[migrate] The value must be the plain connection string from the Neon dashboard,");
+  console.error("[migrate] starting with postgresql:// and roughly 100+ characters long.");
   process.exit(1);
 }
-const found = entry && sanitized ? [entry[0], sanitized] : undefined;
 if (!found) {
-  // Names only, never values: which env keys even look database-related here?
   const visible = Object.keys(process.env).filter((k) => /DATABASE|POSTGRES|NEON|PG/i.test(k)).sort();
   console.log(`[migrate] No connection string found. Checked: ${CANDIDATES.join(", ")}.`);
   console.log(`[migrate] Database-looking env var NAMES visible to this build: ${visible.length ? visible.join(", ") : "(none)"}.`);
   console.log("[migrate] Skipping schema apply.");
   process.exit(0);
 }
-const [urlName, url] = found;
+const [urlName, , url] = found;
 let host = "unparseable";
 try { host = new URL(url).hostname; } catch {}
 console.log(`[migrate] Using connection string from ${urlName} (host: ${host}).`);
