@@ -15,7 +15,7 @@ pnpm ig:posts   # regenerate the Instagram images in content/instagram/
 
 | Variable | Needed for | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` | Lead form, booking flow, schema migration | Postgres connection string. `pnpm build` applies `scripts/phase1-schema.sql` (idempotent, additive) before compiling; run `pnpm db:migrate` to apply it manually. |
+| `DATABASE_URL` | Lead form, booking flow, schema migration | Postgres connection string. Name is matched case-insensitively (`POSTGRES_URL` and friends also work) and the value is sanitized, so quoted or prefixed pastes still resolve; the build log prints the host it dialed. `pnpm build` applies `scripts/phase1-schema.sql` (idempotent, additive) before compiling; run `pnpm db:migrate` to apply it manually. |
 | `NEXT_PUBLIC_BOOKING_URL` | The "Book a call" card | Public booking page for the intro call. See below. |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URLs | Optional. Defaults to `https://crossroadsweddingco.com`; set it on staging aliases or forks so canonicals and the sitemap don't point at production. |
 | `RESEND_API_KEY` | Booking emails | Confirmation to the couple + notification to you on each booking request. Silent no-op while unset. |
