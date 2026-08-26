@@ -17,7 +17,13 @@ if (!url) {
 }
 
 const sql = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "phase1-schema.sql"), "utf8");
-const pool = new pg.Pool({ connectionString: url, max: 1 });
+const pool = new pg.Pool({
+  connectionString: url,
+  max: 1,
+  // A hung database should fail the build visibly, not stall it.
+  connectionTimeoutMillis: 15_000,
+  statement_timeout: 120_000,
+});
 
 try {
   await pool.query(sql);

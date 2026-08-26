@@ -26,10 +26,13 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { state, city } = await params;
   const data = getCity(state, city);
   if (!data) return {};
+  const title = `Wedding DJ in ${data.name}, ${data.stateAbbr} — flat $${DJ_DAY_RATE_USD.toLocaleString("en-US")}`;
+  const description = `${SITE_NAME} covers ${data.name}, ${data.stateName}: wedding DJ, MC, and day-of timeline coordination for one flat $${DJ_DAY_RATE_USD.toLocaleString("en-US")} day rate. Live acoustic sets and bar service available.`;
   return {
-    title: `Wedding DJ in ${data.name}, ${data.stateAbbr} — flat $${DJ_DAY_RATE_USD.toLocaleString("en-US")}`,
-    description: `${SITE_NAME} covers ${data.name}, ${data.stateName}: wedding DJ, MC, and day-of timeline coordination for one flat $${DJ_DAY_RATE_USD.toLocaleString("en-US")} day rate. Live acoustic sets and bar service available.`,
+    title,
+    description,
     alternates: { canonical: cityPath(data) },
+    openGraph: { url: cityPath(data), title, description },
   };
 }
 
@@ -44,7 +47,14 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
     serviceType: "Wedding DJ and MC",
     name: `${SITE_NAME} — ${data.headline}`,
     description: data.intro,
-    provider: { "@id": `${SITE_URL}/#business` },
+    // Inline the essentials: a bare @id pointing at another page is a dangling
+    // reference to most structured-data consumers.
+    provider: {
+      "@type": "LocalBusiness",
+      "@id": `${SITE_URL}/#business`,
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
     areaServed: {
       "@type": "City",
       name: data.name,

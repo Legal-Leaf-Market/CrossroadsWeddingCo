@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getPlaylist, isSpotifyConfigured, parsePlaylistId } from "@/lib/spotify";
@@ -17,7 +18,10 @@ export async function POST(req: NextRequest) {
     );
   }
   const adminToken = process.env.ADMIN_API_TOKEN;
-  if (!adminToken || req.headers.get("x-admin-token") !== adminToken) {
+  const provided = req.headers.get("x-admin-token") ?? "";
+  const expected = Buffer.from(adminToken ?? "");
+  const got = Buffer.from(provided);
+  if (!adminToken || got.length !== expected.length || !timingSafeEqual(got, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

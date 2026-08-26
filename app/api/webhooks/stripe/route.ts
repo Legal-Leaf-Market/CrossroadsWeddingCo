@@ -30,10 +30,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
+  // completed can arrive with payment_status "unpaid" for async methods —
+  // only a paid session locks the date; async success arrives as its own event.
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded"
+  ) {
     const session = event.data.object;
     const weddingId = session.metadata?.weddingId;
-    if (weddingId) {
+    if (weddingId && session.payment_status === "paid") {
       await db
         .update(weddings)
         .set({ isDepositPaid: true, status: "deposit_paid", updatedAt: new Date() })

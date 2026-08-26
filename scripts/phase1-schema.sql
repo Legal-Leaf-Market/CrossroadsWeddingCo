@@ -1,5 +1,20 @@
 -- Phase 1 platform schema (CLAUDE.md §3, deviations §9.3).
--- Idempotent and additive by policy: safe to run on every build.
+-- Idempotent and additive by policy: safe to run on every build,
+-- including against a completely fresh database.
+
+-- The legacy leads table predates the platform (scripts/create-leads-table.sql
+-- was only ever run by hand). Created here first so the ALTERs at the bottom
+-- work on a fresh database, not just the one prod DB that already has it.
+CREATE TABLE IF NOT EXISTS leads (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  event_date TEXT,
+  venue TEXT,
+  services TEXT,
+  message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- Enums: CREATE TYPE has no IF NOT EXISTS, so guard each one.
 DO $$ BEGIN
@@ -13,6 +28,10 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE TYPE dispatch_status AS ENUM ('pending', 'accepted', 'declined', 'expired');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- To add an enum value later, append an ALTER TYPE ... ADD VALUE IF NOT EXISTS
+-- line below — editing the CREATE TYPE lists above never reaches a database
+-- where the type already exists (duplicate_object is swallowed by design).
 
 CREATE TABLE IF NOT EXISTS tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -89,7 +108,9 @@ CREATE TABLE IF NOT EXISTS weddings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_weddings_event_date ON weddings (tenant_id, event_date);
-CREATE INDEX IF NOT EXISTS idx_weddings_access_token ON weddings (access_token);
+-- access_token is UNIQUE, which already indexes it; drop the redundant index
+-- an earlier build may have created.
+DROP INDEX IF EXISTS idx_weddings_access_token;
 
 CREATE TABLE IF NOT EXISTS timeline_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -157,7 +178,15 @@ CREATE TABLE IF NOT EXISTS talent_dispatch_logs (
 
 -- The live leads table predates the platform: keep it, extend it additively
 -- (CLAUDE.md §9.3). Existing columns and serial PK are untouched.
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS tenant_id UUID;
+-- SET NULL, not CASCADE: leads predate tenants and deleting a tenant must not
+-- erase inquiry history. The DO block also repairs any DB where an earlier
+-- build applied the constraint as CASCADE.
+DO $$ BEGIN
+  ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_tenant_id_fkey;
+  ALTER TABLE leads ADD CONSTRAINT leads_tenant_id_fkey
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS source VARCHAR(100) DEFAULT 'site_form';
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS raw_payload JSONB;

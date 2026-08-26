@@ -105,12 +105,15 @@ drifted somewhere else, tell me and I'll re-cut them.
 
 ## Notes
 
-- **Hashtags are all national.** Once the service area is settled, swap three or
-  four of them for local tags — those are what actually reach couples who can
-  book you.
+- **Hashtags are all national.** The service area is settled now (two hours
+  around Columbus, IN), so when posting, swap three or four national tags per
+  post for local ones — #indianapoliswedding #indywedding #bloomingtonindiana
+  #columbusindiana #browncountyindiana #louisvillewedding #cincinnatiwedding
+  #indianabride #kentuckybride — those reach couples who can actually book.
 - **"Link in bio"** assumes the bio points at crossroadsweddingco.com. All four
   captions now ask for the 30-minute call, so once the booking page is live,
   pointing the bio link straight at it will convert better than the homepage.
-- Every claim here comes off the website — the rate, what's included, bar and
-  acoustic being quoted separately, the call length. Nothing invented. If any of
-  it is wrong, the website is wrong too and both should change together.
+- Every claim here comes off the website — the rate, what's included, the flat
+  $400 acoustic set, bar service from $400 quoted fully at intake, the call
+  length. Nothing invented. If any of it is wrong, the website is wrong too and
+  both should change together.

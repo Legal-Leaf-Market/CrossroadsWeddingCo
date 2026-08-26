@@ -10,6 +10,25 @@ import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD, DJ_DAY_RATE_USD } from "@/lib/si
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Best-effort per-instance rate limit: a warm serverless instance keeps this
+// Map across invocations, which is enough to blunt casual abuse of an endpoint
+// that writes rows and (with Resend live) sends email from the business domain.
+// Real distributed limiting (Upstash / a counter table) is a Phase 2 hardening.
+const RATE_WINDOW_MS = 60 * 60 * 1000;
+const RATE_MAX = 5;
+const rateBuckets = new Map<string, { count: number; windowStart: number }>();
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const bucket = rateBuckets.get(ip);
+  if (!bucket || now - bucket.windowStart > RATE_WINDOW_MS) {
+    rateBuckets.set(ip, { count: 1, windowStart: now });
+    return false;
+  }
+  bucket.count += 1;
+  return bucket.count > RATE_MAX;
+}
+
 function noStore(json: unknown, status = 200) {
   return NextResponse.json(json, {
     status,
@@ -18,15 +37,25 @@ function noStore(json: unknown, status = 200) {
 }
 
 const bookingSchema = z.object({
-  coupleNames: z.string().trim().min(2).max(255),
-  email: z.email().max(255),
-  phone: z.string().trim().max(50).optional().default(""),
-  eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
-  venueName: z.string().trim().min(2).max(255),
-  venueAddress: z.string().trim().max(2000).optional().default(""),
+  coupleNames: z
+    .string("Please tell us your names")
+    .trim()
+    .min(2, "Please tell us your names")
+    .max(255, "That's a little long for the names field"),
+  email: z.email("That email doesn't look right").max(255),
+  phone: z.string().trim().max(50, "That phone number is too long").optional().default(""),
+  eventDate: z.string("Please pick a date").regex(/^\d{4}-\d{2}-\d{2}$/, "Please pick a date"),
+  venueName: z
+    .string("Tell us the venue — 'backyard in Seymour' works")
+    .trim()
+    .min(2, "Tell us the venue — 'backyard in Seymour' works")
+    .max(255, "That's a little long for the venue field"),
+  venueAddress: z.string().trim().max(2000, "That address is too long").optional().default(""),
   addons: z.array(z.enum(["acoustic", "bartender"])).max(2).optional().default([]),
-  spotifyPlaylistUrl: z.string().trim().max(500).optional().default(""),
-  notes: z.string().trim().max(5000).optional().default(""),
+  spotifyPlaylistUrl: z.string().trim().max(500, "That link is too long").optional().default(""),
+  notes: z.string().trim().max(5000, "Please keep notes under 5,000 characters").optional().default(""),
+  // Honeypot: hidden from humans, filled by bots.
+  website: z.string().max(200).optional().default(""),
 });
 
 export async function POST(req: NextRequest) {
@@ -37,15 +66,29 @@ export async function POST(req: NextRequest) {
     return noStore({ error: "Invalid request" }, 400);
   }
 
+  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
+  if (rateLimited(ip)) {
+    return noStore({ error: "Too many requests — give it a few minutes or email us directly." }, 429);
+  }
+
   const parsed = bookingSchema.safeParse(raw);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    return noStore({ error: `${issue.path.join(".")}: ${issue.message}` }, 400);
+    return noStore({ error: issue.message }, 400);
   }
   const data = parsed.data;
 
+  // Honeypot tripped: answer like a success, do nothing.
+  if (data.website) {
+    return noStore({ ok: true, reference: "OK" });
+  }
+
+  // Round-trip the date so Feb 31 can't roll over into March.
   const eventDate = new Date(`${data.eventDate}T12:00:00Z`);
-  if (Number.isNaN(eventDate.getTime())) {
+  if (
+    Number.isNaN(eventDate.getTime()) ||
+    eventDate.toISOString().slice(0, 10) !== data.eventDate
+  ) {
     return noStore({ error: "That date doesn't look right" }, 400);
   }
   const today = new Date().toISOString().slice(0, 10);
@@ -71,7 +114,9 @@ export async function POST(req: NextRequest) {
   ];
 
   const accessToken = randomBytes(24).toString("hex");
-  const reference = accessToken.slice(0, 8).toUpperCase();
+  // Independent of the access token: the reference is shared in emails and
+  // conversations, and must reveal nothing about the portal secret.
+  const reference = randomBytes(4).toString("hex").toUpperCase();
 
   let stored: "weddings" | "leads";
   try {
@@ -119,6 +164,12 @@ export async function POST(req: NextRequest) {
         500,
       );
     }
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    // The site promises confirmation within 24 hours — without Resend the
+    // booking is only visible in the database, so shout about it in the logs.
+    console.warn(`[bookings] RESEND_API_KEY unset — booking ${reference} recorded but NO notification sent`);
   }
 
   // Fire-and-forget: email failure must never fail the booking.

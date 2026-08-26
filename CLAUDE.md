@@ -347,7 +347,7 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
    on-page. Shipping it earlier is a documented Google-penalty trigger.
 
 ### 9.2 Decisions made after the spec was written (owner-confirmed)
-- **Add-on pricing (2026-08-27, Jacob):** Live acoustic set is a **flat $400**, published.
+- **Add-on pricing (2026-08-26, Jacob):** Live acoustic set is a **flat $400**, published.
   Bartending is **from $400**, fully quoted at intake once date and headcount are known.
   The booking flow adds $400 to the total for acoustic; bartending is stored as an interest
   flag with a $400 floor and quoted on the intro call.
@@ -356,14 +356,14 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
 - **Service area:** based in Columbus, Indiana; two-hour radius — Indianapolis, Bloomington,
   Nashville (IN), Louisville (KY), Cincinnati (OH). Encoded in `lib/cities.ts` and the
   homepage `areaServed` structured data.
-- **Spotify is a priority integration (2026-08-27, Jacob):** the target market curates its own
+- **Spotify is a priority integration (2026-08-26, Jacob):** the target market curates its own
   playlists in Spotify, so the platform meets them there. Flow: couples build the playlist in
   their own account and share the link — captured at booking (`weddings.spotify_playlist_url`,
   no API needed), ingested into `playlist_curations` via the client-credentials API once
   `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` exist. Write-back (collaborative playlists from
   our side) requires the OAuth authorization-code flow and ships with the Phase 2 portal.
 
-### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-27)
+### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim) — same standing: steering input, not gospel. New
 decisions absorbed from it:
 - **Travel surcharge:** venues past ~60 min of Columbus carry $100–$150, quoted up front,

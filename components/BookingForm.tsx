@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ACOUSTIC_ADDON_USD,
   BARTENDER_MIN_USD,
@@ -19,6 +19,13 @@ export default function BookingForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const [reference, setReference] = useState("");
   const [addons, setAddons] = useState<string[]>([]);
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  // Screen readers lose their place when the form unmounts — land focus on
+  // the confirmation heading so the outcome is announced.
+  useEffect(() => {
+    if (status === "success") successHeadingRef.current?.focus();
+  }, [status]);
 
   const hasAcoustic = addons.includes("acoustic");
   const totalUsd = DJ_DAY_RATE_USD + (hasAcoustic ? ACOUSTIC_ADDON_USD : 0);
@@ -49,6 +56,7 @@ export default function BookingForm() {
           addons,
           spotifyPlaylistUrl: data.get("spotifyPlaylistUrl"),
           notes: data.get("notes"),
+          website: data.get("website"),
         }),
       });
       const json = await res.json();
@@ -67,8 +75,10 @@ export default function BookingForm() {
 
   if (status === "success") {
     return (
-      <div className="rounded-2xl border border-cream/20 bg-cream/5 p-8">
-        <h3 className="text-xl text-cream">Date request received</h3>
+      <div role="status" className="rounded-2xl border border-cream/20 bg-cream/5 p-8">
+        <h3 ref={successHeadingRef} tabIndex={-1} className="text-xl text-cream focus:outline-none">
+          Date request received
+        </h3>
         <p className="mt-3 text-cream/70">
           Here&apos;s what happens next:
         </p>
@@ -78,7 +88,7 @@ export default function BookingForm() {
             A ${DEPOSIT_USD} deposit locks your date — payment details come with the
             confirmation.
           </li>
-          <li>Then you get a planning link where the names, schedule, and music all live.</li>
+          <li>Then we gather the names, the schedule, and the music with you by email and on your intro call.</li>
         </ol>
         {reference && (
           <p className="mt-4 text-sm text-cream/50">Your reference: {reference}</p>
@@ -89,6 +99,13 @@ export default function BookingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-xl text-left">
+      {/* Honeypot: invisible to people, irresistible to bots. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden">
+        <label>
+          Leave this field empty
+          <input name="website" type="text" tabIndex={-1} autoComplete="off" />
+        </label>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-sm font-semibold text-cream/80">Your names</span>
@@ -203,12 +220,13 @@ export default function BookingForm() {
           <span>${totalUsd.toLocaleString("en-US")}</span>
         </div>
         <p className="mt-2 text-xs text-cream/50">
-          ${DEPOSIT_USD} deposit locks the date once we confirm availability. No payment now.
+          ${DEPOSIT_USD} deposit locks the date once we confirm availability — it&apos;s
+          non-refundable and comes off your total. No payment now.
         </p>
       </div>
 
       {status === "error" && (
-        <p className="mt-4 rounded-lg border border-terracotta/60 bg-terracotta/10 px-4 py-2.5 text-sm text-cream">
+        <p role="alert" className="mt-4 rounded-lg border border-terracotta/60 bg-terracotta/10 px-4 py-2.5 text-sm text-cream">
           {errorMessage}{" "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="underline">
             Or just email us.
@@ -218,6 +236,7 @@ export default function BookingForm() {
 
       <button
         type="submit"
+        aria-busy={status === "submitting"}
         disabled={status === "submitting"}
         className="mt-6 w-full rounded-full bg-terracotta px-6 py-3.5 text-sm font-semibold text-cream hover:bg-terracotta-dark disabled:opacity-60"
       >

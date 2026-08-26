@@ -1,5 +1,6 @@
 import SafeImage from "@/components/SafeImage";
 import { IMAGES } from "@/lib/images";
+import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD } from "@/lib/site";
 
 const SERVICES = [
   {
@@ -12,13 +13,17 @@ const SERVICES = [
     title: "Live Acoustic Sets",
     image: IMAGES.liveMusic,
     alt: "Close-up of hands playing an acoustic guitar",
-    body: "Several of our DJs are also working musicians. Add a live acoustic set for your ceremony or cocktail hour — the same person can carry the whole day from guitar to turntable. Flat $400.",
+    body: "Several of our DJs are also working musicians. Add a live acoustic set for your ceremony or cocktail hour — the same person can carry the whole day from guitar to turntable. Flat $" +
+      ACOUSTIC_ADDON_USD +
+      ".",
   },
   {
     title: "Bar Service",
     image: IMAGES.bar,
     alt: "Bartender pouring a cocktail at an outdoor event",
-    body: "Licensed, experienced bartenders for backyard and DIY-venue weddings where the venue doesn't provide one. Bring your own bar; we'll staff and run it. From $400, fully quoted at intake.",
+    body: "Licensed, experienced bartenders for backyard and DIY-venue weddings where the venue doesn't provide one. Bring your own bar; we'll staff and run it. From $" +
+      BARTENDER_MIN_USD +
+      ", fully quoted at intake.",
   },
   {
     title: "Day-Of Coordination",

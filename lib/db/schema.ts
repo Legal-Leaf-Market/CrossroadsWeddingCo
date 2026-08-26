@@ -17,6 +17,9 @@ import {
 
 // Enums (CLAUDE.md §3). Kept in sync with scripts/phase1-schema.sql by hand —
 // migrations in this repo are hand-authored, additive, idempotent SQL.
+// Adding a value here requires an ALTER TYPE ... ADD VALUE IF NOT EXISTS line
+// in the SQL file: editing its CREATE TYPE list is a silent no-op on any
+// database where the type already exists.
 export const userRole = pgEnum("user_role", [
   "super_admin",
   "franchise_owner",
@@ -133,10 +136,7 @@ export const weddings = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [
-    index("idx_weddings_event_date").on(t.tenantId, t.eventDate),
-    index("idx_weddings_access_token").on(t.accessToken),
-  ],
+  (t) => [index("idx_weddings_event_date").on(t.tenantId, t.eventDate)],
 );
 
 // 6. Timeline items (real-time run sheet)
@@ -226,7 +226,7 @@ export const leads = pgTable("leads", {
   message: text("message"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   // --- additive platform columns ---
-  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
   phone: varchar("phone", { length: 50 }),
   source: varchar("source", { length: 100 }).default("site_form"),
   rawPayload: jsonb("raw_payload"),

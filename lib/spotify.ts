@@ -67,9 +67,14 @@ export async function getPlaylist(playlistId: string): Promise<SpotifyPlaylist> 
   const meta = (await metaRes.json()) as { name: string; tracks: { total: number } };
 
   const tracks: SpotifyTrack[] = [];
+  // Cap paging: 8 pages = 800 tracks, far past any wedding playlist, and it
+  // bounds the serial fetches a hostile playlist could make this server do.
+  const MAX_PAGES = 8;
+  let pages = 0;
   let url: string | null =
     `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=next,items(track(id,name,artists(name)))`;
-  while (url) {
+  while (url && pages < MAX_PAGES) {
+    pages += 1;
     const res: Response = await fetch(url, { headers });
     if (!res.ok) throw new Error(`Spotify tracks fetch failed (${res.status})`);
     const page = (await res.json()) as {

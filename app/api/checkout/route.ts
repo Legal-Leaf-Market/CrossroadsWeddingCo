@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
   }
 
   const stripe = new Stripe(key);
+  // Idempotency key pinned to the wedding: concurrent or repeated clicks get
+  // the same Checkout session back instead of minting parallel ones — the
+  // simplest guard against a double-charged deposit.
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
           unit_amount: DEPOSIT_USD * 100,
           product_data: {
             name: `${SITE_NAME} — date-lock deposit`,
-            description: `Locks ${wedding.eventDate} for ${wedding.coupleNames}. Applied to the total.`,
+            description: `Locks ${wedding.eventDate} for ${wedding.coupleNames}. Non-refundable; applied to the total.`,
           },
         },
       },
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest) {
     metadata: { weddingId: wedding.id },
     success_url: `${SITE_URL}/book?deposit=paid`,
     cancel_url: `${SITE_URL}/book?deposit=cancelled`,
-  });
+  }, { idempotencyKey: `deposit-${wedding.id}` });
 
   return NextResponse.json({ url: session.url });
 }
