@@ -10,11 +10,18 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  console.log("[migrate] DATABASE_URL not set, skipping schema apply.");
+const CANDIDATES = ["DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL", "NEON_DATABASE_URL"];
+const found = CANDIDATES.map((name) => [name, process.env[name]]).find(([, v]) => v);
+if (!found) {
+  // Names only, never values: which env keys even look database-related here?
+  const visible = Object.keys(process.env).filter((k) => /DATABASE|POSTGRES|NEON|PG/i.test(k)).sort();
+  console.log(`[migrate] No connection string found. Checked: ${CANDIDATES.join(", ")}.`);
+  console.log(`[migrate] Database-looking env var NAMES visible to this build: ${visible.length ? visible.join(", ") : "(none)"}.`);
+  console.log("[migrate] Skipping schema apply.");
   process.exit(0);
 }
+const [urlName, url] = found;
+console.log(`[migrate] Using connection string from ${urlName}.`);
 
 const sql = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "phase1-schema.sql"), "utf8");
 const pool = new pg.Pool({
