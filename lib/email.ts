@@ -1,10 +1,10 @@
 import { Resend } from "resend";
-import { BARTENDER_MIN_USD, CONTACT_EMAIL, DEPOSIT_USD, SITE_NAME, SITE_URL } from "@/lib/site";
+import { BARTENDER_MIN_USD, DEPOSIT_USD, EMAIL_FROM_ADDRESS, SITE_NAME, SITE_URL } from "@/lib/site";
 
 // Booking emails activate the moment RESEND_API_KEY lands in Vercel; until
 // then every helper is a silent no-op so the booking flow never depends on it.
-const FROM = process.env.RESEND_FROM ?? `${SITE_NAME} <${CONTACT_EMAIL}>`;
-const NOTIFY_TO = process.env.RESEND_NOTIFY_TO ?? "jake@crossroadsweddingco.com";
+const FROM = process.env.RESEND_FROM ?? `${SITE_NAME} <${EMAIL_FROM_ADDRESS}>`;
+const NOTIFY_TO = process.env.RESEND_NOTIFY_TO ?? EMAIL_FROM_ADDRESS;
 
 type BookingEmail = {
   coupleNames: string;

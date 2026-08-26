@@ -16,6 +16,10 @@ export const SITE_DESCRIPTION =
 
 export const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
 
+// Transactional email identity (owner-confirmed 2026-08-26): send as Jake, so
+// replies land where they get read. Overridable with RESEND_FROM in Vercel.
+export const EMAIL_FROM_ADDRESS = "jake@crossroadsweddingco.com";
+
 export const DJ_DAY_RATE_USD = 1000;
 
 // $500 locks the date; the balance is collected closer to the event.
