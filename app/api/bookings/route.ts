@@ -187,34 +187,47 @@ export async function POST(req: NextRequest) {
     console.warn(`[bookings] RESEND_API_KEY unset: booking ${reference} recorded but NO notification sent`);
   }
 
-  // Fire-and-forget: email failure must never fail the booking.
-  sendBookingEmails({
-    coupleNames: data.coupleNames,
-    email: data.email,
-    phone: data.phone || undefined,
-    eventDate: data.eventDate,
-    venueName: data.venueName,
-    venueAddress: data.venueAddress || undefined,
-    addons: data.addons,
-    spotifyPlaylistUrl: data.spotifyPlaylistUrl || undefined,
-    notes: data.notes || undefined,
-    totalUsd,
-    reference,
-    hubPath: stored === "weddings" ? `/hub/${accessToken}` : undefined,
-  }).catch((err) => console.error("[bookings] email dispatch failed:", err));
-
-  // Same posture as email: fire-and-forget, silent no-op until Twilio keys
-  // exist, and a texting failure must never fail the booking.
-  if (data.phone) {
-    sendBookingTexts({
+  // AWAITED on purpose. On serverless, work left un-awaited when the
+  // response returns is frozen with the function and usually never finishes:
+  // that was the bug where bookings landed but no email ever arrived (the
+  // strangled fetch surfaced as "Unable to fetch data" attributed to some
+  // later request). Failures still never fail the booking: both sends are
+  // wrapped so the only outcome of a bad day at Resend or Twilio is a log
+  // line and a slightly quieter couple.
+  const dispatches: Promise<void>[] = [
+    sendBookingEmails({
       coupleNames: data.coupleNames,
-      phone: data.phone,
+      email: data.email,
+      phone: data.phone || undefined,
       eventDate: data.eventDate,
       venueName: data.venueName,
+      venueAddress: data.venueAddress || undefined,
+      addons: data.addons,
+      spotifyPlaylistUrl: data.spotifyPlaylistUrl || undefined,
+      notes: data.notes || undefined,
+      totalUsd,
       reference,
       hubPath: stored === "weddings" ? `/hub/${accessToken}` : undefined,
-    }).catch((err) => console.error("[bookings] sms dispatch failed:", err));
+    }),
+  ];
+  if (data.phone) {
+    dispatches.push(
+      sendBookingTexts({
+        coupleNames: data.coupleNames,
+        phone: data.phone,
+        eventDate: data.eventDate,
+        venueName: data.venueName,
+        reference,
+        hubPath: stored === "weddings" ? `/hub/${accessToken}` : undefined,
+      }),
+    );
   }
+  const outcomes = await Promise.allSettled(dispatches);
+  outcomes.forEach((outcome, i) => {
+    if (outcome.status === "rejected") {
+      console.error(`[bookings] ${i === 0 ? "email" : "sms"} dispatch failed:`, outcome.reason);
+    }
+  });
 
   // The hub link only exists when the row landed in weddings; the leads
   // fallback has no access token to key it on.
