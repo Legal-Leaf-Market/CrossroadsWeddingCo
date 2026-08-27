@@ -35,7 +35,7 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
       ? booking.addons.map((a) => ADDON_LABELS[a] ?? a).join(", ")
       : "none selected";
 
-  const confirmation = [
+  const confirmationLines = [
     `Hi ${booking.coupleNames},`,
     ``,
     `We got your date request for ${booking.eventDate} at ${booking.venueName}. Here's what happens next:`,
@@ -43,12 +43,12 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     `1. We check the calendar and confirm availability by email within 24 hours.`,
     `2. A $${DEPOSIT_USD} deposit locks your date. We'll send payment details with the confirmation.`,
     booking.hubPath
-      ? `3. Your planning hub is ready now: ${SITE_URL}${booking.hubPath}`
+      ? `3. Your planning hub is ready right now: timeline, music, and the names we announce. Fill out now: ${SITE_URL}${booking.hubPath}`
       : `3. From there we gather the names, the schedule, and the music with you by email and on your intro call.`,
     ...(booking.hubPath
       ? [
           ``,
-          `The hub is where the timeline, the must-plays, and the names we announce all live. It saves as you type, and the link above is yours alone: keep it private.`,
+          `The hub saves as you type, and the link above is yours alone: keep it private.`,
         ]
       : []),
     ``,
@@ -61,7 +61,29 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     ``,
     `${SITE_NAME}`,
     SITE_URL,
-  ].join("\n");
+  ];
+  const confirmation = confirmationLines.join("\n");
+
+  // HTML twin of the plain-text confirmation, only so "Fill out now" can be
+  // bold and the hub link clickable. User-typed values are escaped; the two
+  // replacements below operate on copy this function wrote, after escaping.
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const hubUrl = booking.hubPath ? `${SITE_URL}${booking.hubPath}` : null;
+  const confirmationHtml =
+    `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
+    confirmationLines
+      .map((line) => {
+        let html = escapeHtml(line);
+        if (hubUrl) {
+          const u = escapeHtml(hubUrl);
+          html = html.replace(u, `<a href="${u}" style="color: #c1633d;">${u}</a>`);
+        }
+        html = html.replace("Fill out now:", `<strong>Fill out now:</strong>`);
+        return html;
+      })
+      .join("<br>") +
+    `</div>`;
 
   const notification = [
     `New booking request`,
@@ -89,6 +111,7 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
       to: booking.email,
       subject: `We got your date request`,
       text: confirmation,
+      html: confirmationHtml,
     }),
     resend.emails.send({
       from: FROM,
