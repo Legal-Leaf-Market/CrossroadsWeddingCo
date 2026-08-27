@@ -106,9 +106,14 @@ export async function POST(req: NextRequest) {
 
   const hasAcoustic = data.addons.includes("acoustic");
   const hasBartender = data.addons.includes("bartender");
-  // Acoustic is a published flat $400; bartending is an interest flag with a
-  // $400 floor, quoted for real on the intro call (CLAUDE.md §9.2).
-  const totalUsd = DJ_DAY_RATE_USD + (hasAcoustic ? ACOUSTIC_ADDON_USD : 0);
+  // Acoustic is a published flat $400. The bar minimum is owed before any
+  // quote happens, so it counts in the total, which everything downstream
+  // labels "before bar quote"; the final bar number comes from the intro
+  // call (CLAUDE.md §9.2, owner directive 2026-08-27).
+  const totalUsd =
+    DJ_DAY_RATE_USD +
+    (hasAcoustic ? ACOUSTIC_ADDON_USD : 0) +
+    (hasBartender ? BARTENDER_MIN_USD : 0);
   const addonsJson = [
     ...(hasAcoustic ? [{ type: "acoustic_set", fee: ACOUSTIC_ADDON_USD }] : []),
     ...(hasBartender ? [{ type: "bar_service", fee: null, minFee: BARTENDER_MIN_USD }] : []),
