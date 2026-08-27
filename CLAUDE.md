@@ -360,6 +360,13 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   marking up alcohol in Indiana requires a quota-bound three-way retailer permit (secondary
   market $20k+) plus a supplemental caterer's permit, so no copy, quote, or feature may
   imply we supply or sell alcohol. At licensed venues we work under the venue's permit.
+- **Balance due 24 hours after the wedding's START time (2026-08-27, Jacob and Nic).**
+  Supersedes the spec's "auto-charged 14 days prior" in §1.2: nobody pays in full for a
+  service not yet rendered. A 3 PM wedding means paid by 3 PM the next day. Start time is
+  the anchor because the end time is never known in advance. The same 24 hours is the
+  couple's window for comments, concerns, and criticisms about the day, and the invoice can
+  be adjusted based on performance; the contract must state this plainly. No public site
+  copy ever promised the old timing, so this is contract + docs only.
 - **Deposits are cash and check for roughly the first 4 months (2026-08-27, Jacob).** Stripe
   stays scaffolded and gated off; do not prioritize Stripe keys or build further payment
   automation until Jacob says so. Site and email copy already read "payment details come with
