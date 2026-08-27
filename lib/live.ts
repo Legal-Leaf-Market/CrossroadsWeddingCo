@@ -108,6 +108,27 @@ export function computeLive(blocks: LiveBlock[]): LiveView {
   };
 }
 
+/**
+ * The epoch instant at which the venue's wall clock reads `hhmm` on the day
+ * `dateIso` (YYYY-MM-DD), DST-correct for that date. Used by the countdown
+ * hero and the dev previews so venue-local schedule times become real
+ * instants regardless of the machine's own timezone.
+ */
+export function venueWallClockToEpoch(dateIso: string, hhmm: string): number {
+  const [y, mo, d] = dateIso.split("-").map(Number);
+  const [h, m] = hhmm.split(":").map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, m);
+  const venue = new Date(guess).toLocaleString("en-US", {
+    timeZone: VENUE_TIME_ZONE,
+    hourCycle: "h23",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const [vh, vm] = venue.split(":").map(Number);
+  const diff = h * 60 + m - ((vh % 24) * 60 + vm);
+  return guess + diff * 60_000;
+}
+
 export function driftLabel(driftMinutes: number | null): string {
   if (driftMinutes === null) return "Not started yet";
   if (Math.abs(driftMinutes) <= 2) return "On schedule";

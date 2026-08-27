@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import CountdownHero from "@/components/hub/CountdownHero";
 import DetailsSection from "@/components/hub/DetailsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
-import { daysOut, getPortalData, TOKEN_RE } from "@/lib/hub";
+import { getPortalData, TOKEN_RE } from "@/lib/hub";
 import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
 import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
@@ -30,7 +31,6 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   const data = await getPortalData(token);
   if (!data) notFound();
   const { wedding, timeline, cues, vips, playlists } = data;
-  const days = daysOut(wedding.eventDate);
   const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
   // The hub-managed playlist links, seeded from the single link captured at
   // booking when the couple hasn't managed the list yet. The playlists route
@@ -54,11 +54,6 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {days >= 0 && (
-              <span className="rounded-full bg-parchment px-4 py-1.5 text-sm font-semibold text-charcoal">
-                {days === 0 ? "Today!" : `${days} days out`}
-              </span>
-            )}
             <a
               href={`/hub/${token}/live`}
               className="rounded-full bg-terracotta px-4 py-1.5 text-sm font-semibold text-cream hover:bg-terracotta-dark"
@@ -76,6 +71,10 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
       </header>
 
       <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+        <CountdownHero
+          eventDate={wedding.eventDate}
+          startTime={timeline[0]?.scheduledStartTime.slice(0, 5) ?? null}
+        />
         <p className="text-sm text-ink/60">
           Everything here saves as you type and lands directly in front of your crew. Fill in
           what you know, skip what you don&apos;t, and we walk the rest together on your call.

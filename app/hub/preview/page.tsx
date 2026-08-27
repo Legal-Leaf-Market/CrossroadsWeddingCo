@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import CountdownHero from "@/components/hub/CountdownHero";
 import DetailsSection from "@/components/hub/DetailsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
@@ -29,8 +30,8 @@ export default function HubPreviewPage() {
             <p className="text-sm text-ink/60">Saturday, June 12, 2027 at The Sycamore Barn</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="rounded-full bg-parchment px-4 py-1.5 text-sm font-semibold text-charcoal">
-              290 days out
+            <span className="rounded-full bg-terracotta px-4 py-1.5 text-sm font-semibold text-cream">
+              Live
             </span>
             <span className="rounded-full border border-terracotta px-4 py-1.5 text-sm font-semibold text-terracotta">
               Run sheet
@@ -40,6 +41,7 @@ export default function HubPreviewPage() {
       </header>
 
       <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+        <CountdownHero eventDate="2027-06-12" startTime="16:00" />
         <p className="text-sm text-ink/60">
           Everything here saves as you type and lands directly in front of your crew. Fill in
           what you know, skip what you don&apos;t, and we walk the rest together on your call.
