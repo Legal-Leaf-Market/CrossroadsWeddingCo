@@ -139,6 +139,9 @@ export default function BookingForm() {
         <label className="block">
           <span className="mb-1 block text-sm font-semibold text-cream/80">Phone (optional)</span>
           <input name="phone" type="tel" className={inputClass} placeholder="(812) 555-0100" />
+          <span className="mt-1 block text-xs text-cream/50">
+            We text booking updates to this number, never marketing. Reply STOP any time.
+          </span>
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-semibold text-cream/80">Wedding date</span>

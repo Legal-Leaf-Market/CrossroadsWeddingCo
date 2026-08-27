@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
 import { sendBookingEmails } from "@/lib/email";
+import { sendBookingTexts } from "@/lib/sms";
 import { parsePlaylistId } from "@/lib/spotify";
 import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD, DJ_DAY_RATE_USD } from "@/lib/site";
 
@@ -201,6 +202,19 @@ export async function POST(req: NextRequest) {
     reference,
     hubPath: stored === "weddings" ? `/hub/${accessToken}` : undefined,
   }).catch((err) => console.error("[bookings] email dispatch failed:", err));
+
+  // Same posture as email: fire-and-forget, silent no-op until Twilio keys
+  // exist, and a texting failure must never fail the booking.
+  if (data.phone) {
+    sendBookingTexts({
+      coupleNames: data.coupleNames,
+      phone: data.phone,
+      eventDate: data.eventDate,
+      venueName: data.venueName,
+      reference,
+      hubPath: stored === "weddings" ? `/hub/${accessToken}` : undefined,
+    }).catch((err) => console.error("[bookings] sms dispatch failed:", err));
+  }
 
   // The hub link only exists when the row landed in weddings; the leads
   // fallback has no access token to key it on.
