@@ -20,6 +20,7 @@ export default function BookingForm() {
   const [reference, setReference] = useState("");
   const [hubPath, setHubPath] = useState<string | null>(null);
   const [addons, setAddons] = useState<string[]>([]);
+  const [noPlaylist, setNoPlaylist] = useState(false);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
   // Screen readers lose their place when the form unmounts, so land focus on
@@ -62,7 +63,9 @@ export default function BookingForm() {
           venueName: data.get("venueName"),
           venueAddress: data.get("venueAddress"),
           addons,
-          spotifyPlaylistUrl: data.get("spotifyPlaylistUrl"),
+          // A disabled input is absent from FormData; send an explicit empty
+          // string so the API's string schema never sees null.
+          spotifyPlaylistUrl: noPlaylist ? "" : (data.get("spotifyPlaylistUrl") ?? ""),
           notes: data.get("notes"),
           website: data.get("website"),
         }),
@@ -199,20 +202,34 @@ export default function BookingForm() {
         </div>
       </fieldset>
 
-      <label className="mt-6 block">
-        <span className="mb-1 block text-sm font-semibold text-cream/80">
-          Spotify playlist (optional)
+      <div className="mt-6">
+        <span className="mb-1 flex items-center justify-between gap-3">
+          <label htmlFor="spotifyPlaylistUrl" className="text-sm font-semibold text-cream/80">
+            Spotify playlist (optional)
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-cream/60">
+            <input
+              type="checkbox"
+              checked={noPlaylist}
+              onChange={(e) => setNoPlaylist(e.target.checked)}
+              className="accent-terracotta"
+            />
+            Don&apos;t have one yet
+          </label>
         </span>
         <input
+          id="spotifyPlaylistUrl"
           name="spotifyPlaylistUrl"
-          className={inputClass}
+          disabled={noPlaylist}
+          className={`${inputClass} ${noPlaylist ? "cursor-not-allowed opacity-40" : ""}`}
           placeholder="Paste a share link from your own Spotify"
         />
         <span className="mt-1 block text-xs text-cream/50">
-          Already collecting must-plays? Share the playlist and it follows your booking all the
-          way to the DJ booth.
+          {noPlaylist
+            ? "No problem. Your planning hub has an Add a playlist button waiting whenever you make one."
+            : "Already collecting must-plays? Share the playlist and it follows your booking all the way to the DJ booth."}
         </span>
-      </label>
+      </div>
 
       <label className="mt-4 block">
         <span className="mb-1 block text-sm font-semibold text-cream/80">Anything else</span>
