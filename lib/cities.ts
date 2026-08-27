@@ -79,7 +79,7 @@ export const CITIES: City[] = [
       "Yes, the Indiana one. Brown County is one of the Midwest's great wedding destinations: cabins, ridgelines, and October leaves that do half your decorating for you. We're thirty minutes away.",
     localNotes: [
       "Hillside and cabin venues mean winding load-ins and no house sound. We scout the setup ahead of your day instead of discovering it at 3 PM.",
-      "A live solo acoustic set fits Brown County like it was invented here: one performer with a guitar for the ceremony in the trees, decks for the reception in the barn. Flat $400 to add it.",
+      "A live solo acoustic set fits Brown County like it was invented here: one performer with a guitar for the ceremony in the trees, decks for the reception in the barn. Flat $500 to add it.",
       "Fall wedding? We plan around early sunsets and cold snaps: lighting, blankets-hour playlists, and a timeline that gets your golden-hour photos in.",
     ],
     travelNote: "About 30 minutes from Columbus. No travel fee.",

@@ -347,14 +347,16 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
    on-page. Shipping it earlier is a documented Google-penalty trigger.
 
 ### 9.2 Decisions made after the spec was written (owner-confirmed)
-- **Add-on pricing (2026-08-26, Jacob; sharpened 2026-08-27 with Nic):** the acoustic
-  package is a **live SOLO acoustic set**, flat $400, published: one performer,
-  singer-songwriter style, ceremony or cocktail hour, one hour preferred and two hours
-  absolute max, and up to three requested songs learned per wedding with adequate notice
-  (the rest comes from the standing repertoire). Bartending is a **$400 minimum, never a
-  quote on the site**: copy must read as "minimum, real number on the intro call" because
-  shelf and guest count move the price. The booking flow adds $400 to the total for
-  acoustic; bartending is stored as an interest flag with a $400 floor.
+- **Add-on pricing (2026-08-26, Jacob; sharpened 2026-08-27 with Nic; raised to $500
+  2026-08-27 after the WeddingPro meeting with Adam):** the acoustic package is a
+  **live SOLO acoustic set**, flat $500, published: one performer, singer-songwriter
+  style, ceremony or cocktail hour, one hour preferred and two hours absolute max, and
+  up to three requested songs learned per wedding with adequate notice (the rest comes
+  from the standing repertoire). Bartending is a **$500 minimum, never a quote on the
+  site**: copy must read as "minimum, real number on the intro call" because shelf and
+  guest count move the price. The booking flow adds $500 to the total for acoustic;
+  bartending is stored as an interest flag with a $500 floor. Both were $400 until
+  2026-08-27; the spec's §1.2 add-on table predates the change.
 - **Bar service is serve-only, never sell (standing until legal review says otherwise,
   2026-08-27):** the couple or venue provides the alcohol; we staff and pour. Selling or
   marking up alcohol in Indiana requires a quota-bound three-way retailer permit (secondary

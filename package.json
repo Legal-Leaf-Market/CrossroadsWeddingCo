@@ -8,6 +8,7 @@
     "start": "next start",
     "check": "tsc --noEmit",
     "ig:posts": "node scripts/generate-ig-posts.mjs",
+    "storefront:slides": "node scripts/generate-storefront-slides.mjs",
     "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {

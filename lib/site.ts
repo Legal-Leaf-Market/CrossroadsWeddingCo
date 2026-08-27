@@ -27,10 +27,11 @@ export const DJ_DAY_RATE_USD = 1000;
 // comments-and-concerns period. See CLAUDE.md 9.2.
 export const DEPOSIT_USD = 500;
 
-// Add-on pricing (owner-confirmed 2026-08-27): acoustic is flat, bartending is
-// a floor with the real quote settled on the intro call.
-export const ACOUSTIC_ADDON_USD = 400;
-export const BARTENDER_MIN_USD = 400;
+// Add-on pricing (owner-confirmed 2026-08-27, raised from 400 the same day
+// after the WeddingPro meeting): acoustic is flat, bartending is a floor with
+// the real quote settled on the intro call.
+export const ACOUSTIC_ADDON_USD = 500;
+export const BARTENDER_MIN_USD = 500;
 
 // Venues past ~60 minutes of Columbus carry a travel surcharge, quoted up
 // front and paid directly to the talent driving (docs/MASTER_SPEC_AND_STRATEGY.md §1.1).
@@ -64,13 +65,13 @@ export const SERVICE_OFFERS = [
   {
     name: "Live Solo Acoustic Set",
     description:
-      "One performer, singer-songwriter style, played live for your ceremony or cocktail hour. One hour is the sweet spot (two is the max), and with enough notice we learn up to three songs just for you. Flat $400.",
+      "One performer, singer-songwriter style, played live for your ceremony or cocktail hour. One hour is the sweet spot (two is the max), and with enough notice we learn up to three songs just for you. Flat $500.",
     priceUsd: ACOUSTIC_ADDON_USD,
   },
   {
     name: "Bar Service",
     description:
-      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. $400 is the minimum, not the price: your guest count and your shelf set the real number, and we quote it straight on your intro call.",
+      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. $500 is the minimum, not the price: your guest count and your shelf set the real number, and we quote it straight on your intro call.",
     priceUsd: null,
     minPriceUsd: BARTENDER_MIN_USD,
   },

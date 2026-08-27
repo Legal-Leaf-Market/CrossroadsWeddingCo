@@ -71,7 +71,7 @@ drifted somewhere else, tell me and I'll re-cut them.
 > carry the day from guitar to turntable. And licensed bartenders for backyard
 > and DIY venues without their own bar staff.
 >
-> The acoustic set is a flat $400. Bartending starts at $400 and gets quoted
+> The acoustic set is a flat $500. Bartending starts at $500 and gets quoted
 > fully once we know your date and headcount.
 >
 > Book a 30-minute call with us and we'll price the whole thing out loud. No
@@ -114,6 +114,6 @@ drifted somewhere else, tell me and I'll re-cut them.
   captions now ask for the 30-minute call, so once the booking page is live,
   pointing the bio link straight at it will convert better than the homepage.
 - Every claim here comes off the website: the rate, what's included, the flat
-  $400 acoustic set, bar service from $400 quoted fully at intake, the call
+  $500 acoustic set, bar service from $500 quoted fully at intake, the call
   length. Nothing invented. If any of it is wrong, the website is wrong too and
   both should change together.

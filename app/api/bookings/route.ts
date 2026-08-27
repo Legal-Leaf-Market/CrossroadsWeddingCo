@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
   const hasAcoustic = data.addons.includes("acoustic");
   const hasBartender = data.addons.includes("bartender");
-  // Acoustic is a published flat $400. The bar minimum is owed before any
+  // Acoustic is a published flat rate. The bar minimum is owed before any
   // quote happens, so it counts in the total, which everything downstream
   // labels "before bar quote"; the final bar number comes from the intro
   // call (CLAUDE.md §9.2, owner directive 2026-08-27).
