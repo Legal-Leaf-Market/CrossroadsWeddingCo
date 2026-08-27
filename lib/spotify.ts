@@ -10,20 +10,10 @@ export function isSpotifyConfigured(): boolean {
   return Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET);
 }
 
-/** Accepts open.spotify.com/playlist/<id> (with or without query junk) and spotify:playlist:<id>. */
-export function parsePlaylistId(input: string): string | null {
-  const trimmed = input.trim();
-  const uri = trimmed.match(/^spotify:playlist:([A-Za-z0-9]+)$/);
-  if (uri) return uri[1];
-  try {
-    const url = new URL(trimmed);
-    if (!/(^|\.)spotify\.com$/.test(url.hostname)) return null;
-    const match = url.pathname.match(/\/playlist\/([A-Za-z0-9]+)/);
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
+// Accepts open.spotify.com/playlist/<id> (with or without query junk) and
+// spotify:playlist:<id>. Defined in lib/hub-constants (client-safe) so the
+// hub UI validates with the exact same logic as the API routes.
+export { parsePlaylistId } from "@/lib/hub-constants";
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
 

@@ -40,6 +40,15 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   const { wedding, timeline, cues, vips, playlists } = data;
   const days = daysOut(wedding.eventDate);
   const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
+  // The hub-managed playlist links, seeded from the single link captured at
+  // booking when the couple hasn't managed the list yet.
+  const storedPlaylists = Array.isArray(wedding.spotifyPlaylistUrls)
+    ? (wedding.spotifyPlaylistUrls as { label: string; url: string }[])
+    : [];
+  const playlistLinks =
+    storedPlaylists.length === 0 && wedding.spotifyPlaylistUrl
+      ? [{ label: "", url: wedding.spotifyPlaylistUrl }]
+      : storedPlaylists;
 
   return (
     <div className="min-h-screen bg-cream">
@@ -111,7 +120,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           initialDoNotPlay={playlists
             .filter((p) => p.category === "do_not_play")
             .map((p) => ({ trackTitle: p.trackTitle, artist: p.artist === "Unknown artist" ? "" : p.artist }))}
-          initialPlaylistUrl={wedding.spotifyPlaylistUrl ?? ""}
+          initialPlaylists={playlistLinks}
         />
         <VipSection
           token={token}

@@ -1,36 +1,11 @@
 import { ImageResponse } from "next/og";
+import { loadGoogleFont } from "@/lib/og-fonts";
 import { SITE_NAME } from "@/lib/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt =
   "Crossroads Wedding Co., the DJ and music crew that also quietly runs your day";
-
-// Satori can't read the fonts next/font bundles, so pull the same two faces the
-// site uses straight from Google Fonts. The legacy UA makes the CSS endpoint
-// hand back a .ttf instead of a .woff2, which is what satori can parse.
-const LEGACY_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/533.20.25";
-
-async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuffer | null> {
-  try {
-    const cssRes = await fetch(
-      `https://fonts.googleapis.com/css2?family=${family}:wght@${weight}`,
-      { headers: { "User-Agent": LEGACY_UA } },
-    );
-    if (!cssRes.ok) return null;
-
-    const fontUrl = (await cssRes.text()).match(/src: url\((https:\/\/[^)]+\.ttf)\)/)?.[1];
-    if (!fontUrl) return null;
-
-    const fontRes = await fetch(fontUrl);
-    if (!fontRes.ok) return null;
-
-    return await fontRes.arrayBuffer();
-  } catch {
-    // Fall back to satori's built-in sans rather than failing the build.
-    return null;
-  }
-}
 
 export default async function OpengraphImage() {
   const [spectral, karla] = await Promise.all([

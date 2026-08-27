@@ -84,7 +84,10 @@ export default function HubPreviewPage() {
             { trackTitle: "Mr. Brightside", artist: "The Killers" },
           ]}
           initialDoNotPlay={[{ trackTitle: "Chicken Dance", artist: "" }]}
-          initialPlaylistUrl="https://open.spotify.com/playlist/37i9dQZF1DXdPec7aLTmlC"
+          initialPlaylists={[
+            { label: "Cocktail hour", url: "https://open.spotify.com/playlist/37i9dQZF1DXdPec7aLTmlC" },
+            { label: "Dance floor", url: "https://open.spotify.com/playlist/37i9dQZF1DX4JAvHpjipBk" },
+          ]}
         />
         <VipSection
           token={SAMPLE_TOKEN}

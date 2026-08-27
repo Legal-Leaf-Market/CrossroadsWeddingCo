@@ -121,6 +121,9 @@ export const weddings = pgTable(
     packageType: varchar("package_type", { length: 100 }).default("standard_dj_mc"),
     addons: jsonb("addons").default([]),
     spotifyPlaylistUrl: varchar("spotify_playlist_url", { length: 500 }),
+    // [{label, url}] rows managed in the hub; the single column above is the
+    // booking-form capture and read-only fallback seed.
+    spotifyPlaylistUrls: jsonb("spotify_playlist_urls").notNull().default([]),
     // Per-section revision counters ({"timeline": 3, ...}) backing the hub's
     // optimistic concurrency; bumped inside each replace-all transaction.
     hubSectionRevs: jsonb("hub_section_revs").notNull().default({}),

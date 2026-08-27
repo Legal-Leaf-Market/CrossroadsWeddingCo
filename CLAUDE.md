@@ -361,11 +361,14 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   Nashville (IN), Louisville (KY), Cincinnati (OH). Encoded in `lib/cities.ts` and the
   homepage `areaServed` structured data.
 - **Spotify is a priority integration (2026-08-26, Jacob):** the target market curates its own
-  playlists in Spotify, so the platform meets them there. Flow: couples build the playlist in
-  their own account and share the link, captured at booking (`weddings.spotify_playlist_url`,
-  no API needed), ingested into `playlist_curations` via the client-credentials API once
+  playlists in Spotify, so the platform meets them there. Flow: couples build playlists in
+  their own account and share the links. One link is captured at booking
+  (`weddings.spotify_playlist_url`); the hub manages a labeled list of them
+  (`weddings.spotify_playlist_urls` jsonb, "Add a playlist" per Jacob 2026-08-27, since
+  couples split cocktail hour, dinner, and dance floor into separate playlists). Ingestion
+  into `playlist_curations` via the client-credentials API once
   `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` exist. Write-back (collaborative playlists from
-  our side) requires the OAuth authorization-code flow and ships with the Phase 2 portal.
+  our side) requires the OAuth authorization-code flow, Phase 3+.
 
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New

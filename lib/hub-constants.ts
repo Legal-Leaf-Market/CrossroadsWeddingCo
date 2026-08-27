@@ -32,6 +32,28 @@ export const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 /** Message sent with a 409 when a hub section was changed from another tab or device. */
 export const CONFLICT_MESSAGE = "Updated from another device. Showing the latest.";
 
+/** A couple can split their music into this many shared Spotify playlists. */
+export const MAX_PLAYLIST_LINKS = 10;
+
+/**
+ * Extract the playlist id from a Spotify share link or URI, null when the
+ * input is not a playlist link. Lives here (client-safe) so the hub UI and
+ * the API routes validate identically; lib/spotify re-exports it.
+ */
+export function parsePlaylistId(input: string): string | null {
+  const trimmed = input.trim();
+  const uri = trimmed.match(/^spotify:playlist:([A-Za-z0-9]+)$/);
+  if (uri) return uri[1];
+  try {
+    const url = new URL(trimmed);
+    if (!/(^|\.)spotify\.com$/.test(url.hostname)) return null;
+    const match = url.pathname.match(/\/playlist\/([A-Za-z0-9]+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Days until the event; negative once it has passed. */
 export function daysOut(eventDate: string): number {
   const today = new Date().toISOString().slice(0, 10);

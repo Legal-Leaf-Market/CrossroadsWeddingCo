@@ -198,3 +198,9 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'new';
 -- saves. A stale tab or second device must get a 409 and refresh instead of
 -- silently wiping rows the other partner just saved.
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_section_revs JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- Couples split their music across multiple shared Spotify playlists
+-- (cocktail hour, dinner, dance floor), so the hub stores a list of
+-- {label, url} rows. The original single spotify_playlist_url column stays
+-- as the booking-form capture and legacy fallback.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS spotify_playlist_urls JSONB NOT NULL DEFAULT '[]'::jsonb;

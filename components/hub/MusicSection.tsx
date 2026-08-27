@@ -1,17 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CUE_TYPES } from "@/lib/hub-constants";
+import { CUE_TYPES, MAX_PLAYLIST_LINKS, parsePlaylistId } from "@/lib/hub-constants";
 import {
   hubInput,
-  hubSave,
   RemoveButton,
   revAwareSave,
   SaveBadge,
   SectionCard,
   useAutosave,
   type SaveFn,
-  type SaveState,
 } from "./shared";
 
 export type CueRow = {
@@ -22,23 +20,6 @@ export type CueRow = {
 };
 
 export type TrackRow = { trackTitle: string; artist: string };
-
-/**
- * The playlist card runs two saves (the track lists and the playlist URL);
- * its one badge must never let a green Saved from one hide a failure in the
- * other, so the worse state always wins.
- */
-function combineBadge(
-  a: { state: SaveState; message: string | null },
-  b: { state: SaveState; message: string | null },
-): { state: SaveState; message: string | null } {
-  const order: SaveState[] = ["conflict", "error", "saving", "saved", "idle"];
-  for (const state of order) {
-    if (a.state === state) return a;
-    if (b.state === state) return b;
-  }
-  return a;
-}
 
 function TrackList({
   label,
@@ -118,12 +99,14 @@ function TrackList({
   );
 }
 
+export type PlaylistLink = { label: string; url: string };
+
 export default function MusicSection({
   token,
   initialCues,
   initialMustPlay,
   initialDoNotPlay,
-  initialPlaylistUrl,
+  initialPlaylists,
   initialCuesRev,
   initialPlaylistsRev,
 }: {
@@ -131,7 +114,7 @@ export default function MusicSection({
   initialCues: CueRow[];
   initialMustPlay: TrackRow[];
   initialDoNotPlay: TrackRow[];
-  initialPlaylistUrl: string;
+  initialPlaylists: PlaylistLink[];
   initialCuesRev: number;
   initialPlaylistsRev: number;
 }) {
@@ -148,9 +131,10 @@ export default function MusicSection({
   const [cues, setCues] = useState<CueRow[]>(toGrid(initialCues));
   const [mustPlay, setMustPlay] = useState<TrackRow[]>(initialMustPlay);
   const [doNotPlay, setDoNotPlay] = useState<TrackRow[]>(initialDoNotPlay);
-  const [playlistUrl, setPlaylistUrl] = useState(initialPlaylistUrl);
+  const [playlists, setPlaylists] = useState<PlaylistLink[]>(initialPlaylists);
   const [armedMust, setArmedMust] = useState<number | null>(null);
   const [armedDoNot, setArmedDoNot] = useState<number | null>(null);
+  const [armedPlaylist, setArmedPlaylist] = useState<number | null>(null);
   const cuesRev = useRef(initialCuesRev);
   const playlistsRev = useRef(initialPlaylistsRev);
   const cuesSaveIds = useRef<string[]>([]);
@@ -169,44 +153,44 @@ export default function MusicSection({
       },
     });
 
-  const saveLists: SaveFn = ({ keepalive }) =>
-    revAwareSave({
+  const badLink = (p: PlaylistLink) => p.url.trim() !== "" && !parsePlaylistId(p.url);
+
+  const saveLists: SaveFn = async ({ keepalive }) => {
+    // A link that isn't a playlist would 400 the whole replace-all save, so
+    // hold the save and mark the field until it looks right.
+    if (playlists.some(badLink)) {
+      return {
+        ok: false,
+        noRetry: true,
+        message: "That link doesn't look like a Spotify playlist. Use Share, then Copy link.",
+      };
+    }
+    return revAwareSave({
       path: `/api/hub/${token}/playlists`,
-      payload: { mustPlay, doNotPlay },
+      payload: { mustPlay, doNotPlay, playlists },
       rev: playlistsRev,
       sentSaveIds: playlistsSaveIds,
       keepalive,
       onConflict: (body) => {
-        const b = body as { mustPlay?: TrackRow[]; doNotPlay?: TrackRow[] };
+        const b = body as {
+          mustPlay?: TrackRow[];
+          doNotPlay?: TrackRow[];
+          playlists?: PlaylistLink[];
+        };
         if (!Array.isArray(b.mustPlay) || !Array.isArray(b.doNotPlay)) return;
         setMustPlay(b.mustPlay);
         setDoNotPlay(b.doNotPlay);
+        if (Array.isArray(b.playlists)) setPlaylists(b.playlists);
         // Disarm: the rows just changed under any armed remove button.
         setArmedMust(null);
         setArmedDoNot(null);
+        setArmedPlaylist(null);
       },
     });
-
-  const saveUrl: SaveFn = async ({ keepalive }) => {
-    const out = await hubSave(
-      `/api/hub/${token}/details`,
-      "PATCH",
-      { spotifyPlaylistUrl: playlistUrl.trim() },
-      { keepalive },
-    );
-    if (out.ok) return { ok: true };
-    // A 400 (say, a track link pasted where a playlist link belongs) rejects
-    // this exact value every time; retrying without an edit is pointless.
-    return { ok: false, message: out.message, noRetry: out.status >= 400 && out.status < 500 };
   };
 
   const cueSave = useAutosave(saveCues);
   const listSave = useAutosave(saveLists);
-  const urlSave = useAutosave(saveUrl);
-  const playlistBadge = combineBadge(
-    { state: listSave.state, message: listSave.message },
-    { state: urlSave.state, message: urlSave.message },
-  );
 
   function updateCue(index: number, patch: Partial<CueRow>) {
     setCues((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -258,23 +242,68 @@ export default function MusicSection({
       </SectionCard>
 
       <SectionCard
-        title="Your playlist and hard lines"
-        subtitle="Build the big playlist in your own Spotify and paste the share link. Must-plays are promises; the do-not-play list is law."
-        badge={<SaveBadge state={playlistBadge.state} message={playlistBadge.message} />}
+        title="Your playlists and hard lines"
+        subtitle="Build your playlists in your own Spotify and paste the share links: cocktail hour, dinner, dance floor, however you split it. Must-plays are promises; the do-not-play list is law."
+        badge={<SaveBadge state={listSave.state} message={listSave.message} />}
       >
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-charcoal">Spotify playlist link</span>
-          <input
-            className={hubInput}
-            value={playlistUrl}
-            maxLength={500}
-            onChange={(e) => {
-              setPlaylistUrl(e.target.value);
-              urlSave.touch();
-            }}
-            placeholder="https://open.spotify.com/playlist/..."
-          />
-        </label>
+        <div>
+          <h3 className="text-sm font-semibold text-charcoal">Spotify playlists</h3>
+          <p className="mb-2 text-xs text-ink/50">
+            In Spotify: Share, then Copy link. Name each one so we know where it belongs in the day.
+          </p>
+          <ul className="space-y-2">
+            {playlists.map((p, index) => (
+              <li key={index} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                <input
+                  aria-label="Playlist name"
+                  className={`${hubInput} basis-40 sm:basis-56 sm:flex-none`}
+                  value={p.label}
+                  maxLength={100}
+                  onChange={(e) => {
+                    setPlaylists((r) => r.map((row, i) => (i === index ? { ...row, label: e.target.value } : row)));
+                    listSave.touch();
+                  }}
+                  placeholder="Cocktail hour"
+                />
+                <input
+                  aria-label="Playlist link"
+                  aria-invalid={badLink(p) || undefined}
+                  className={`${hubInput} min-w-40 flex-1`}
+                  value={p.url}
+                  maxLength={500}
+                  onChange={(e) => {
+                    setPlaylists((r) => r.map((row, i) => (i === index ? { ...row, url: e.target.value } : row)));
+                    listSave.touch();
+                  }}
+                  placeholder="https://open.spotify.com/playlist/..."
+                />
+                <RemoveButton
+                  label="Remove playlist"
+                  armed={armedPlaylist === index}
+                  onToggle={(next) => setArmedPlaylist(next ? index : null)}
+                  onRemove={() => {
+                    setPlaylists((r) => r.filter((_, i) => i !== index));
+                    setArmedPlaylist(null);
+                    listSave.touch();
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+          {playlists.length < MAX_PLAYLIST_LINKS && (
+            <button
+              type="button"
+              onClick={() => {
+                setPlaylists((r) => [...r, { label: "", url: "" }]);
+                setArmedPlaylist(null);
+                listSave.touch();
+              }}
+              className="mt-2 text-sm font-semibold text-terracotta hover:text-terracotta-dark"
+            >
+              + Add a playlist
+            </button>
+          )}
+        </div>
         <div className="mt-5 grid gap-6 sm:grid-cols-2">
           <TrackList
             label="Must play"
