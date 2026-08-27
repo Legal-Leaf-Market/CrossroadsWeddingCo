@@ -20,8 +20,15 @@ const OUT_DIR = path.join(process.cwd(), "content", "reel");
 const WIDTH = 1080;
 const HEIGHT = 1920;
 const FPS = 30;
-const SLIDE_SECONDS = 4;
 const FADE = 0.5; // crossfade between slides
+
+// Jacob's recorded voiceover (content/reel/voiceover.m4a, override with VO=).
+// Slide durations below are cut to its pause map: each transition starts
+// 0.55s before the matching line begins, so the entrance animation finishes
+// right as the line lands. Re-derive with ffmpeg silencedetect if the VO is
+// re-recorded; set VO=none to build silent.
+const VO_DEFAULT = path.join(OUT_DIR, "voiceover.m4a");
+const VO = process.env.VO === "none" ? null : (process.env.VO || VO_DEFAULT);
 
 const FFMPEG = process.env.FFMPEG || "ffmpeg";
 
@@ -123,6 +130,7 @@ const includedRow = (text, color, dot, marginTop = 34) =>
 const SLIDES = [
   {
     slug: "01-the-rate",
+    duration: 6.63,
     background: COLORS.charcoal,
     color: COLORS.cream,
     eyebrow: "Columbus, Indiana",
@@ -149,6 +157,7 @@ const SLIDES = [
   },
   {
     slug: "02-whats-included",
+    duration: 5.88,
     background: COLORS.cream,
     color: COLORS.charcoal,
     eyebrow: "What $1,000 covers",
@@ -173,6 +182,7 @@ const SLIDES = [
   },
   {
     slug: "03-no-packages",
+    duration: 6.74,
     background: COLORS.terracotta,
     color: COLORS.cream,
     eyebrow: "No tiers, no upsells",
@@ -199,6 +209,7 @@ const SLIDES = [
   },
   {
     slug: "04-acoustic",
+    duration: 5.92,
     background: COLORS.charcoal,
     color: COLORS.cream,
     eyebrow: "Add-on",
@@ -227,6 +238,7 @@ const SLIDES = [
   },
   {
     slug: "05-bar-service",
+    duration: 5.63,
     background: COLORS.cream,
     color: COLORS.charcoal,
     eyebrow: "Add-on",
@@ -253,6 +265,7 @@ const SLIDES = [
   },
   {
     slug: "06-planning-hub",
+    duration: 5.7,
     background: COLORS.terracotta,
     color: COLORS.cream,
     eyebrow: "Your planning hub",
@@ -279,6 +292,7 @@ const SLIDES = [
   },
   {
     slug: "07-book-a-call",
+    duration: 8.5,
     background: COLORS.charcoal,
     color: COLORS.cream,
     eyebrow: "Let's talk it through",
@@ -345,10 +359,10 @@ for (const slide of SLIDES) {
   const inputs = [];
   const filters = [];
   filters.push(
-    `color=c=${slide.background.replace("#", "0x")}:s=${WIDTH}x${HEIGHT}:d=${SLIDE_SECONDS}:r=${FPS}[base0]`,
+    `color=c=${slide.background.replace("#", "0x")}:s=${WIDTH}x${HEIGHT}:d=${slide.duration}:r=${FPS}[base0]`,
   );
   slide.layers.forEach((layer, i) => {
-    inputs.push("-loop", "1", "-t", String(SLIDE_SECONDS), "-i", path.join(work, `${slide.slug}--${layer.key}.png`));
+    inputs.push("-loop", "1", "-t", String(slide.duration), "-i", path.join(work, `${slide.slug}--${layer.key}.png`));
     const fadeDur = layer.anim === "fade" ? 0.5 : 0.6;
     filters.push(`[${i}:v]format=rgba,fade=t=in:st=${layer.t}:d=${fadeDur}:alpha=1[l${i}]`);
     const dist = layer.anim === "rise-far" ? 130 : layer.anim === "rise" ? 70 : 0;
@@ -388,18 +402,30 @@ for (const slide of SLIDES) {
 const inputs = SLIDES.flatMap((s) => ["-i", path.join(work, `${s.slug}.mp4`)]);
 const chain = [];
 let prev = "0:v";
+let offset = 0;
 SLIDES.slice(1).forEach((s, i) => {
-  const offset = (i + 1) * (SLIDE_SECONDS - FADE);
+  offset += SLIDES[i].duration - FADE;
   const label = `x${i + 1}`;
   chain.push(
-    `[${prev}][${i + 1}:v]xfade=transition=${TRANSITIONS[i]}:duration=${FADE}:offset=${offset}[${label}]`,
+    `[${prev}][${i + 1}:v]xfade=transition=${TRANSITIONS[i]}:duration=${FADE}:offset=${offset.toFixed(2)}[${label}]`,
   );
   prev = label;
 });
-const total = SLIDES.length * SLIDE_SECONDS - (SLIDES.length - 1) * FADE;
+const total = offset + SLIDES[SLIDES.length - 1].duration;
 chain.push(
-  `[${prev}]fade=t=in:st=0:d=0.4,fade=t=out:st=${(total - 0.6).toFixed(2)}:d=0.6,format=yuv420p[v]`,
+  `[${prev}]fade=t=in:st=0:d=0.4,fade=t=out:st=${(total - 0.8).toFixed(2)}:d=0.8,format=yuv420p[v]`,
 );
+
+let hasAudio = false;
+if (VO) {
+  try {
+    await fs.access(VO);
+    hasAudio = true;
+  } catch {
+    console.warn(`voiceover not found at ${VO}, building silent`);
+  }
+}
+if (hasAudio) inputs.push("-i", VO);
 
 await fs.mkdir(OUT_DIR, { recursive: true });
 const finalOut = path.join(OUT_DIR, "crossroads-reel.mp4");
@@ -412,6 +438,7 @@ execFileSync(
     chain.join(";"),
     "-map",
     "[v]",
+    ...(hasAudio ? ["-map", `${SLIDES.length}:a`, "-c:a", "aac", "-b:a", "192k"] : []),
     "-c:v",
     "libx264",
     "-preset",
@@ -420,6 +447,8 @@ execFileSync(
     "18",
     "-r",
     String(FPS),
+    "-t",
+    total.toFixed(2),
     "-movflags",
     "+faststart",
     finalOut,
