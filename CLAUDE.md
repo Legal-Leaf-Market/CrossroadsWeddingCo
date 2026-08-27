@@ -351,6 +351,10 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   Bartending is **from $400**, fully quoted at intake once date and headcount are known.
   The booking flow adds $400 to the total for acoustic; bartending is stored as an interest
   flag with a $400 floor and quoted on the intro call.
+- **Deposits are cash and check for roughly the first 4 months (2026-08-27, Jacob).** Stripe
+  stays scaffolded and gated off; do not prioritize Stripe keys or build further payment
+  automation until Jacob says so. Site and email copy already read "payment details come with
+  the confirmation", which covers cash/check with no change.
 - **Intro call:** 30 minutes, booked via the contact-section card
   (`NEXT_PUBLIC_BOOKING_URL`, Google Calendar appointment schedule).
 - **Service area:** based in Columbus, Indiana; two-hour radius, Indianapolis, Bloomington,
