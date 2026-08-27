@@ -4,7 +4,6 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
 import { getWeddingByToken } from "@/lib/hub";
-import { parsePlaylistId } from "@/lib/spotify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +16,9 @@ const schema = z.object({
   // here degrades gracefully (a contact we follow up on the call).
   venueContactEmail: z.string().trim().max(255).optional(),
   contactPhone: z.string().trim().max(50).optional(),
-  spotifyPlaylistUrl: z.string().trim().max(500).optional(),
+  // spotifyPlaylistUrl is deliberately NOT accepted here anymore: playlist
+  // links are managed by the rev-guarded playlists route, which also clears
+  // the legacy single column. A writable side door here would bypass that.
   vibeNotes: z.string().trim().max(5000).optional(),
 });
 
@@ -38,13 +39,6 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ token: st
   }
   const d = parsed.data;
 
-  if (d.spotifyPlaylistUrl && !parsePlaylistId(d.spotifyPlaylistUrl)) {
-    return NextResponse.json(
-      { error: "That Spotify link doesn't look like a playlist. Use Share, then Copy link." },
-      { status: 400 },
-    );
-  }
-
   await db
     .update(weddings)
     .set({
@@ -53,9 +47,6 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ token: st
         ? { venueContactEmail: d.venueContactEmail || null }
         : {}),
       ...(d.contactPhone !== undefined ? { contactPhone: d.contactPhone || null } : {}),
-      ...(d.spotifyPlaylistUrl !== undefined
-        ? { spotifyPlaylistUrl: d.spotifyPlaylistUrl || null }
-        : {}),
       ...(d.vibeNotes !== undefined ? { notes: d.vibeNotes || null } : {}),
       updatedAt: new Date(),
     })

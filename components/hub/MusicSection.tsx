@@ -99,7 +99,8 @@ function TrackList({
   );
 }
 
-export type PlaylistLink = { label: string; url: string };
+export type { PlaylistLink } from "@/lib/hub-constants";
+import type { PlaylistLink } from "@/lib/hub-constants";
 
 export default function MusicSection({
   token,
@@ -153,18 +154,12 @@ export default function MusicSection({
       },
     });
 
+  // A non-playlist link still saves as typed (holding the save would block
+  // the track-list edits sharing this section); the field is flagged and the
+  // hint below the list explains, so nothing is lost and nothing lies.
   const badLink = (p: PlaylistLink) => p.url.trim() !== "" && !parsePlaylistId(p.url);
 
   const saveLists: SaveFn = async ({ keepalive }) => {
-    // A link that isn't a playlist would 400 the whole replace-all save, so
-    // hold the save and mark the field until it looks right.
-    if (playlists.some(badLink)) {
-      return {
-        ok: false,
-        noRetry: true,
-        message: "That link doesn't look like a Spotify playlist. Use Share, then Copy link.",
-      };
-    }
     return revAwareSave({
       path: `/api/hub/${token}/playlists`,
       payload: { mustPlay, doNotPlay, playlists },
@@ -290,6 +285,12 @@ export default function MusicSection({
               </li>
             ))}
           </ul>
+          {playlists.some(badLink) && (
+            <p className="mt-2 text-xs text-terracotta-dark">
+              A highlighted link doesn&apos;t look like a Spotify playlist. In Spotify: Share,
+              then Copy link.
+            </p>
+          )}
           {playlists.length < MAX_PLAYLIST_LINKS && (
             <button
               type="button"

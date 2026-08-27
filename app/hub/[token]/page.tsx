@@ -5,6 +5,7 @@ import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
 import { daysOut, getPortalData, TOKEN_RE } from "@/lib/hub";
+import { normalizePlaylistLinks } from "@/lib/hub-constants";
 import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -41,10 +42,10 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   const days = daysOut(wedding.eventDate);
   const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
   // The hub-managed playlist links, seeded from the single link captured at
-  // booking when the couple hasn't managed the list yet.
-  const storedPlaylists = Array.isArray(wedding.spotifyPlaylistUrls)
-    ? (wedding.spotifyPlaylistUrls as { label: string; url: string }[])
-    : [];
+  // booking when the couple hasn't managed the list yet. The playlists route
+  // nulls that single column on every managed save, so a deleted seed row
+  // stays deleted instead of resurrecting on reload.
+  const storedPlaylists = normalizePlaylistLinks(wedding.spotifyPlaylistUrls);
   const playlistLinks =
     storedPlaylists.length === 0 && wedding.spotifyPlaylistUrl
       ? [{ label: "", url: wedding.spotifyPlaylistUrl }]

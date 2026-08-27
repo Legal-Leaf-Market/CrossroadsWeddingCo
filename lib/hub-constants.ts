@@ -35,6 +35,24 @@ export const CONFLICT_MESSAGE = "Updated from another device. Showing the latest
 /** A couple can split their music into this many shared Spotify playlists. */
 export const MAX_PLAYLIST_LINKS = 10;
 
+export type PlaylistLink = { label: string; url: string };
+
+/**
+ * Coerce whatever the spotify_playlist_urls jsonb column holds into clean
+ * {label, url} rows. A manually fixed-up or malformed element must never
+ * reach the client, where rendering it would crash the hub.
+ */
+export function normalizePlaylistLinks(value: unknown): PlaylistLink[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((x): x is Record<string, unknown> => x !== null && typeof x === "object")
+    .map((x) => ({
+      label: typeof x.label === "string" ? x.label : "",
+      url: typeof x.url === "string" ? x.url : "",
+    }))
+    .slice(0, MAX_PLAYLIST_LINKS);
+}
+
 /**
  * Extract the playlist id from a Spotify share link or URI, null when the
  * input is not a playlist link. Lives here (client-safe) so the hub UI and

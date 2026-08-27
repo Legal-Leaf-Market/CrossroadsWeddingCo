@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { playlistCurations, weddings } from "@/lib/db/schema";
 import { getWeddingByToken, withSectionRev, type Tx } from "@/lib/hub";
-import { CONFLICT_MESSAGE, MAX_PLAYLIST_LINKS, parsePlaylistId } from "@/lib/hub-constants";
+import { CONFLICT_MESSAGE, MAX_PLAYLIST_LINKS, normalizePlaylistLinks } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +18,9 @@ const track = z.object({
 
 const playlistLink = z.object({
   // A row with a label but no URL yet (or the reverse) must round-trip.
+  // The URL is deliberately not format-validated here: a link that isn't a
+  // playlist saves as typed with the field flagged in the UI, because a 400
+  // on this replace-all route would block the couple's track-list edits too.
   label: z.string().trim().max(100),
   url: z.string().trim().max(500),
 });
@@ -53,7 +56,7 @@ async function currentLists(ex: Tx | typeof db, weddingId: string) {
     .select({ spotifyPlaylistUrls: weddings.spotifyPlaylistUrls })
     .from(weddings)
     .where(eq(weddings.id, weddingId));
-  const playlists = Array.isArray(w?.spotifyPlaylistUrls) ? w.spotifyPlaylistUrls : [];
+  const playlists = normalizePlaylistLinks(w?.spotifyPlaylistUrls);
   return {
     mustPlay: toClient(rows, "must_play"),
     doNotPlay: toClient(rows, "do_not_play"),
@@ -75,15 +78,6 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
-  }
-
-  // The client validates before sending, so a bad link here means it slipped
-  // past; answer with the same friendly message the client shows.
-  if (parsed.data.playlists.some((p) => p.url !== "" && !parsePlaylistId(p.url))) {
-    return NextResponse.json(
-      { error: "One of the Spotify links doesn't look like a playlist. Use Share, then Copy link." },
-      { status: 400 },
-    );
   }
 
   // Only the two portal-owned categories are replaced; anything else (future
@@ -117,9 +111,13 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
           ),
         );
       if (rows.length > 0) await tx.insert(playlistCurations).values(rows);
+      // Clearing the booking-captured single link on every managed save is
+      // what lets a deleted seed row STAY deleted: the hub page only seeds
+      // from that column while this list has never been saved. updated_at is
+      // stamped by withSectionRev's rev bump in this same transaction.
       await tx
         .update(weddings)
-        .set({ spotifyPlaylistUrls: parsed.data.playlists, updatedAt: new Date() })
+        .set({ spotifyPlaylistUrls: parsed.data.playlists, spotifyPlaylistUrl: null })
         .where(eq(weddings.id, wedding.id));
     },
     (tx) => currentLists(tx, wedding.id),
