@@ -101,9 +101,14 @@ export default function BookingForm() {
             confirmation.
           </li>
           <li>
-            {hubPath
-              ? "Your planning hub is ready right now: timeline, music, and the names we announce, saving as you type."
-              : "Then we gather the names, the schedule, and the music with you by email and on your intro call."}
+            {hubPath ? (
+              <>
+                Your planning hub is ready right now: timeline, music, and the names we
+                announce. <strong className="text-cream">Fill out now.</strong>
+              </>
+            ) : (
+              "Then we gather the names, the schedule, and the music with you by email and on your intro call."
+            )}
           </li>
         </ol>
         {hubPath && (
