@@ -69,6 +69,12 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
               </span>
             )}
             <a
+              href={`/hub/${token}/live`}
+              className="rounded-full bg-terracotta px-4 py-1.5 text-sm font-semibold text-cream hover:bg-terracotta-dark"
+            >
+              Live
+            </a>
+            <a
               href={`/hub/${token}/runsheet`}
               className="rounded-full border border-terracotta px-4 py-1.5 text-sm font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
             >

@@ -204,3 +204,21 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_section_revs JSONB NOT NULL DE
 -- {label, url} rows. The original single spotify_playlist_url column stays
 -- as the booking-form capture and legacy fallback.
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS spotify_playlist_urls JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- Phase 3: read-only share token for the zero-auth live day-of view
+-- (/live/[share_token]). Separate from access_token so vendors and printed
+-- pages never carry the write-capable hub credential. pgcrypto backfills
+-- existing rows; new bookings mint the token in app code.
+DO $$ BEGIN
+  CREATE EXTENSION IF NOT EXISTS pgcrypto;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS share_token VARCHAR(64);
+DO $$ BEGIN
+  UPDATE weddings SET share_token = encode(gen_random_bytes(24), 'hex') WHERE share_token IS NULL;
+EXCEPTION WHEN undefined_function THEN
+  UPDATE weddings
+    SET share_token = substr(md5(random()::text || clock_timestamp()::text || id::text)
+                          || md5(id::text || random()::text || clock_timestamp()::text), 1, 48)
+    WHERE share_token IS NULL;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_weddings_share_token ON weddings (share_token);

@@ -115,6 +115,9 @@ export async function POST(req: NextRequest) {
   ];
 
   const accessToken = randomBytes(24).toString("hex");
+  // Read-only credential for the /live/[token] vendor view; independent of
+  // the write-capable access token by design.
+  const shareToken = randomBytes(24).toString("hex");
   // Independent of the access token: the reference is shared in emails and
   // conversations, and must reveal nothing about the portal secret.
   const reference = randomBytes(4).toString("hex").toUpperCase();
@@ -123,6 +126,7 @@ export async function POST(req: NextRequest) {
   try {
     await db.insert(weddings).values({
       accessToken,
+      shareToken,
       coupleNames: data.coupleNames,
       contactEmail: data.email,
       contactPhone: data.phone || null,

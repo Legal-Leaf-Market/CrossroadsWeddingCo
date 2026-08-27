@@ -78,9 +78,14 @@ and refreshes instead of overwriting what the other partner saved. `/hub/[token]
 print-optimized one-pager for the venue and crew; the PWA manifest lets couples
 pin the hub to a phone home screen.
 
-`/hub/preview` and `/hub/preview/runsheet` are dev-only sample-data twins used
-for layout QA; they 404 in production builds. Everything under `/hub/` and
-`/api/` is disallowed in `robots.ts`.
+`/hub/[token]/live` runs the day: the MC taps Start as each block begins and
+the drift engine shifts every downstream time, on every open screen (15s
+poll). `/live/[share_token]` is the read-only version of the same view for
+vendors; the share token grants exactly that read and nothing else.
+
+`/hub/preview`, `/hub/preview/runsheet`, and `/hub/preview/live` are dev-only
+sample-data twins used for layout QA; they 404 in production builds. `/api/`
+is disallowed in `robots.ts`; the tokened pages rely on noindex metadata.
 
 ## Layout
 
