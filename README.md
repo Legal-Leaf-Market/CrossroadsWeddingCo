@@ -21,6 +21,7 @@ pnpm ig:posts   # regenerate the Instagram images in content/instagram/
 | `RESEND_API_KEY` | Booking emails | Confirmation to the couple + notification to you on each booking request. Silent no-op while unset. |
 | `RESEND_FROM` | Booking emails | Optional. Defaults to `Crossroads Wedding Co. <hello@crossroadsweddingco.com>`, must be a Resend-verified domain. |
 | `RESEND_NOTIFY_TO` | Booking emails | Optional. Defaults to `jake@crossroadsweddingco.com`. |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Booking texts | Confirmation text to the couple (+ optional owner text via `TWILIO_NOTIFY_TO`). Needs a sender: `TWILIO_MESSAGING_SERVICE_SID` (preferred) or `TWILIO_FROM_NUMBER`. Silent no-op while unset. |
 | `STRIPE_SECRET_KEY` | `/api/checkout` | Deposit payments. Fails closed (501) while unset. |
 | `STRIPE_WEBHOOK_SECRET` | `/api/webhooks/stripe` | Marks deposits paid. Fails closed (501) while unset. |
 | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | Playlist ingestion & track search | Free app at developer.spotify.com. `lib/spotify.ts` fails closed while unset. |
