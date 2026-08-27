@@ -390,7 +390,10 @@ decisions absorbed from it:
 - **Nic (spelled N-i-c):** apprentice partner, 6-gig progression, $2,000/month draw from
   Jan 2027 with quarterly/year-end true-up. `talent_profiles` will gain `monthly_draw_rate`
   when payroll tracking ships (Phase 4); partner deck lives at
-  `content/partner/crossroads-partner-brief-nic.pptx`.
+  `content/partner/crossroads-partner-brief-nic.pptx`. Bar credentials (2026-08-27): about
+  20 years serving/bartending, holds a current Indiana ATC employee permit, heard as
+  expiring June 21 of next year (2027); verify the exact date on the card before renewal
+  season. The "licensed bartenders" copy is literally backed by this.
 - Where the two docs disagree, the newer doc + owner's live word wins; this appendix is the
   tiebreaker record.
 
