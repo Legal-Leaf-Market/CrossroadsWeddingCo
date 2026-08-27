@@ -16,8 +16,8 @@ The first photo becomes the storefront cover, so keep 01 first.
 1. `01-the-rate.png`: $1,000 flat rate, matches the storefront headline
 2. `02-whats-included.png`: what the rate covers
 3. `03-no-packages.png`: no tiers, no upsells
-4. `04-acoustic.png`: live solo acoustic add-on, flat $400
-5. `05-bar-service.png`: bar service, $400 minimum, quoted on the call
+4. `04-acoustic.png`: live solo acoustic add-on, flat $500
+5. `05-bar-service.png`: bar service, $500 minimum, quoted on the call
 6. `06-planning-hub.png`: the planning hub, benefit-first
 7. `07-book-a-call.png`: the 30-minute call and the service area
 

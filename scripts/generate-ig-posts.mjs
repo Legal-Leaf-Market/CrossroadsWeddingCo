@@ -134,7 +134,7 @@ const POSTS = [
       footerColor: COLORS.parchment,
       children: [
         display(88, COLORS.cream, "There is no silver, gold, or platinum package.", { maxWidth: 860 }),
-        bodyText(40, COLORS.parchment, "There\u2019s the day rate. Add a live acoustic set for a flat $400. Bartending starts at $400, quoted fully once we know your date and headcount.", {
+        bodyText(40, COLORS.parchment, "There\u2019s the day rate. Add a live acoustic set for a flat $500. Bartending starts at $500, quoted fully once we know your date and headcount.", {
           marginTop: 44,
           maxWidth: 820,
         }),

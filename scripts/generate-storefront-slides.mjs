@@ -170,7 +170,7 @@ const SLIDES = [
       footer: "Ceremony · Cocktail hour",
       footerColor: COLORS.muted,
       children: [
-        display(88, COLORS.cream, "A live solo acoustic set. Flat $400.", { maxWidth: 860 }),
+        display(88, COLORS.cream, "A live solo acoustic set. Flat $500.", { maxWidth: 860 }),
         rule(COLORS.terracotta, { marginTop: 44 }),
         bodyText(
           40,
@@ -195,7 +195,7 @@ const SLIDES = [
         bodyText(
           40,
           COLORS.ink,
-          "$400 is the minimum, not the price. Your guest count and your shelf set the real number, and we quote it on your intro call.",
+          "$500 is the minimum, not the price. Your guest count and your shelf set the real number, and we quote it on your intro call.",
           { marginTop: 44, maxWidth: 830 },
         ),
       ],
