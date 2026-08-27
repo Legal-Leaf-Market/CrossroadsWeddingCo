@@ -21,8 +21,10 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ token: str
   const { token } = await ctx.params;
   const wedding = await getWeddingByToken(token);
   if (!wedding) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Deliberately blocks only: the share token is rendered server-side on the
+  // live page and has no business riding every 15-second poll response.
   return NextResponse.json(
-    { blocks: await getLiveBlocks(wedding.id), shareToken: wedding.shareToken },
+    { blocks: await getLiveBlocks(wedding.id) },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

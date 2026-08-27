@@ -1,47 +1,62 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { computeLive, driftLabel, minutesToLabel, type LiveBlock } from "@/lib/live";
+import {
+  applyLiveAction,
+  computeLive,
+  driftLabel,
+  minutesToLabel,
+  type LiveAction,
+  type LiveBlock,
+} from "@/lib/live";
 
 const POLL_MS = 15_000;
 
 /**
- * The Crossroads Live run sheet. One component, two modes: with `controlPath`
- * it is the MC's tap-to-run console (start blocks, wrap the night, undo);
- * without it, the read-only vendor view. Both poll every 15 seconds so every
- * phone at the venue converges on the same state.
+ * The Crossroads Live run sheet. One component, three modes: with
+ * `controlPath` it is the MC's tap-to-run console; with `demo` the same
+ * console simulated locally (the dev preview, no database); with neither,
+ * the read-only vendor view. Polling every 15 seconds converges every phone
+ * at the venue on the same state.
  */
 export default function LiveRunSheet({
   initialBlocks,
   pollPath,
   controlPath,
+  demo = false,
 }: {
   initialBlocks: LiveBlock[];
-  pollPath: string;
+  pollPath?: string;
   controlPath?: string;
+  demo?: boolean;
 }) {
   const [blocks, setBlocks] = useState<LiveBlock[]>(initialBlocks);
   const [offline, setOffline] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  // Bumped by every action so a poll snapshot taken BEFORE the action can
+  // never land after it and roll the console back to pre-tap state.
+  const pollSeq = useRef(0);
 
   const refresh = useCallback(async () => {
-    // Never clobber state with a poll response racing an action.
-    if (busyRef.current) return;
+    if (!pollPath || busyRef.current) return;
+    const mySeq = pollSeq.current;
     try {
       const res = await fetch(pollPath, { cache: "no-store" });
       if (!res.ok) throw new Error();
       const body = (await res.json()) as { blocks?: LiveBlock[] };
-      if (!busyRef.current && Array.isArray(body.blocks)) {
+      if (mySeq === pollSeq.current && !busyRef.current && Array.isArray(body.blocks)) {
         setBlocks(body.blocks);
         setOffline(false);
       }
     } catch {
-      setOffline(true);
+      if (mySeq === pollSeq.current) setOffline(true);
     }
   }, [pollPath]);
 
   useEffect(() => {
+    if (!pollPath) return;
     const timer = setInterval(refresh, POLL_MS);
     const onVisibility = () => {
       if (document.visibilityState === "visible") void refresh();
@@ -51,11 +66,16 @@ export default function LiveRunSheet({
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [refresh]);
+  }, [pollPath, refresh]);
 
-  async function act(action: "start" | "complete" | "reset", itemId: string) {
+  async function act(action: LiveAction, itemId: string) {
+    if (demo && !controlPath) {
+      setBlocks((b) => applyLiveAction(b, action, itemId, new Date().toISOString()));
+      return;
+    }
     if (!controlPath || busyRef.current) return;
     busyRef.current = true;
+    pollSeq.current += 1;
     setBusy(true);
     try {
       const res = await fetch(controlPath, {
@@ -65,12 +85,12 @@ export default function LiveRunSheet({
       });
       if (res.ok) {
         const body = (await res.json()) as { blocks?: LiveBlock[] };
-        if (Array.isArray(body.blocks)) {
-          setBlocks(body.blocks);
-          setOffline(false);
-        }
+        if (Array.isArray(body.blocks)) setBlocks(body.blocks);
+        setOffline(false);
+        setFailure(null);
       } else {
-        setOffline(true);
+        // A 4xx is not a connectivity problem: the tap was rejected.
+        setFailure("That didn't save. Refresh this page; the timeline may have changed.");
       }
     } catch {
       setOffline(true);
@@ -80,6 +100,7 @@ export default function LiveRunSheet({
     }
   }
 
+  const showControls = Boolean(controlPath) || demo;
   const view = computeLive(blocks);
   const lastId = blocks.length > 0 ? blocks[blocks.length - 1].id : null;
 
@@ -100,6 +121,11 @@ export default function LiveRunSheet({
         {offline && (
           <span className="text-xs font-semibold text-terracotta-dark" role="status">
             Reconnecting; times shown may be a moment old
+          </span>
+        )}
+        {failure && (
+          <span className="text-xs font-semibold text-terracotta-dark" role="status">
+            {failure}
           </span>
         )}
       </div>
@@ -126,26 +152,29 @@ export default function LiveRunSheet({
                   <span className="block text-base font-bold text-charcoal">
                     {minutesToLabel(block.projectedMinutes)}
                   </span>
-                  {!block.actualStart &&
+                  {block.status === "upcoming" &&
+                    !block.actualStart &&
                     view.driftMinutes !== null &&
                     Math.abs(view.driftMinutes) > 2 && (
                       <span className="block text-xs text-ink/40 line-through">
-                        {minutesToLabel(
-                          block.projectedMinutes - (view.driftMinutes ?? 0),
-                        )}
+                        {minutesToLabel(block.projectedMinutes - (view.driftMinutes ?? 0))}
                       </span>
                     )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-charcoal">
-                    {block.status === "done" ? <s>{block.title || "Untitled block"}</s> : (block.title || "Untitled block")}
+                    {block.status === "done" ? (
+                      <s>{block.title || "Untitled block"}</s>
+                    ) : (
+                      block.title || "Untitled block"
+                    )}
                   </p>
                   {block.mcNotes && <p className="text-sm text-ink/60">{block.mcNotes}</p>}
                 </div>
                 <span className="shrink-0 whitespace-nowrap text-xs text-ink/40">
                   {block.durationMinutes} min
                 </span>
-                {controlPath && (
+                {showControls && (
                   <span className="flex w-full justify-end gap-2 sm:w-auto">
                     {block.status === "upcoming" && (
                       <button
@@ -178,6 +207,18 @@ export default function LiveRunSheet({
                           Undo
                         </button>
                       </>
+                    )}
+                    {block.status === "done" && (
+                      // The recovery path for a fat-fingered Start or an
+                      // accidental wrap: restarting reopens everything after.
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => act("start", block.id)}
+                        className="min-h-11 rounded-full border border-parchment px-4 py-2 text-sm font-semibold text-ink/50 hover:text-charcoal disabled:opacity-50"
+                      >
+                        Restart
+                      </button>
                     )}
                   </span>
                 )}

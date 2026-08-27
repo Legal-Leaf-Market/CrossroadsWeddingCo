@@ -72,6 +72,17 @@ export function parsePlaylistId(input: string): string | null {
   }
 }
 
+/** "Saturday, June 12, 2027" from a YYYY-MM-DD date, timezone-proof via noon UTC. */
+export function formatEventDate(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** Days until the event; negative once it has passed. */
 export function daysOut(eventDate: string): number {
   const today = new Date().toISOString().slice(0, 10);

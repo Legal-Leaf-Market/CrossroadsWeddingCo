@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import LiveRunSheet from "@/components/hub/LiveRunSheet";
 import ShareLink from "@/components/hub/ShareLink";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { SITE_NAME, SITE_URL, VENUE_TIME_ZONE } from "@/lib/site";
 import type { LiveBlock } from "@/lib/live";
 
 // Dev-only layout preview of Crossroads Live with sample mid-event state
@@ -13,11 +13,22 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// The drift engine reads wall clocks in the venue timezone, so the sample
+// "actual start" instants must be minted there too, not in this machine's
+// local zone, or the preview drift reads as hours instead of minutes.
 function startedAt(hhmm: string): string {
   const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
+  const now = new Date();
+  const guess = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, m));
+  const venue = guess.toLocaleString("en-US", {
+    timeZone: VENUE_TIME_ZONE,
+    hourCycle: "h23",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const [vh, vm] = venue.split(":").map(Number);
+  const diff = h * 60 + m - ((vh % 24) * 60 + vm);
+  return new Date(guess.getTime() + diff * 60_000).toISOString();
 }
 
 const BLOCKS: LiveBlock[] = [
@@ -52,11 +63,8 @@ export default function LivePreviewPage() {
         </div>
       </header>
       <main className="mx-auto max-w-3xl space-y-6 px-6 py-8">
-        <LiveRunSheet
-          initialBlocks={BLOCKS}
-          pollPath="/api/hub/000000000000000000000000000000000000000000000000/live"
-          controlPath="/api/hub/000000000000000000000000000000000000000000000000/live"
-        />
+        {/* demo mode: the console simulated locally, no polling, no database */}
+        <LiveRunSheet initialBlocks={BLOCKS} demo />
         <section className="rounded-2xl border border-parchment bg-white p-6 shadow-sm">
           <h2 className="text-lg text-charcoal">Share with your vendors</h2>
           <p className="mb-3 mt-1 text-sm text-ink/60">

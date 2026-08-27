@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PrintButton from "@/components/hub/PrintButton";
 import { CUE_TYPES, getPortalData } from "@/lib/hub";
+import { formatEventDate } from "@/lib/hub-constants";
 import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -47,13 +48,7 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
             <span className="text-sm font-semibold">{SITE_NAME}</span>
           </div>
           <p className="mt-1 text-sm">
-            {new Date(`${wedding.eventDate}T12:00:00Z`).toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-              timeZone: "UTC",
-            })}
+            {formatEventDate(wedding.eventDate)}
             {" · "}
             {wedding.venueName}
             {wedding.venueAddress ? ` · ${wedding.venueAddress}` : ""}

@@ -216,9 +216,9 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS share_token VARCHAR(64);
 DO $$ BEGIN
   UPDATE weddings SET share_token = encode(gen_random_bytes(24), 'hex') WHERE share_token IS NULL;
 EXCEPTION WHEN undefined_function THEN
-  UPDATE weddings
-    SET share_token = substr(md5(random()::text || clock_timestamp()::text || id::text)
-                          || md5(id::text || random()::text || clock_timestamp()::text), 1, 48)
-    WHERE share_token IS NULL;
+  -- No pgcrypto means no cryptographically random backfill; leave NULL (the
+  -- hub hides the share card for those rows) rather than mint weak tokens
+  -- from random(), which is not a CSPRNG.
+  NULL;
 END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_weddings_share_token ON weddings (share_token);
