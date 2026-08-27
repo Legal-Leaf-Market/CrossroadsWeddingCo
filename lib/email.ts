@@ -53,7 +53,7 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
       : []),
     ``,
     booking.addons.includes("bartender")
-      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before bar service. Bartending starts at a $${BARTENDER_MIN_USD} minimum; the real number depends on your bar and gets quoted on your intro call (add-ons noted: ${addonLine}).`
+      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before the bar quote. That includes the $${BARTENDER_MIN_USD} bar minimum; the final bar number depends on your guest count and shelf and gets set on your intro call (add-ons noted: ${addonLine}).`
       : `Your quote: $${booking.totalUsd.toLocaleString("en-US")} (add-ons noted: ${addonLine}).`,
     `Reference: ${booking.reference}`,
     ``,

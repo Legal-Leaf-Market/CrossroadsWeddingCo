@@ -29,7 +29,14 @@ export default function BookingForm() {
   }, [status]);
 
   const hasAcoustic = addons.includes("acoustic");
-  const totalUsd = DJ_DAY_RATE_USD + (hasAcoustic ? ACOUSTIC_ADDON_USD : 0);
+  const hasBartender = addons.includes("bartender");
+  // The bar minimum is owed before any quote happens, so it belongs in the
+  // total; the label marks the total as "before bar quote" (owner directive
+  // 2026-08-27: DJ 1000 + acoustic 400 + bar minimum 400 reads 1,800).
+  const totalUsd =
+    DJ_DAY_RATE_USD +
+    (hasAcoustic ? ACOUSTIC_ADDON_USD : 0) +
+    (hasBartender ? BARTENDER_MIN_USD : 0);
 
   function toggleAddon(addon: string) {
     setAddons((prev) =>
@@ -225,14 +232,14 @@ export default function BookingForm() {
             <span>${ACOUSTIC_ADDON_USD}</span>
           </div>
         )}
-        {addons.includes("bartender") && (
-          <div className="mt-1 flex items-center justify-between text-cream/60">
-            <span>Bar service (quoted on your call)</span>
+        {hasBartender && (
+          <div className="mt-1 flex items-center justify-between">
+            <span>Bar service (fully quoted on your call)</span>
             <span>from ${BARTENDER_MIN_USD}</span>
           </div>
         )}
         <div className="mt-2 flex items-center justify-between border-t border-cream/20 pt-2 font-semibold text-cream">
-          <span>Total{addons.includes("bartender") ? " (before bar quote)" : ""}</span>
+          <span>Total{hasBartender ? " (before bar quote)" : ""}</span>
           <span>${totalUsd.toLocaleString("en-US")}</span>
         </div>
         <p className="mt-2 text-xs text-cream/50">
