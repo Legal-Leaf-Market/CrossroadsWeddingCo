@@ -10,10 +10,10 @@ const SERVICES = [
     body: "Ceremony sound, cocktail hour, reception, and every transition between them. We MC as much or as little as you want. Some couples want a bold host; others want us invisible until it matters.",
   },
   {
-    title: "Live Acoustic Sets",
+    title: "Live Solo Acoustic Set",
     image: IMAGES.liveMusic,
     alt: "Close-up of hands playing an acoustic guitar",
-    body: "Several of our DJs are also working musicians. Add a live acoustic set for your ceremony or cocktail hour, and the same person can carry the whole day from guitar to turntable. Flat $" +
+    body: "One performer, singer-songwriter style, live for your ceremony or cocktail hour, played by the same person who carries the rest of your day from guitar to turntable. An hour is the sweet spot (two is the max), and with enough notice we learn up to three songs just for you. Flat $" +
       ACOUSTIC_ADDON_USD +
       ".",
   },
@@ -21,9 +21,9 @@ const SERVICES = [
     title: "Bar Service",
     image: IMAGES.bar,
     alt: "Bartender pouring a cocktail at an outdoor event",
-    body: "Licensed, experienced bartenders for backyard and DIY-venue weddings where the venue doesn't provide one. Bring your own bar; we'll staff and run it. From $" +
+    body: "Licensed, experienced bartenders for backyard and DIY-venue weddings where the venue doesn't provide one. Bring your own bar; we'll staff and run it. $" +
       BARTENDER_MIN_USD +
-      ", fully quoted at intake.",
+      " is the minimum, not the price: guest count and shelf set the real number, quoted straight on your intro call.",
   },
   {
     title: "Day-Of Coordination",

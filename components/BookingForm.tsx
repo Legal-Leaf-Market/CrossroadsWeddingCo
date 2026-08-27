@@ -165,9 +165,10 @@ export default function BookingForm() {
               onChange={() => toggleAddon("acoustic")}
               className="mr-2 accent-terracotta"
             />
-            <span className="font-semibold text-cream">Live acoustic set</span>
+            <span className="font-semibold text-cream">Live solo acoustic set</span>
             <span className="mt-1 block text-sm text-cream/60">
-              Ceremony or cocktail hour, played live. Flat ${ACOUSTIC_ADDON_USD}.
+              One performer, ceremony or cocktail hour, up to three requests learned with
+              notice. Flat ${ACOUSTIC_ADDON_USD}.
             </span>
           </label>
           <label
@@ -181,7 +182,8 @@ export default function BookingForm() {
             />
             <span className="font-semibold text-cream">Bar service</span>
             <span className="mt-1 block text-sm text-cream/60">
-              Licensed bartenders. From ${BARTENDER_MIN_USD}, fully quoted on your intro call.
+              Licensed bartenders. ${BARTENDER_MIN_USD} minimum; the real number depends on
+              your bar and gets quoted on your intro call.
             </span>
           </label>
         </div>
@@ -219,7 +221,7 @@ export default function BookingForm() {
         </div>
         {hasAcoustic && (
           <div className="mt-1 flex items-center justify-between">
-            <span>Live acoustic set</span>
+            <span>Live solo acoustic set</span>
             <span>${ACOUSTIC_ADDON_USD}</span>
           </div>
         )}

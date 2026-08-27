@@ -26,8 +26,14 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
   if (!key) return;
 
   const resend = new Resend(key);
+  const ADDON_LABELS: Record<string, string> = {
+    acoustic: "live solo acoustic set",
+    bartender: "bar service",
+  };
   const addonLine =
-    booking.addons.length > 0 ? booking.addons.join(", ") : "none selected";
+    booking.addons.length > 0
+      ? booking.addons.map((a) => ADDON_LABELS[a] ?? a).join(", ")
+      : "none selected";
 
   const confirmation = [
     `Hi ${booking.coupleNames},`,
@@ -47,7 +53,7 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
       : []),
     ``,
     booking.addons.includes("bartender")
-      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before bar service. Bartending is from $${BARTENDER_MIN_USD} and gets fully quoted on your intro call (add-ons noted: ${addonLine}).`
+      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before bar service. Bartending starts at a $${BARTENDER_MIN_USD} minimum; the real number depends on your bar and gets quoted on your intro call (add-ons noted: ${addonLine}).`
       : `Your quote: $${booking.totalUsd.toLocaleString("en-US")} (add-ons noted: ${addonLine}).`,
     `Reference: ${booking.reference}`,
     ``,

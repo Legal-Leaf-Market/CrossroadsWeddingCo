@@ -12,7 +12,7 @@ export const SITE_NAME = "Crossroads Wedding Co.";
 export const SITE_TAGLINE = "Wedding DJ, Live Music & Bar Service";
 
 export const SITE_DESCRIPTION =
-  "Backyard-to-ballroom wedding DJ services starting at $1,000, plus live acoustic sets and licensed bartenders. We run your day so you don't have to.";
+  "Backyard-to-ballroom wedding DJ services starting at $1,000, plus live solo acoustic sets and licensed bartenders. We run your day so you don't have to.";
 
 export const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
 
@@ -60,15 +60,15 @@ export const SERVICE_OFFERS = [
     priceUsd: DJ_DAY_RATE_USD,
   },
   {
-    name: "Live Acoustic Sets",
+    name: "Live Solo Acoustic Set",
     description:
-      "A live acoustic set for the ceremony or cocktail hour, played by the same person running the decks. Flat $400.",
+      "One performer, singer-songwriter style, played live for your ceremony or cocktail hour. One hour is the sweet spot (two is the max), and with enough notice we learn up to three songs just for you. Flat $400.",
     priceUsd: ACOUSTIC_ADDON_USD,
   },
   {
     name: "Bar Service",
     description:
-      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. From $400, fully quoted at intake.",
+      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. $400 is the minimum, not the price: your guest count and your shelf set the real number, and we quote it straight on your intro call.",
     priceUsd: null,
     minPriceUsd: BARTENDER_MIN_USD,
   },
