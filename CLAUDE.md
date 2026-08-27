@@ -347,10 +347,19 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
    on-page. Shipping it earlier is a documented Google-penalty trigger.
 
 ### 9.2 Decisions made after the spec was written (owner-confirmed)
-- **Add-on pricing (2026-08-26, Jacob):** Live acoustic set is a **flat $400**, published.
-  Bartending is **from $400**, fully quoted at intake once date and headcount are known.
-  The booking flow adds $400 to the total for acoustic; bartending is stored as an interest
-  flag with a $400 floor and quoted on the intro call.
+- **Add-on pricing (2026-08-26, Jacob; sharpened 2026-08-27 with Nic):** the acoustic
+  package is a **live SOLO acoustic set**, flat $400, published: one performer,
+  singer-songwriter style, ceremony or cocktail hour, one hour preferred and two hours
+  absolute max, and up to three requested songs learned per wedding with adequate notice
+  (the rest comes from the standing repertoire). Bartending is a **$400 minimum, never a
+  quote on the site**: copy must read as "minimum, real number on the intro call" because
+  shelf and guest count move the price. The booking flow adds $400 to the total for
+  acoustic; bartending is stored as an interest flag with a $400 floor.
+- **Bar service is serve-only, never sell (standing until legal review says otherwise,
+  2026-08-27):** the couple or venue provides the alcohol; we staff and pour. Selling or
+  marking up alcohol in Indiana requires a quota-bound three-way retailer permit (secondary
+  market $20k+) plus a supplemental caterer's permit, so no copy, quote, or feature may
+  imply we supply or sell alcohol. At licensed venues we work under the venue's permit.
 - **Deposits are cash and check for roughly the first 4 months (2026-08-27, Jacob).** Stripe
   stays scaffolded and gated off; do not prioritize Stripe keys or build further payment
   automation until Jacob says so. Site and email copy already read "payment details come with

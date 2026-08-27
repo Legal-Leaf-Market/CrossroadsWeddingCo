@@ -24,12 +24,12 @@ export default function Pricing() {
           </p>
           <div className="mt-5 space-y-2 border-t border-terracotta/30 pt-4 text-left text-sm text-ink/70">
             <p>
-              <span className="font-semibold text-charcoal">Live acoustic set</span>: flat $
-              {ACOUSTIC_ADDON_USD}
+              <span className="font-semibold text-charcoal">Live solo acoustic set</span>: flat $
+              {ACOUSTIC_ADDON_USD}, ceremony or cocktail hour
             </p>
             <p>
-              <span className="font-semibold text-charcoal">Bar service</span>: from $
-              {BARTENDER_MIN_USD}, fully quoted on your intro call
+              <span className="font-semibold text-charcoal">Bar service</span>: $
+              {BARTENDER_MIN_USD} minimum, real number quoted on your intro call
             </p>
           </div>
           <a
