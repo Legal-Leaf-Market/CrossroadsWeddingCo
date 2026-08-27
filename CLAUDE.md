@@ -468,5 +468,17 @@ decisions absorbed from it:
     a crawler must fetch to see it, else a leaked URL gets indexed URL-only. Do not "fix" by
     re-adding the disallow.
   - PrintButton swaps a tokenless URL into history during window.print() so browser print
-    headers do not hand the write-capable token to the venue. A real read-only share token is
-    the durable fix and belongs with Phase 3's `/live/[token]`.
+    headers do not hand the write-capable token to the venue. The durable fix, the read-only
+    share token, shipped with the first Phase 3 slice below.
+- **Phase 3, first slice (2026-08-27): "Crossroads Live" drift engine.**
+  `/hub/[token]/live` is the MC's tap-to-run console: Start on a block anchors it to now,
+  closes everything before it, reopens everything after, and the drift (actual minus
+  scheduled of the latest start) shifts every downstream time. `/live/[share_token]` is the
+  zero-auth read-only vendor view (photographer, venue) of the same state.
+  `weddings.share_token` (additive migration, pgcrypto backfill, minted at booking) grants
+  exactly that read. Both pages poll every 15s; drift math is client-side
+  (`lib/live.ts`, pure) so wall-clock deltas use the venue device's timezone. Live writes
+  are deliberately last-write-wins single-field updates, not rev-guarded: a mid-ceremony
+  tap must never be blocked, and the poll reconverges all devices. Still Phase 3 backlog:
+  dispatch cascade (needs Twilio), blockout calendar, Music Stand/ChordPro, realtime push
+  instead of polling.

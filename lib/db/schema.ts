@@ -109,6 +109,8 @@ export const weddings = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
     accessToken: varchar("access_token", { length: 64 }).notNull().unique(),
+    // Read-only credential for /live/[share_token]; never grants writes.
+    shareToken: varchar("share_token", { length: 64 }).unique(),
     clientUserId: uuid("client_user_id").references(() => users.id, { onDelete: "set null" }),
     coupleNames: varchar("couple_names", { length: 255 }).notNull(),
     contactEmail: varchar("contact_email", { length: 255 }),

@@ -5,7 +5,7 @@ import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
 import { daysOut, getPortalData, TOKEN_RE } from "@/lib/hub";
-import { normalizePlaylistLinks } from "@/lib/hub-constants";
+import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
 import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -24,15 +24,6 @@ export async function generateMetadata({
   };
 }
 
-function formatDate(iso: string): string {
-  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 export default async function HubPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -59,7 +50,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             <p className="text-sm font-semibold text-terracotta">{SITE_NAME}</p>
             <h1 className="text-2xl text-charcoal">{wedding.coupleNames}</h1>
             <p className="text-sm text-ink/60">
-              {formatDate(wedding.eventDate)} at {wedding.venueName}
+              {formatEventDate(wedding.eventDate)} at {wedding.venueName}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -68,6 +59,12 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
                 {days === 0 ? "Today!" : `${days} days out`}
               </span>
             )}
+            <a
+              href={`/hub/${token}/live`}
+              className="rounded-full bg-terracotta px-4 py-1.5 text-sm font-semibold text-cream hover:bg-terracotta-dark"
+            >
+              Live
+            </a>
             <a
               href={`/hub/${token}/runsheet`}
               className="rounded-full border border-terracotta px-4 py-1.5 text-sm font-semibold text-terracotta hover:bg-terracotta hover:text-cream"

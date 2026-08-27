@@ -85,6 +85,36 @@ export async function getWeddingByToken(token: string): Promise<Wedding | null> 
   return wedding ?? null;
 }
 
+/** Read-only lookup for the vendor live view; grants no writes anywhere. */
+export async function getWeddingByShareToken(token: string): Promise<Wedding | null> {
+  if (!TOKEN_RE.test(token)) return null;
+  const [wedding] = await db
+    .select()
+    .from(weddings)
+    .where(eq(weddings.shareToken, token))
+    .limit(1);
+  return wedding ?? null;
+}
+
+/** The timeline in the wire shape both live pages consume (lib/live.ts LiveBlock). */
+export async function getLiveBlocks(weddingId: string) {
+  const rows = await db
+    .select()
+    .from(timelineItems)
+    .where(eq(timelineItems.weddingId, weddingId))
+    .orderBy(asc(timelineItems.orderIndex));
+  return rows.map((item) => ({
+    id: item.id,
+    title: item.title,
+    category: item.category ?? "reception",
+    scheduledStartTime: item.scheduledStartTime.slice(0, 5),
+    durationMinutes: item.estimatedDurationMinutes,
+    actualStart: item.actualStartTime ? item.actualStartTime.toISOString() : null,
+    isCompleted: item.isCompleted ?? false,
+    mcNotes: item.mcNotes ?? "",
+  }));
+}
+
 export async function getPortalData(token: string) {
   const wedding = await getWeddingByToken(token);
   if (!wedding) return null;

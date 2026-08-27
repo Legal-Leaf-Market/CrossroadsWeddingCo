@@ -35,6 +35,10 @@ export const BARTENDER_MIN_USD = 400;
 export const TRAVEL_SURCHARGE_RANGE = "$100–$150";
 
 export const HOME_BASE = "Columbus, Indiana";
+
+// Every venue we serve runs on Indiana Eastern time; schedules are venue wall
+// clock, so live drift math pins to this zone on server and client alike.
+export const VENUE_TIME_ZONE = "America/Indiana/Indianapolis";
 export const SERVICE_RADIUS_BLURB =
   "Based in Columbus, Indiana, serving couples within about two hours: Indianapolis, Bloomington, Nashville, Louisville, and Cincinnati.";
 
