@@ -69,8 +69,8 @@ in the sitemap and footer.
 Every booking mints a 48-hex `access_token` on the `weddings` row, and the
 confirmation email links the couple to `/hub/[token]`. No passwords: the link is
 the login. The hub has four autosaving sections (venue basics, run-of-show
-timeline, music cues + playlist link + must/do-not-play lists, VIP names with
-phonetic spellings) that debounce writes to `PUT /api/hub/[token]/*` routes,
+timeline, music cues + labeled Spotify playlist links + must/do-not-play lists,
+VIP names with phonetic spellings) that debounce writes to `PUT /api/hub/[token]/*` routes,
 each of which validates the token, zod-checks the body, and replaces that
 wedding's rows in a transaction guarded by a per-section revision counter
 (`weddings.hub_section_revs`): a stale tab gets a 409 plus the current rows

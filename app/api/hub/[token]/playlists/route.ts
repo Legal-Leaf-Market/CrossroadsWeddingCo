@@ -2,9 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { playlistCurations } from "@/lib/db/schema";
+import { playlistCurations, weddings } from "@/lib/db/schema";
 import { getWeddingByToken, withSectionRev, type Tx } from "@/lib/hub";
-import { CONFLICT_MESSAGE } from "@/lib/hub-constants";
+import { CONFLICT_MESSAGE, MAX_PLAYLIST_LINKS, normalizePlaylistLinks } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,11 +16,21 @@ const track = z.object({
   artist: z.string().trim().max(255).optional().default(""),
 });
 
+const playlistLink = z.object({
+  // A row with a label but no URL yet (or the reverse) must round-trip.
+  // The URL is deliberately not format-validated here: a link that isn't a
+  // playlist saves as typed with the field flagged in the UI, because a 400
+  // on this replace-all route would block the couple's track-list edits too.
+  label: z.string().trim().max(100),
+  url: z.string().trim().max(500),
+});
+
 const schema = z.object({
   rev: z.number().int().min(0).optional().default(0),
   saveId: z.string().max(64).optional().default(""),
   mustPlay: z.array(track).max(100),
   doNotPlay: z.array(track).max(100),
+  playlists: z.array(playlistLink).max(MAX_PLAYLIST_LINKS).optional().default([]),
 });
 
 function toClient(rows: { category: string; trackTitle: string; artist: string }[], category: string) {
@@ -42,7 +52,16 @@ async function currentLists(ex: Tx | typeof db, weddingId: string) {
         inArray(playlistCurations.category, ["must_play", "do_not_play"]),
       ),
     );
-  return { mustPlay: toClient(rows, "must_play"), doNotPlay: toClient(rows, "do_not_play") };
+  const [w] = await ex
+    .select({ spotifyPlaylistUrls: weddings.spotifyPlaylistUrls })
+    .from(weddings)
+    .where(eq(weddings.id, weddingId));
+  const playlists = normalizePlaylistLinks(w?.spotifyPlaylistUrls);
+  return {
+    mustPlay: toClient(rows, "must_play"),
+    doNotPlay: toClient(rows, "do_not_play"),
+    playlists,
+  };
 }
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
@@ -92,6 +111,14 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
           ),
         );
       if (rows.length > 0) await tx.insert(playlistCurations).values(rows);
+      // Clearing the booking-captured single link on every managed save is
+      // what lets a deleted seed row STAY deleted: the hub page only seeds
+      // from that column while this list has never been saved. updated_at is
+      // stamped by withSectionRev's rev bump in this same transaction.
+      await tx
+        .update(weddings)
+        .set({ spotifyPlaylistUrls: parsed.data.playlists, spotifyPlaylistUrl: null })
+        .where(eq(weddings.id, wedding.id));
     },
     (tx) => currentLists(tx, wedding.id),
   );

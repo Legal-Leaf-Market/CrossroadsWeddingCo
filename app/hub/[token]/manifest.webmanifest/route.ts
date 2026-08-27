@@ -25,7 +25,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
       display: "standalone",
       background_color: "#faf5ec",
       theme_color: "#faf5ec",
-      icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
+      icons: [
+        { src: "/apple-icon", sizes: "180x180", type: "image/png", purpose: "any" },
+        { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      ],
     },
     {
       headers: {
