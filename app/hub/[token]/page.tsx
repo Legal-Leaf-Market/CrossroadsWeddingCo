@@ -97,6 +97,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           token={token}
           venueName={wedding.venueName}
           initial={{
+            contactEmail: wedding.contactEmail ?? "",
             venueAddress: wedding.venueAddress ?? "",
             venueContactEmail: wedding.venueContactEmail ?? "",
             contactPhone: wedding.contactPhone ?? "",

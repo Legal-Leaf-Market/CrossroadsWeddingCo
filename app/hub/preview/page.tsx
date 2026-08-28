@@ -60,6 +60,7 @@ export default function HubPreviewPage() {
           token={SAMPLE_TOKEN}
           venueName="The Sycamore Barn"
           initial={{
+            contactEmail: "jordan@example.com",
             venueAddress: "4280 County Road 325 N, Columbus, IN 47203",
             venueContactEmail: "events@sycamorebarn.com",
             contactPhone: "(812) 555-0142",
