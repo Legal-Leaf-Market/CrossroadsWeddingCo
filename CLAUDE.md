@@ -388,6 +388,18 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` exist. Write-back (collaborative playlists from
   our side) requires the OAuth authorization-code flow, Phase 3+.
 
+- **Communication strategy (2026-08-27/28, Jacob, the "AppFolio model"):** one master
+  message thread per wedding, stored in our platform (`wedding_messages`), NOT in email.
+  Couple writes from the hub's Messages tab; Jake and Nic both read and reply from the
+  admin dashboard, each reply labeled with the teammate's first name, and the couple sees
+  one fluid Crossroads thread. Email's only job is getting the couple INTO the hub: all
+  transactional email sends from **booking@crossroadsweddingco.com** and says plainly
+  "don't reply to this email, message us in your hub"; team replies trigger a pointer
+  email only ("new message in your hub"), never the content. Couples can download their
+  conversation any time. Jacob must keep booking@ alive as a Workspace alias/group
+  (deliver to him and Nic) so strays never bounce. SMS will later become a second door
+  into the same thread (the AppFolio text behavior); that waits on Twilio.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:
@@ -493,6 +505,17 @@ decisions absorbed from it:
   - PrintButton swaps a tokenless URL into history during window.print() so browser print
     headers do not hand the write-capable token to the venue. The durable fix, the read-only
     share token, shipped with the first Phase 3 slice below.
+- **Phase 3, third slice (2026-08-28): Messages, the one-master-thread inbox.**
+  `wedding_messages` table; couple chat at `/hub/[token]/messages` (Messages button with
+  unread badge in the hub header), team inbox at `/admin/[key]/messages/[weddingId]`
+  (Messages button with unread count on each dashboard card, "Replying as Jake/Nic"
+  remembered per device). 12s polling with a stale-poll guard, optimistic sends, 4000-char
+  cap, download-as-txt. Couple posts email an alert to OWNER_EMAIL with a direct dashboard
+  reply link; team posts email the couple a pointer only. Booking email now sends from
+  booking@, tells couples not to reply, and carries a "Message us in your planning hub"
+  button. Notification emails are awaited (Promise.allSettled) before the response, per
+  the serverless-freeze lesson. Dev previews: `/hub/preview/messages`,
+  `/admin/preview/messages/[id]`.
 - **Phase 3, second slice (2026-08-28): milestone check-in texts + owner dashboard.**
   `/api/cron/checkins` (vercel.json cron, daily 15:00 UTC) sends the 90/30/14-days-out
   check-in texts with the hub link; `weddings.checkins_sent` marks sent milestones (only

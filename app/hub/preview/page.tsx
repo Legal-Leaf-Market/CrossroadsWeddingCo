@@ -5,7 +5,7 @@ import DetailsSection from "@/components/hub/DetailsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
-import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
+import { SITE_NAME } from "@/lib/site";
 
 // Dev-only layout preview of the planning hub, rendered with sample data so the
 // portal can be screenshotted and measured without a database. Returns 404 in
@@ -30,6 +30,15 @@ export default function HubPreviewPage() {
             <p className="text-sm text-ink/60">Saturday, June 12, 2027 at The Sycamore Barn</p>
           </div>
           <div className="flex items-center gap-3">
+            <a
+              href="/hub/preview/messages"
+              className="rounded-full bg-charcoal px-4 py-1.5 text-sm font-semibold text-cream"
+            >
+              Messages
+              <span className="ml-2 rounded-full bg-terracotta px-2 py-0.5 text-xs font-bold text-cream">
+                1
+              </span>
+            </a>
             <span className="rounded-full bg-terracotta px-4 py-1.5 text-sm font-semibold text-cream">
               Live
             </span>
@@ -100,7 +109,11 @@ export default function HubPreviewPage() {
           ]}
         />
         <p className="pb-8 text-center text-xs text-ink/40">
-          Questions any time: {EMAIL_FROM_ADDRESS}
+          Questions any time:{" "}
+          <a href="/hub/preview/messages" className="underline decoration-parchment underline-offset-2">
+            message us
+          </a>{" "}
+          and we both see it right away.
         </p>
       </main>
     </div>

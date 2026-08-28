@@ -16,9 +16,16 @@ export const SITE_DESCRIPTION =
 
 export const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
 
-// Transactional email identity (owner-confirmed 2026-08-26): send as Jake, so
-// replies land where they get read. Overridable with RESEND_FROM in Vercel.
-export const EMAIL_FROM_ADDRESS = "jake@crossroadsweddingco.com";
+// Transactional email identity (owner decision 2026-08-28): everything sends
+// as booking@, and the emails tell couples NOT to reply: the hub's Messages
+// thread is the conversation, email is only the door in. Jacob must keep
+// booking@ alive as a Google Workspace alias/group (delivering to him and
+// Nic) so strays never bounce. Overridable with RESEND_FROM in Vercel.
+export const EMAIL_FROM_ADDRESS = "booking@crossroadsweddingco.com";
+
+// Where internal notifications land (new bookings, new couple messages): a
+// real, read mailbox. Overridable with RESEND_NOTIFY_TO.
+export const OWNER_EMAIL = "jake@crossroadsweddingco.com";
 
 export const DJ_DAY_RATE_USD = 1000;
 

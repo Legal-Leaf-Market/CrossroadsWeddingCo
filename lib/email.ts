@@ -1,10 +1,17 @@
 import { Resend } from "resend";
-import { BARTENDER_MIN_USD, DEPOSIT_USD, EMAIL_FROM_ADDRESS, SITE_NAME, SITE_URL } from "@/lib/site";
+import {
+  BARTENDER_MIN_USD,
+  DEPOSIT_USD,
+  EMAIL_FROM_ADDRESS,
+  OWNER_EMAIL,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/site";
 
 // Booking emails activate the moment RESEND_API_KEY lands in Vercel; until
 // then every helper is a silent no-op so the booking flow never depends on it.
 const FROM = process.env.RESEND_FROM ?? `${SITE_NAME} <${EMAIL_FROM_ADDRESS}>`;
-const NOTIFY_TO = process.env.RESEND_NOTIFY_TO ?? EMAIL_FROM_ADDRESS;
+const NOTIFY_TO = process.env.RESEND_NOTIFY_TO ?? OWNER_EMAIL;
 
 type BookingEmail = {
   coupleNames: string;
@@ -57,7 +64,9 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
       : `Your quote: $${booking.totalUsd.toLocaleString("en-US")} (add-ons noted: ${addonLine}).`,
     `Reference: ${booking.reference}`,
     ``,
-    `Questions in the meantime? Just reply to this email.`,
+    booking.hubPath
+      ? `Questions? Please don't reply to this email. Message us: your hub has a Messages tab where you text us like a group chat, we both see it right away, and your whole conversation stays in one place: ${SITE_URL}${booking.hubPath}/messages`
+      : `Questions in the meantime? Just reply to this email.`,
     ``,
     `${SITE_NAME}`,
     SITE_URL,
@@ -70,19 +79,42 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
   const escapeHtml = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const hubUrl = booking.hubPath ? `${SITE_URL}${booking.hubPath}` : null;
-  const confirmationHtml =
-    `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
-    confirmationLines
+  const messagesUrl = hubUrl ? `${hubUrl}/messages` : null;
+  // The Messages button is the star (owner directive 2026-08-28): the email's
+  // one job is getting the couple off email and into the hub thread.
+  const buttonBlock = messagesUrl
+    ? `<div style="margin: 18px 0 6px;">` +
+      `<a href="${escapeHtml(messagesUrl)}" style="display: inline-block; background: #c1633d; color: #faf5ec; font-weight: bold; padding: 12px 22px; border-radius: 999px; text-decoration: none;">Message us in your planning hub</a>` +
+      `</div>` +
+      `<div style="margin: 0 0 12px;">` +
+      `<a href="${escapeHtml(hubUrl!)}" style="color: #c1633d;">Or open the hub itself</a>` +
+      `</div>`
+    : "<br>";
+  const htmlLines = confirmationLines
       .map((line) => {
         let html = escapeHtml(line);
+        // Longest URL first, so the /messages link never gets half-eaten by
+        // the plain hub link replacement.
+        if (messagesUrl) {
+          const m = escapeHtml(messagesUrl);
+          html = html.replace(m, `<a href="${m}" style="color: #c1633d;">${m}</a>`);
+        }
         if (hubUrl) {
           const u = escapeHtml(hubUrl);
-          html = html.replace(u, `<a href="${u}" style="color: #c1633d;">${u}</a>`);
+          if (!html.includes(`href="${u}/messages"`)) {
+            html = html.replace(u, `<a href="${u}" style="color: #c1633d;">${u}</a>`);
+          }
         }
         html = html.replace("Fill out now:", `<strong>Fill out now:</strong>`);
+        html = html.replace("Please don't reply to this email.", `<strong>Please don't reply to this email.</strong>`);
         return html;
-      })
-      .join("<br>") +
+      });
+  // Button sits between the body and the signature (the last two lines).
+  const confirmationHtml =
+    `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
+    htmlLines.slice(0, -2).join("<br>") +
+    buttonBlock +
+    htmlLines.slice(-2).join("<br>") +
     `</div>`;
 
   const notification = [
@@ -124,4 +156,68 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     if (r.status === "rejected") console.error("[email] send failed:", r.reason);
     else if (r.value.error) console.error("[email] send failed:", r.value.error);
   }
+}
+
+// --- Message-thread notifications (AppFolio model, 2026-08-28) -------------
+// The hub's Messages thread is the conversation; these emails only point at
+// it. Both fail silently without RESEND_API_KEY and must be awaited by
+// callers (Promise.allSettled) before the serverless response goes out.
+
+/** Tell the owners a couple wrote in the hub thread. */
+export async function sendTeamInboxAlert(input: {
+  coupleNames: string;
+  preview: string;
+  weddingId: string;
+}): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  const resend = new Resend(key);
+  const adminKey = process.env.ADMIN_DASH_KEY;
+  const replyLine =
+    adminKey && adminKey.length >= 16
+      ? `Reply from the dashboard: ${SITE_URL}/admin/${adminKey}/messages/${input.weddingId}`
+      : `Reply from the bookings dashboard (set ADMIN_DASH_KEY to get a direct link here).`;
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: NOTIFY_TO,
+    subject: `New message from ${input.coupleNames}`,
+    text: [
+      `${input.coupleNames} wrote in their planning hub:`,
+      ``,
+      input.preview,
+      ``,
+      replyLine,
+    ].join("\n"),
+  });
+  if (error) console.error("[email] inbox alert failed:", error);
+}
+
+/** Tell the couple the team wrote back; content stays in the hub on purpose. */
+export async function sendHubMessagePointer(input: {
+  to: string;
+  hubPath: string;
+}): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  const resend = new Resend(key);
+  const url = `${SITE_URL}${input.hubPath}/messages`;
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: input.to,
+    subject: `New message in your planning hub`,
+    text: [
+      `You have a new message from ${SITE_NAME}.`,
+      ``,
+      `Read and reply here: ${url}`,
+      ``,
+      `Please don't reply to this email; the hub thread is where we talk.`,
+    ].join("\n"),
+    html:
+      `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
+      `You have a new message from ${SITE_NAME}.<br>` +
+      `<div style="margin: 16px 0;"><a href="${url}" style="display: inline-block; background: #c1633d; color: #faf5ec; font-weight: bold; padding: 12px 22px; border-radius: 999px; text-decoration: none;">Open Messages</a></div>` +
+      `Please don't reply to this email; the hub thread is where we talk.` +
+      `</div>`,
+  });
+  if (error) console.error("[email] hub pointer failed:", error);
 }

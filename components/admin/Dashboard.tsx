@@ -35,7 +35,15 @@ function statusChip(status: string) {
   );
 }
 
-function WeddingCard({ wedding, upcoming }: { wedding: AdminWedding; upcoming: boolean }) {
+function WeddingCard({
+  wedding,
+  upcoming,
+  basePath,
+}: {
+  wedding: AdminWedding;
+  upcoming: boolean;
+  basePath: string;
+}) {
   const d = daysOut(wedding.eventDate);
   return (
     <div className="rounded-2xl border border-parchment bg-white p-5">
@@ -91,6 +99,17 @@ function WeddingCard({ wedding, upcoming }: { wedding: AdminWedding; upcoming: b
       {wedding.notes && <p className="mt-3 text-sm text-ink/60">{wedding.notes}</p>}
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
+        <a
+          href={`${basePath}/messages/${wedding.id}`}
+          className="rounded-full bg-charcoal px-4 py-1.5 font-semibold text-cream hover:bg-ink"
+        >
+          Messages
+          {wedding.unreadMessages > 0 && (
+            <span className="ml-2 rounded-full bg-terracotta px-2 py-0.5 text-xs font-bold text-cream">
+              {wedding.unreadMessages}
+            </span>
+          )}
+        </a>
         <a href={`/hub/${wedding.accessToken}`} className="rounded-full bg-terracotta px-4 py-1.5 font-semibold text-cream hover:bg-terracotta-dark">
           Hub
         </a>
@@ -110,7 +129,7 @@ function WeddingCard({ wedding, upcoming }: { wedding: AdminWedding; upcoming: b
   );
 }
 
-export default function Dashboard({ data }: { data: AdminData }) {
+export default function Dashboard({ data, basePath }: { data: AdminData; basePath: string }) {
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-parchment bg-white">
@@ -134,7 +153,7 @@ export default function Dashboard({ data }: { data: AdminData }) {
           ) : (
             <div className="space-y-4">
               {data.upcoming.map((w) => (
-                <WeddingCard key={w.id} wedding={w} upcoming />
+                <WeddingCard key={w.id} wedding={w} upcoming basePath={basePath} />
               ))}
             </div>
           )}
@@ -175,7 +194,7 @@ export default function Dashboard({ data }: { data: AdminData }) {
             <h2 className="mb-3 text-lg font-semibold text-charcoal">Past and cancelled</h2>
             <div className="space-y-4">
               {data.past.map((w) => (
-                <WeddingCard key={w.id} wedding={w} upcoming={false} />
+                <WeddingCard key={w.id} wedding={w} upcoming={false} basePath={basePath} />
               ))}
             </div>
           </section>
