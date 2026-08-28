@@ -30,6 +30,7 @@ const SAMPLE: AdminData = {
       accessToken: "000000000000000000000000000000000000000000000000",
       shareToken: "111111111111111111111111111111111111111111111111",
       checkinsSent: [90],
+      unreadMessages: 2,
       notes: "Golden hour garden party. Motown for cocktails.",
       createdAt: "2026-08-01T12:00:00.000Z",
     },
@@ -48,6 +49,7 @@ const SAMPLE: AdminData = {
       accessToken: "000000000000000000000000000000000000000000000002",
       shareToken: null,
       checkinsSent: [],
+      unreadMessages: 0,
       notes: null,
       createdAt: "2026-08-20T12:00:00.000Z",
     },
@@ -68,6 +70,7 @@ const SAMPLE: AdminData = {
       accessToken: "000000000000000000000000000000000000000000000003",
       shareToken: null,
       checkinsSent: [90, 30, 14],
+      unreadMessages: 0,
       notes: null,
       createdAt: "2026-01-15T12:00:00.000Z",
     },
@@ -87,5 +90,5 @@ const SAMPLE: AdminData = {
 
 export default function AdminPreviewPage() {
   if (process.env.NODE_ENV === "production") notFound();
-  return <Dashboard data={SAMPLE} />;
+  return <Dashboard data={SAMPLE} basePath="/admin/preview" />;
 }

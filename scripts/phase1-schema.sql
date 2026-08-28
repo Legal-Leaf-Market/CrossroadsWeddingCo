@@ -227,3 +227,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_weddings_share_token ON weddings (share_to
 -- already sent per wedding, e.g. [90, 30]. Marked inside the cron route so a
 -- text never repeats; jsonb so future milestone sets need no DDL.
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS checkins_sent JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- One master conversation per wedding (owner decision 2026-08-28, AppFolio
+-- model): couple and team write into the same thread; the hub renders it for
+-- the couple, the admin dashboard renders it for Jake and Nic. Email and,
+-- later, SMS are only doors into this thread, never the thread itself.
+CREATE TABLE IF NOT EXISTS wedding_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wedding_id UUID REFERENCES weddings(id) ON DELETE CASCADE,
+    sender VARCHAR(20) NOT NULL, -- 'couple' | 'team'
+    sender_name VARCHAR(100) NOT NULL,
+    body TEXT NOT NULL,
+    read_by_team BOOLEAN NOT NULL DEFAULT false,
+    read_by_couple BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_wedding_messages_thread ON wedding_messages (wedding_id, created_at);

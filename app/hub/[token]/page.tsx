@@ -7,7 +7,8 @@ import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
 import { getPortalData, TOKEN_RE } from "@/lib/hub";
 import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
-import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
+import { countUnread } from "@/lib/messages";
+import { SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   const data = await getPortalData(token);
   if (!data) notFound();
   const { wedding, timeline, cues, vips, playlists } = data;
+  const unreadMessages = await countUnread(wedding.id, "couple");
   const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
   // The hub-managed playlist links, seeded from the single link captured at
   // booking when the couple hasn't managed the list yet. The playlists route
@@ -54,6 +56,17 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <a
+              href={`/hub/${token}/messages`}
+              className="rounded-full bg-charcoal px-4 py-1.5 text-sm font-semibold text-cream hover:bg-ink"
+            >
+              Messages
+              {unreadMessages > 0 && (
+                <span className="ml-2 rounded-full bg-terracotta px-2 py-0.5 text-xs font-bold text-cream">
+                  {unreadMessages}
+                </span>
+              )}
+            </a>
             <a
               href={`/hub/${token}/live`}
               className="rounded-full bg-terracotta px-4 py-1.5 text-sm font-semibold text-cream hover:bg-terracotta-dark"
@@ -130,7 +143,11 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           }))}
         />
         <p className="pb-8 text-center text-xs text-ink/40">
-          Questions any time: {EMAIL_FROM_ADDRESS}
+          Questions any time:{" "}
+          <a href={`/hub/${token}/messages`} className="underline decoration-parchment underline-offset-2 hover:text-terracotta">
+            message us
+          </a>{" "}
+          and we both see it right away.
         </p>
       </main>
     </div>

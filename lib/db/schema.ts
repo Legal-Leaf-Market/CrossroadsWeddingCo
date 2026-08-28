@@ -188,6 +188,24 @@ export const musicCues = pgTable("music_cues", {
   isLivePerformance: boolean("is_live_performance").default(false),
 });
 
+// 7b. Wedding messages: the one master conversation per wedding (AppFolio
+// model, owner decision 2026-08-28). Couple and team write into the same
+// thread; email/SMS only point at it.
+export const weddingMessages = pgTable(
+  "wedding_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id").references(() => weddings.id, { onDelete: "cascade" }),
+    sender: varchar("sender", { length: 20 }).notNull(),
+    senderName: varchar("sender_name", { length: 100 }).notNull(),
+    body: text("body").notNull(),
+    readByTeam: boolean("read_by_team").notNull().default(false),
+    readByCouple: boolean("read_by_couple").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_wedding_messages_thread").on(t.weddingId, t.createdAt)],
+);
+
 // 8. VIP pronunciation & wedding-party roster
 export const vipRoster = pgTable("vip_roster", {
   id: uuid("id").primaryKey().defaultRandom(),
