@@ -9,6 +9,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
+  // The couple's own email: where booking updates and new-message pointers
+  // land. Same relaxed validation as the venue email, for the same reason.
+  contactEmail: z.string().trim().max(255).optional(),
   venueAddress: z.string().trim().max(2000).optional(),
   // Deliberately not z.email(): format is enforced client-side for UX, and a
   // strict server check whose regex differs from the client's would 400 the
@@ -42,6 +45,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ token: st
   await db
     .update(weddings)
     .set({
+      ...(d.contactEmail !== undefined ? { contactEmail: d.contactEmail || null } : {}),
       ...(d.venueAddress !== undefined ? { venueAddress: d.venueAddress || null } : {}),
       ...(d.venueContactEmail !== undefined
         ? { venueContactEmail: d.venueContactEmail || null }

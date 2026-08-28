@@ -415,6 +415,17 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   with upside. When approved: add him to `lib/team.ts` (appears on the site instantly)
   and to the partner-economics records.
 
+- **Kat McKinney's wedding is the first live one: November 7 (2026-08-28, Jacob).**
+  Partner's name heard as "tennis" on voice, VERIFY the real name before it appears
+  anywhere. Jacob DJs; the new partners shadow (Kat's permission requested by
+  Messenger). The couple gets workshop status: features get trialed with them first.
+  Their deal includes the pilot referral program: for each future wedding they refer
+  that books, the referrer gets $75 and the referred couple gets $25 off, capping our
+  cost at $100 per referred wedding, applying only to referred bookings. Software
+  tracking for referrals is future work; for now it lives in this record and the
+  contract. The hub's "Your email" field (Details section) was added same-day so
+  Jacob can put Kat's real email on her booking record himself.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { hubInput, hubSave, SaveBadge, SectionCard, useAutosave, type SaveFn } from "./shared";
 
 type Details = {
+  contactEmail: string;
   venueAddress: string;
   venueContactEmail: string;
   contactPhone: string;
@@ -29,14 +30,25 @@ export default function DetailsSection({
 
   const emailInvalid =
     details.venueContactEmail.trim() !== "" && !EMAIL_RE.test(details.venueContactEmail.trim());
+  const ownEmailInvalid =
+    details.contactEmail.trim() !== "" && !EMAIL_RE.test(details.contactEmail.trim());
+
+  const heldNames = () =>
+    [
+      ownEmailInvalid && dirty.current.has("contactEmail") ? "your email" : null,
+      emailInvalid && dirty.current.has("venueContactEmail") ? "the venue email" : null,
+    ].filter((n): n is string => n !== null);
 
   const save: SaveFn = async ({ keepalive }) => {
     // Hold back a half-typed email; the field is marked and the rest saves.
-    const keys = [...dirty.current].filter((k) => !(k === "venueContactEmail" && emailInvalid));
-    const heldEmail = emailInvalid && dirty.current.has("venueContactEmail");
+    const keys = [...dirty.current].filter(
+      (k) =>
+        !(k === "venueContactEmail" && emailInvalid) && !(k === "contactEmail" && ownEmailInvalid),
+    );
+    const held = heldNames();
     if (keys.length === 0) {
-      return heldEmail
-        ? { ok: false, noRetry: true, message: "Finish the venue email so we can save it" }
+      return held.length > 0
+        ? { ok: false, noRetry: true, message: `Finish ${held.join(" and ")} so we can save` }
         : { ok: true };
     }
     const payload: Partial<Details> = {};
@@ -53,11 +65,11 @@ export default function DetailsSection({
     }
     // Reads under the badge's "Not saved: " prefix, so the message names
     // what is not saved rather than contradicting the prefix.
-    return heldEmail
+    return held.length > 0
       ? {
           ok: false,
           noRetry: true,
-          message: "the venue email is incomplete; everything else is saved",
+          message: `${held.join(" and ")} ${held.length > 1 ? "are" : "is"} incomplete; everything else is saved`,
         }
       : { ok: true };
   };
@@ -76,6 +88,34 @@ export default function DetailsSection({
       badge={<SaveBadge state={state} message={message} />}
     >
       <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-charcoal">Your email</span>
+          <input
+            className={hubInput}
+            type="email"
+            aria-invalid={ownEmailInvalid || undefined}
+            value={details.contactEmail}
+            maxLength={255}
+            onChange={(e) => set("contactEmail", e.target.value)}
+            placeholder="Where booking updates land"
+          />
+          {ownEmailInvalid && (
+            <span className="mt-1 block text-xs text-terracotta-dark">
+              We save this once it looks like a full email address
+            </span>
+          )}
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-charcoal">Best phone for the day</span>
+          <input
+            className={hubInput}
+            type="tel"
+            value={details.contactPhone}
+            maxLength={50}
+            onChange={(e) => set("contactPhone", e.target.value)}
+            placeholder="Who we text when we arrive"
+          />
+        </label>
         <label className="block sm:col-span-2">
           <span className="mb-1 block text-sm font-semibold text-charcoal">Venue address</span>
           <input
@@ -86,7 +126,7 @@ export default function DetailsSection({
             placeholder="Street address for load-in"
           />
         </label>
-        <label className="block">
+        <label className="block sm:col-span-2">
           <span className="mb-1 block text-sm font-semibold text-charcoal">
             Venue coordinator email (optional)
           </span>
@@ -104,17 +144,6 @@ export default function DetailsSection({
               We save this once it looks like a full email address
             </span>
           )}
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-charcoal">Best phone for the day</span>
-          <input
-            className={hubInput}
-            type="tel"
-            value={details.contactPhone}
-            maxLength={50}
-            onChange={(e) => set("contactPhone", e.target.value)}
-            placeholder="Who we text when we arrive"
-          />
         </label>
         <label className="block sm:col-span-2">
           <span className="mb-1 block text-sm font-semibold text-charcoal">The vibe</span>
