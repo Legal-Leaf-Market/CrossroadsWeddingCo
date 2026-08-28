@@ -10,7 +10,9 @@
     "ig:posts": "node scripts/generate-ig-posts.mjs",
     "storefront:slides": "node scripts/generate-storefront-slides.mjs",
     "db:migrate": "node scripts/migrate.mjs",
-    "reel": "node scripts/generate-reel.mjs"
+    "reel": "node scripts/generate-reel.mjs",
+    "reel:acoustic": "node scripts/generate-reel-acoustic.mjs",
+    "reel:bartending": "node scripts/generate-reel-bartending.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
