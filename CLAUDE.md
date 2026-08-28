@@ -493,6 +493,16 @@ decisions absorbed from it:
   - PrintButton swaps a tokenless URL into history during window.print() so browser print
     headers do not hand the write-capable token to the venue. The durable fix, the read-only
     share token, shipped with the first Phase 3 slice below.
+- **Phase 3, second slice (2026-08-28): milestone check-in texts + owner dashboard.**
+  `/api/cron/checkins` (vercel.json cron, daily 15:00 UTC) sends the 90/30/14-days-out
+  check-in texts with the hub link; `weddings.checkins_sent` marks sent milestones (only
+  the tightest reached milestone is texted, all reached ones are marked, so late bookings
+  never get a stack). Gated on `CRON_SECRET` (Vercel sends it as the Bearer token
+  automatically) plus the Twilio keys; fails closed at every layer. `/admin/[key]` is the
+  read-only owner dashboard (upcoming and past weddings, contacts, money and deposit
+  state, hub/run-sheet/live/vendor links, legacy leads), gated on `ADMIN_DASH_KEY`
+  (generate with `openssl rand -hex 24`; keys under 16 chars are treated as unconfigured;
+  timing-safe compare; 404 on any mismatch). `/admin/preview` is the dev-only QA twin.
 - **Phase 3, first slice (2026-08-27): "Crossroads Live" drift engine.**
   `/hub/[token]/live` is the MC's tap-to-run console: Start on a block anchors it to now,
   closes everything before it, reopens everything after, and the drift (actual minus

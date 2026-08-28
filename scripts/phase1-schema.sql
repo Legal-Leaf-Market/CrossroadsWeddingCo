@@ -222,3 +222,8 @@ EXCEPTION WHEN undefined_function THEN
   NULL;
 END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_weddings_share_token ON weddings (share_token);
+
+-- Milestone check-in texts (90/30/14 days out, daily cron): the milestones
+-- already sent per wedding, e.g. [90, 30]. Marked inside the cron route so a
+-- text never repeats; jsonb so future milestone sets need no DDL.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS checkins_sent JSONB NOT NULL DEFAULT '[]'::jsonb;

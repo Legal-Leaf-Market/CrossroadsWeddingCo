@@ -27,7 +27,11 @@ export function toE164US(input: string): string | null {
   return null;
 }
 
-async function sendSms(to: string, body: string): Promise<void> {
+/**
+ * Send one SMS to an E.164 number. Throws on Twilio errors so callers decide
+ * whether a failure matters; silent no-op while Twilio is unconfigured.
+ */
+export async function sendSms(to: string, body: string): Promise<void> {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !token) return;
