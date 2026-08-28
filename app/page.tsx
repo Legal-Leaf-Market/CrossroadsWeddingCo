@@ -4,6 +4,7 @@ import Services from "@/components/Services";
 import Gallery from "@/components/Gallery";
 import Pricing from "@/components/Pricing";
 import About from "@/components/About";
+import Team from "@/components/Team";
 import ContactCTA from "@/components/ContactCTA";
 import Footer from "@/components/Footer";
 import StructuredData from "@/components/StructuredData";
@@ -18,6 +19,7 @@ export default function Home() {
         <Gallery />
         <Pricing />
         <About />
+        <Team />
         <ContactCTA />
       </main>
       <Footer />

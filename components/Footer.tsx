@@ -7,6 +7,20 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-6">
         <p className="text-center">{SERVICE_RADIUS_BLURB}</p>
         <nav className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2">
+          <a href="/" className="font-semibold text-cream/70 hover:text-cream">
+            Wedding DJ &amp; MC
+          </a>
+          <a href="/acoustic" className="font-semibold text-cream/70 hover:text-cream">
+            Live Solo Acoustic Set
+          </a>
+          <a href="/bartending" className="font-semibold text-cream/70 hover:text-cream">
+            Wedding Bartending
+          </a>
+          <a href="/book" className="font-semibold text-cream/70 hover:text-cream">
+            Check Your Date
+          </a>
+        </nav>
+        <nav className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2">
           {CITIES.map((c) => (
             <a key={c.citySlug} href={cityPath(c)} className="hover:text-cream/80">
               Wedding DJ in {c.name}, {c.stateAbbr}
