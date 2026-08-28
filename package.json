@@ -9,7 +9,8 @@
     "check": "tsc --noEmit",
     "ig:posts": "node scripts/generate-ig-posts.mjs",
     "storefront:slides": "node scripts/generate-storefront-slides.mjs",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node scripts/migrate.mjs",
+    "reel": "node scripts/generate-reel.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
