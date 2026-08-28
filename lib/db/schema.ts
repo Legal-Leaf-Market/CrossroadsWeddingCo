@@ -129,6 +129,8 @@ export const weddings = pgTable(
     // Per-section revision counters ({"timeline": 3, ...}) backing the hub's
     // optimistic concurrency; bumped inside each replace-all transaction.
     hubSectionRevs: jsonb("hub_section_revs").notNull().default({}),
+    // Milestone check-in texts already sent for this wedding, e.g. [90, 30].
+    checkinsSent: jsonb("checkins_sent").notNull().default([]),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull().default("1000.00"),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),
