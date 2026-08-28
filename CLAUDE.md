@@ -400,6 +400,21 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   (deliver to him and Nic) so strays never bounce. SMS will later become a second door
   into the same thread (the AppFolio text behavior); that waits on Twilio.
 
+- **A la carte standalone services + site as directory (2026-08-28, Jacob, confirmed to
+  Adam at WeddingPro):** the acoustic set and bar service are sold standalone, bolted onto
+  weddings where someone else is the DJ, at the same $500 (acoustic flat, bar minimum).
+  The framing to protect everywhere: DJ and MC is $1,000 flat; acoustic or bartending on
+  their own are $500; never let $500 read as the DJ price. The site grows from a landing
+  page into a service directory: shareable pages at `/acoustic` and `/bartending`
+  (footer-linked like the city pages), plus a "Who you get" team section. True a la carte
+  booking flow (the /book form still assumes the DJ base) is a known follow-up.
+- **Brayton (SPELLING UNCONFIRMED, heard "Braiton"; 2026-08-28, Jacob; NOT yet approved
+  by Nic, so nothing public until Jacob confirms):** roommate/best friend, strong on sound
+  engineering and people. Planned as Chief Business Officer (org sketch: Jacob CEO, Nic
+  COO, Brayton CBO), same model as Nic: 3 weddings/month in 2027, $2,000/month baseline
+  with upside. When approved: add him to `lib/team.ts` (appears on the site instantly)
+  and to the partner-economics records.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

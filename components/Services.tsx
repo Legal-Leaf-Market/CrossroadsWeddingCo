@@ -2,7 +2,14 @@ import SafeImage from "@/components/SafeImage";
 import { IMAGES } from "@/lib/images";
 import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD } from "@/lib/site";
 
-const SERVICES = [
+const SERVICES: {
+  title: string;
+  image: string;
+  alt: string;
+  body: string;
+  href?: string;
+  linkLabel?: string;
+}[] = [
   {
     title: "Wedding DJ",
     image: IMAGES.stringLights,
@@ -13,6 +20,8 @@ const SERVICES = [
     title: "Live Solo Acoustic Set",
     image: IMAGES.liveMusic,
     alt: "Close-up of hands playing an acoustic guitar",
+    href: "/acoustic",
+    linkLabel: "The acoustic set, in full",
     body: "One performer, singer-songwriter style, live for your ceremony or cocktail hour, played by the same person who carries the rest of your day from guitar to turntable. An hour is the sweet spot (two is the max), and with enough notice we learn up to three songs just for you. Flat $" +
       ACOUSTIC_ADDON_USD +
       ".",
@@ -21,6 +30,8 @@ const SERVICES = [
     title: "Bar Service",
     image: IMAGES.bar,
     alt: "Bartender pouring a cocktail at an outdoor event",
+    href: "/bartending",
+    linkLabel: "How wedding bars work in Indiana",
     body: "Licensed, experienced bartenders for backyard and DIY-venue weddings where the venue doesn't provide one. Bring your own bar; we'll staff and run it. $" +
       BARTENDER_MIN_USD +
       " is the minimum, not the price: guest count and shelf set the real number, quoted straight on your intro call.",
@@ -62,6 +73,14 @@ export default function Services() {
                 <p className="mt-2 text-sm leading-relaxed text-ink/70">
                   {service.body}
                 </p>
+                {service.href && (
+                  <a
+                    href={service.href}
+                    className="mt-3 inline-block text-sm font-semibold text-terracotta underline decoration-terracotta/40 underline-offset-2 hover:text-terracotta-dark"
+                  >
+                    {service.linkLabel}
+                  </a>
+                )}
               </div>
             </div>
           ))}
