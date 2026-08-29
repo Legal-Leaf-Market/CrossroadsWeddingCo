@@ -100,6 +100,18 @@ export default function HubPreviewPage() {
             { label: "Cocktail hour", url: "https://open.spotify.com/playlist/37i9dQZF1DXdPec7aLTmlC" },
             { label: "Dance floor", url: "https://open.spotify.com/playlist/37i9dQZF1DX4JAvHpjipBk" },
           ]}
+          demoTracks={{
+            "37i9dQZF1DXdPec7aLTmlC": {
+              name: "Cocktail hour",
+              tracks: [
+                { title: "Golden Hour", artist: "Kacey Musgraves" },
+                { title: "Fly Me to the Moon", artist: "Frank Sinatra" },
+                { title: "Best Part", artist: "Daniel Caesar, H.E.R." },
+                { title: "Sunday Kind of Love", artist: "Etta James" },
+                { title: "Dreams", artist: "Fleetwood Mac" },
+              ],
+            },
+          }}
         />
         <VipSection
           token={SAMPLE_TOKEN}
