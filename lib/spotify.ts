@@ -17,6 +17,13 @@ export { parsePlaylistId } from "@/lib/hub-constants";
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
+// Since Spotify's February 2026 API migration, the playlist /items endpoint
+// rejects client-credentials tokens (401): reading playlists now needs a
+// user-authorized token. SPOTIFY_REFRESH_TOKEN carries a one-time
+// authorization of the owner's own Spotify account (minted via
+// /api/spotify/connect, admin-key gated); when present, tokens come from the
+// refresh grant and every read runs as that account. Without it we fall back
+// to client credentials, which still serves basic metadata and search.
 async function getToken(): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
 
@@ -24,13 +31,18 @@ async function getToken(): Promise<string> {
     `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`,
   ).toString("base64");
 
+  const refresh = process.env.SPOTIFY_REFRESH_TOKEN;
+  const body = refresh
+    ? new URLSearchParams({ grant_type: "refresh_token", refresh_token: refresh }).toString()
+    : "grant_type=client_credentials";
+
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
       Authorization: `Basic ${credentials}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: "grant_type=client_credentials",
+    body,
   });
   if (!res.ok) throw new Error(`Spotify token request failed (${res.status})`);
 
