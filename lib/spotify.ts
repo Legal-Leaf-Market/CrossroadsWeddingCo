@@ -44,17 +44,31 @@ export type SpotifyTrack = { title: string; artist: string; spotifyId: string };
 
 export type SpotifyPlaylist = { name: string; total: number; tracks: SpotifyTrack[] };
 
-/** Reads a public/unlisted playlist shared by a couple. */
+type PlaylistEntryTrack = { id: string | null; name: string; artists: { name: string }[] };
+
+/**
+ * Reads a public/unlisted playlist shared by a couple.
+ *
+ * Uses the /playlists/{id}/items endpoint from Spotify's February 2026 API
+ * migration (enforced 2026-03-09): the old /tracks path 403s for
+ * development-mode apps, playlist objects renamed `tracks` to `items`, and
+ * each entry's `track` became `item`. Parsing accepts both shapes so a
+ * rollback on Spotify's side can't break us.
+ */
 export async function getPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
   const token = await getToken();
   const headers = { Authorization: `Bearer ${token}` };
 
   const metaRes = await fetch(
-    `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,tracks.total`,
+    `https://api.spotify.com/v1/playlists/${playlistId}?fields=name,items.total,tracks.total`,
     { headers },
   );
   if (!metaRes.ok) throw new Error(`Spotify playlist fetch failed (${metaRes.status})`);
-  const meta = (await metaRes.json()) as { name: string; tracks: { total: number } };
+  const meta = (await metaRes.json()) as {
+    name: string;
+    items?: { total?: number };
+    tracks?: { total?: number };
+  };
 
   const tracks: SpotifyTrack[] = [];
   // Cap paging: 8 pages = 800 tracks, far past any wedding playlist, and it
@@ -62,29 +76,31 @@ export async function getPlaylist(playlistId: string): Promise<SpotifyPlaylist> 
   const MAX_PAGES = 8;
   let pages = 0;
   let url: string | null =
-    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=next,items(track(id,name,artists(name)))`;
+    `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=100&fields=next,items(item(id,name,artists(name)),track(id,name,artists(name)))`;
   while (url && pages < MAX_PAGES) {
     pages += 1;
     const res: Response = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`Spotify tracks fetch failed (${res.status})`);
+    if (!res.ok) throw new Error(`Spotify items fetch failed (${res.status})`);
     const page = (await res.json()) as {
       next: string | null;
-      items: { track: { id: string | null; name: string; artists: { name: string }[] } | null }[];
+      items: { item?: PlaylistEntryTrack | null; track?: PlaylistEntryTrack | null }[];
     };
-    for (const item of page.items) {
+    for (const entry of page.items) {
+      const t = entry.item ?? entry.track;
       // Local files and removed tracks come back with null ids; skip them.
-      if (item.track?.id) {
+      if (t?.id) {
         tracks.push({
-          title: item.track.name,
-          artist: item.track.artists.map((a) => a.name).join(", "),
-          spotifyId: item.track.id,
+          title: t.name,
+          artist: t.artists.map((a) => a.name).join(", "),
+          spotifyId: t.id,
         });
       }
     }
     url = page.next;
   }
 
-  return { name: meta.name, total: meta.tracks.total, tracks };
+  const total = meta.items?.total ?? meta.tracks?.total ?? tracks.length;
+  return { name: meta.name, total, tracks };
 }
 
 /** Track search for the Phase 2 portal's must-play / do-not-play pickers. */
