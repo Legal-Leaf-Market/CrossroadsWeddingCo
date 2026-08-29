@@ -20,7 +20,7 @@ type BookingEmail = {
   eventDate: string;
   venueName: string;
   venueAddress?: string;
-  addons: string[];
+  services: string[];
   spotifyPlaylistUrl?: string;
   notes?: string;
   totalUsd: number;
@@ -33,14 +33,13 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
   if (!key) return;
 
   const resend = new Resend(key);
-  const ADDON_LABELS: Record<string, string> = {
+  const SERVICE_LABELS: Record<string, string> = {
+    dj: "DJ and MC, the whole day",
     acoustic: "live solo acoustic set",
     bartender: "bar service",
   };
-  const addonLine =
-    booking.addons.length > 0
-      ? booking.addons.map((a) => ADDON_LABELS[a] ?? a).join(", ")
-      : "none selected";
+  const hasDj = booking.services.includes("dj");
+  const bookedLine = booking.services.map((s) => SERVICE_LABELS[s] ?? s).join(", ");
 
   const confirmationLines = [
     `Hi ${booking.coupleNames},`,
@@ -48,7 +47,9 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     `We got your date request for ${booking.eventDate} at ${booking.venueName}. Here's what happens next:`,
     ``,
     `1. We check the calendar and confirm availability by email within 24 hours.`,
-    `2. A $${DEPOSIT_USD} deposit locks your date. We'll send payment details with the confirmation.`,
+    hasDj
+      ? `2. A $${DEPOSIT_USD} deposit locks your date. We'll send payment details with the confirmation.`
+      : `2. A deposit locks your date. We'll sort the amount and payment details with the confirmation.`,
     booking.hubPath
       ? `3. Your planning hub is ready right now: timeline, music, and the names we announce. Fill out now: ${SITE_URL}${booking.hubPath}`
       : `3. From there we gather the names, the schedule, and the music with you by email and on your intro call.`,
@@ -59,9 +60,9 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
         ]
       : []),
     ``,
-    booking.addons.includes("bartender")
-      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before the bar quote. That includes the $${BARTENDER_MIN_USD} bar minimum; the final bar number depends on your guest count and shelf and gets set on your intro call (add-ons noted: ${addonLine}).`
-      : `Your quote: $${booking.totalUsd.toLocaleString("en-US")} (add-ons noted: ${addonLine}).`,
+    booking.services.includes("bartender")
+      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before the bar quote. That includes the $${BARTENDER_MIN_USD} bar minimum; the final bar number depends on your guest count and shelf and gets set on your intro call (booked: ${bookedLine}).`
+      : `Your quote: $${booking.totalUsd.toLocaleString("en-US")} (booked: ${bookedLine}).`,
     `Reference: ${booking.reference}`,
     ``,
     booking.hubPath
@@ -126,7 +127,7 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     `Date: ${booking.eventDate}`,
     `Venue: ${booking.venueName}`,
     `Address: ${booking.venueAddress || "not provided"}`,
-    `Add-ons: ${addonLine}`,
+    `Services: ${bookedLine}`,
     `Spotify playlist: ${booking.spotifyPlaylistUrl || "not provided"}`,
     `Quoted total: $${booking.totalUsd.toLocaleString("en-US")}`,
     `Reference: ${booking.reference}`,

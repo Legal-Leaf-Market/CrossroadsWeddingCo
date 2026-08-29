@@ -406,8 +406,13 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   The framing to protect everywhere: DJ and MC is $1,000 flat; acoustic or bartending on
   their own are $500; never let $500 read as the DJ price. The site grows from a landing
   page into a service directory: shareable pages at `/acoustic` and `/bartending`
-  (footer-linked like the city pages), plus a "Who you get" team section. True a la carte
-  booking flow (the /book form still assumes the DJ base) is a known follow-up.
+  (footer-linked like the city pages), plus a "Who you get" team section. The /book form
+  is service-aware (shipped 2026-08-29): three service cards (DJ $1,000 / acoustic $500 /
+  bar from $500), any combination, at least one required; the service pages deep-link
+  with ?service=acoustic|bartending; DJ-less bookings store package_type 'a_la_carte'
+  with deposit_amount capped at the quote. OPEN OWNER DECISION: the a-la-carte deposit
+  amount; all copy for DJ-less bookings deliberately promises no number ("deposit details
+  come with your confirmation").
 - **Brayton (SPELLING UNCONFIRMED, heard "Braiton"; 2026-08-28, Jacob; NOT yet approved
   by Nic, so nothing public until Jacob confirms):** roommate/best friend, strong on sound
   engineering and people. Planned as Chief Business Officer (org sketch: Jacob CEO, Nic
