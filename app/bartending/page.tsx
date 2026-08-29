@@ -67,7 +67,7 @@ export default function BartendingPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <a
-                href="/book"
+                href="/book?service=bartending"
                 className="rounded-full bg-terracotta px-6 py-3 text-sm font-semibold text-cream hover:bg-terracotta-dark"
               >
                 Check your date

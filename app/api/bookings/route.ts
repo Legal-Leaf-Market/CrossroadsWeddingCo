@@ -7,7 +7,7 @@ import { weddings } from "@/lib/db/schema";
 import { sendBookingEmails } from "@/lib/email";
 import { sendBookingTexts } from "@/lib/sms";
 import { parsePlaylistId } from "@/lib/spotify";
-import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD, DJ_DAY_RATE_USD } from "@/lib/site";
+import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD, DEPOSIT_USD, DJ_DAY_RATE_USD } from "@/lib/site";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +53,10 @@ const bookingSchema = z.object({
     .min(2, "Tell us the venue. 'Backyard in Seymour' works")
     .max(255, "That's a little long for the venue field"),
   venueAddress: z.string().trim().max(2000, "That address is too long").optional().default(""),
+  // The service picker (a la carte, owner directive 2026-08-28). `addons` is
+  // the pre-picker wire shape; an old cached form sending it still books,
+  // with the DJ implied like it always was.
+  services: z.array(z.enum(["dj", "acoustic", "bartender"])).max(3).optional(),
   addons: z.array(z.enum(["acoustic", "bartender"])).max(2).optional().default([]),
   spotifyPlaylistUrl: z.string().trim().max(500, "That link is too long").optional().default(""),
   notes: z.string().trim().max(5000, "Please keep notes under 5,000 characters").optional().default(""),
@@ -105,14 +109,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const hasAcoustic = data.addons.includes("acoustic");
-  const hasBartender = data.addons.includes("bartender");
+  const services = data.services ?? ["dj", ...data.addons];
+  if (services.length === 0) {
+    return noStore({ error: "Pick at least one service" }, 400);
+  }
+  const hasDj = services.includes("dj");
+  const hasAcoustic = services.includes("acoustic");
+  const hasBartender = services.includes("bartender");
   // Acoustic is a published flat rate. The bar minimum is owed before any
   // quote happens, so it counts in the total, which everything downstream
   // labels "before bar quote"; the final bar number comes from the intro
-  // call (CLAUDE.md §9.2, owner directive 2026-08-27).
+  // call (CLAUDE.md §9.2, owner directive 2026-08-27). A-la-carte bookings
+  // simply have no DJ line (owner directive 2026-08-28).
   const totalUsd =
-    DJ_DAY_RATE_USD +
+    (hasDj ? DJ_DAY_RATE_USD : 0) +
     (hasAcoustic ? ACOUSTIC_ADDON_USD : 0) +
     (hasBartender ? BARTENDER_MIN_USD : 0);
   const addonsJson = [
@@ -139,10 +149,14 @@ export async function POST(req: NextRequest) {
       eventDate: data.eventDate,
       venueName: data.venueName,
       venueAddress: data.venueAddress || null,
-      packageType: hasAcoustic ? "hybrid_acoustic" : "standard_dj_mc",
+      packageType: !hasDj ? "a_la_carte" : hasAcoustic ? "hybrid_acoustic" : "standard_dj_mc",
       addons: addonsJson,
       spotifyPlaylistUrl: data.spotifyPlaylistUrl || null,
       totalAmount: totalUsd.toFixed(2),
+      // The $500 deposit is DJ-package policy; an a-la-carte deposit can't
+      // exceed the whole quote. The exact a-la-carte deposit policy is an
+      // open owner decision; nothing customer-facing promises a number.
+      depositAmount: Math.min(DEPOSIT_USD, totalUsd).toFixed(2),
       notes: data.notes || null,
     });
     stored = "weddings";
@@ -169,7 +183,7 @@ export async function POST(req: NextRequest) {
       await db.execute(sql`
         insert into leads (name, email, event_date, venue, services, message)
         values (${data.coupleNames}, ${data.email}, ${data.eventDate},
-                ${data.venueName}, ${data.addons.join(", ") || null}, ${message})
+                ${data.venueName}, ${services.join(", ") || null}, ${message})
       `);
       stored = "leads";
     } catch (fallbackErr) {
@@ -202,7 +216,7 @@ export async function POST(req: NextRequest) {
       eventDate: data.eventDate,
       venueName: data.venueName,
       venueAddress: data.venueAddress || undefined,
-      addons: data.addons,
+      services,
       spotifyPlaylistUrl: data.spotifyPlaylistUrl || undefined,
       notes: data.notes || undefined,
       totalUsd,

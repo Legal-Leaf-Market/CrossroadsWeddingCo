@@ -14,12 +14,17 @@ type Status = "idle" | "submitting" | "success" | "error";
 const inputClass =
   "w-full rounded-lg border border-cream/20 bg-cream/5 px-4 py-2.5 text-cream placeholder:text-cream/40 focus:border-terracotta focus:outline-none";
 
-export default function BookingForm() {
+export default function BookingForm({
+  initialServices = ["dj"],
+}: {
+  /** Preselected services; the /acoustic and /bartending pages deep-link a-la-carte. */
+  initialServices?: string[];
+}) {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [reference, setReference] = useState("");
   const [hubPath, setHubPath] = useState<string | null>(null);
-  const [addons, setAddons] = useState<string[]>([]);
+  const [services, setServices] = useState<string[]>(initialServices);
   const [noPlaylist, setNoPlaylist] = useState(false);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
@@ -29,19 +34,21 @@ export default function BookingForm() {
     if (status === "success") successHeadingRef.current?.focus();
   }, [status]);
 
-  const hasAcoustic = addons.includes("acoustic");
-  const hasBartender = addons.includes("bartender");
+  const hasDj = services.includes("dj");
+  const hasAcoustic = services.includes("acoustic");
+  const hasBartender = services.includes("bartender");
   // The bar minimum is owed before any quote happens, so it belongs in the
   // total; the label marks the total as "before bar quote" (owner directive
-  // 2026-08-27: DJ 1000 + acoustic 400 + bar minimum 400 reads 1,800).
+  // 2026-08-27). A-la-carte bookings (owner directive 2026-08-28) simply
+  // leave the DJ line out.
   const totalUsd =
-    DJ_DAY_RATE_USD +
+    (hasDj ? DJ_DAY_RATE_USD : 0) +
     (hasAcoustic ? ACOUSTIC_ADDON_USD : 0) +
     (hasBartender ? BARTENDER_MIN_USD : 0);
 
-  function toggleAddon(addon: string) {
-    setAddons((prev) =>
-      prev.includes(addon) ? prev.filter((a) => a !== addon) : [...prev, addon],
+  function toggleService(service: string) {
+    setServices((prev) =>
+      prev.includes(service) ? prev.filter((a) => a !== service) : [...prev, service],
     );
   }
 
@@ -62,7 +69,7 @@ export default function BookingForm() {
           eventDate: data.get("eventDate"),
           venueName: data.get("venueName"),
           venueAddress: data.get("venueAddress"),
-          addons,
+          services,
           // A disabled input is absent from FormData; send an explicit empty
           // string so the API's string schema never sees null.
           spotifyPlaylistUrl: noPlaylist ? "" : (data.get("spotifyPlaylistUrl") ?? ""),
@@ -97,8 +104,9 @@ export default function BookingForm() {
         <ol className="mt-3 list-decimal space-y-2 pl-5 text-cream/70">
           <li>We check the calendar and confirm availability by email within 24 hours.</li>
           <li>
-            A ${DEPOSIT_USD} deposit locks your date. Payment details come with the
-            confirmation.
+            {hasDj
+              ? `A $${DEPOSIT_USD} deposit locks your date. Payment details come with the confirmation.`
+              : "A deposit locks your date. We'll sort the amount and payment details with the confirmation."}
           </li>
           <li>
             {hubPath ? (
@@ -172,15 +180,36 @@ export default function BookingForm() {
       </div>
 
       <fieldset className="mt-6">
-        <legend className="mb-2 block text-sm font-semibold text-cream/80">Add-ons</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <legend className="mb-2 block text-sm font-semibold text-cream/80">
+          What are you booking?
+        </legend>
+        <p className="mb-3 text-xs text-cream/50">
+          Pick any combination. Already have a DJ? The acoustic set and bar service book
+          entirely on their own.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label
+            className={`cursor-pointer rounded-lg border p-4 ${hasDj ? "border-terracotta bg-terracotta/10" : "border-cream/20 bg-cream/5"}`}
+          >
+            <input
+              type="checkbox"
+              checked={hasDj}
+              onChange={() => toggleService("dj")}
+              className="mr-2 accent-terracotta"
+            />
+            <span className="font-semibold text-cream">DJ &amp; MC, the whole day</span>
+            <span className="mt-1 block text-sm text-cream/60">
+              Ceremony through last dance: sound, MC, and the day-of timeline. Flat $
+              {DJ_DAY_RATE_USD.toLocaleString("en-US")}.
+            </span>
+          </label>
           <label
             className={`cursor-pointer rounded-lg border p-4 ${hasAcoustic ? "border-terracotta bg-terracotta/10" : "border-cream/20 bg-cream/5"}`}
           >
             <input
               type="checkbox"
               checked={hasAcoustic}
-              onChange={() => toggleAddon("acoustic")}
+              onChange={() => toggleService("acoustic")}
               className="mr-2 accent-terracotta"
             />
             <span className="font-semibold text-cream">Live solo acoustic set</span>
@@ -190,12 +219,12 @@ export default function BookingForm() {
             </span>
           </label>
           <label
-            className={`cursor-pointer rounded-lg border p-4 ${addons.includes("bartender") ? "border-terracotta bg-terracotta/10" : "border-cream/20 bg-cream/5"}`}
+            className={`cursor-pointer rounded-lg border p-4 ${hasBartender ? "border-terracotta bg-terracotta/10" : "border-cream/20 bg-cream/5"}`}
           >
             <input
               type="checkbox"
-              checked={addons.includes("bartender")}
-              onChange={() => toggleAddon("bartender")}
+              checked={hasBartender}
+              onChange={() => toggleService("bartender")}
               className="mr-2 accent-terracotta"
             />
             <span className="font-semibold text-cream">Bar service</span>
@@ -205,6 +234,11 @@ export default function BookingForm() {
             </span>
           </label>
         </div>
+        {services.length === 0 && (
+          <p className="mt-3 text-sm text-terracotta">
+            Pick at least one so we know what to check the calendar for.
+          </p>
+        )}
       </fieldset>
 
       <div className="mt-6">
@@ -247,10 +281,12 @@ export default function BookingForm() {
       </label>
 
       <div className="mt-6 rounded-lg border border-cream/20 bg-cream/5 px-4 py-3 text-sm text-cream/80">
-        <div className="flex items-center justify-between">
-          <span>DJ &amp; MC day rate</span>
-          <span>${DJ_DAY_RATE_USD.toLocaleString("en-US")}</span>
-        </div>
+        {hasDj && (
+          <div className="flex items-center justify-between">
+            <span>DJ &amp; MC day rate</span>
+            <span>${DJ_DAY_RATE_USD.toLocaleString("en-US")}</span>
+          </div>
+        )}
         {hasAcoustic && (
           <div className="mt-1 flex items-center justify-between">
             <span>Live solo acoustic set</span>
@@ -268,8 +304,9 @@ export default function BookingForm() {
           <span>${totalUsd.toLocaleString("en-US")}</span>
         </div>
         <p className="mt-2 text-xs text-cream/50">
-          ${DEPOSIT_USD} deposit locks the date once we confirm availability. It&apos;s
-          non-refundable and comes off your total. No payment now.
+          {hasDj
+            ? `$${DEPOSIT_USD} deposit locks the date once we confirm availability. It's non-refundable and comes off your total. No payment now.`
+            : "No payment now. We confirm availability first, and deposit details come with your confirmation."}
         </p>
       </div>
 
@@ -285,7 +322,7 @@ export default function BookingForm() {
       <button
         type="submit"
         aria-busy={status === "submitting"}
-        disabled={status === "submitting"}
+        disabled={status === "submitting" || services.length === 0}
         className="mt-6 w-full rounded-full bg-terracotta px-6 py-3.5 text-sm font-semibold text-cream hover:bg-terracotta-dark disabled:opacity-60"
       >
         {status === "submitting" ? "Sending..." : "Request this date"}

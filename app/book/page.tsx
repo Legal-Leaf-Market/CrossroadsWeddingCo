@@ -17,11 +17,15 @@ export const metadata: Metadata = {
 export default async function BookPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deposit?: string }>;
+  searchParams: Promise<{ deposit?: string; service?: string }>;
 }) {
   // Stripe checkout returns here with ?deposit=paid|cancelled, and the page must
   // not greet someone who just paid $500 with "No payment now."
-  const { deposit } = await searchParams;
+  const { deposit, service } = await searchParams;
+  // The /acoustic and /bartending pages deep-link a-la-carte bookings.
+  const initialServices =
+    service === "acoustic" ? ["acoustic"] : service === "bartending" ? ["bartender"] : ["dj"];
+  const alaCarte = !initialServices.includes("dj");
   return (
     <>
       <Header />
@@ -48,7 +52,9 @@ export default async function BookPage({
             <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold">
               {deposit === "paid"
                 ? "Deposit paid"
-                : `No payment now \u00b7 $${DEPOSIT_USD} deposit locks the date once confirmed`}
+                : alaCarte
+                  ? "No payment now \u00b7 A deposit locks the date once confirmed"
+                  : `No payment now \u00b7 $${DEPOSIT_USD} deposit locks the date once confirmed`}
             </p>
             <h1 className="text-4xl sm:text-5xl">Check your date</h1>
             <p className="mt-4 max-w-xl text-lg text-cream/80">
@@ -56,7 +62,7 @@ export default async function BookPage({
               and the rate is exactly what it says on the site.
             </p>
             <div className="mt-10">
-              <BookingForm />
+              <BookingForm initialServices={initialServices} />
             </div>
             <div className="mt-10">
               <BookCallCard />
