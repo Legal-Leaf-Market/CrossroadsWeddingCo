@@ -14,6 +14,8 @@ import {
 
 export type CueRow = {
   cueType: string;
+  /** The couple's own name for the moment. Seeded from CUE_TYPES, editable. */
+  label: string;
   trackTitle: string;
   artist: string;
   notes: string;
@@ -139,18 +141,31 @@ export default function MusicSection({
   /** Preview-only: playlist id -> tracks, served without touching the API. */
   demoTracks?: Record<string, { name: string; tracks: FetchedTrack[] }>;
 }) {
-  const toGrid = (rows: CueRow[]) =>
-    CUE_TYPES.map(
-      (ct) =>
-        rows.find((c) => c.cueType === ct.type) ?? {
-          cueType: ct.type,
-          trackTitle: "",
-          artist: "",
-          notes: "",
-          spotifyUrl: "",
-          isLivePerformance: false,
-        },
-    );
+  // Songs are a list, not a fixed grid: a wedding can need three processional
+  // songs. Every standard moment is offered once so the page is never blank,
+  // and any row the couple added or duplicated keeps its own place after it.
+  const blank = (cueType: string, label: string): CueRow => ({
+    cueType,
+    label,
+    trackTitle: "",
+    artist: "",
+    notes: "",
+    spotifyUrl: "",
+    isLivePerformance: false,
+  });
+  const toGrid = (rows: CueRow[]) => {
+    const out: CueRow[] = [];
+    for (const ct of CUE_TYPES) {
+      const matches = rows.filter((c) => c.cueType === ct.type);
+      if (matches.length === 0) out.push(blank(ct.type, ""));
+      else out.push(...matches);
+    }
+    // A row whose type we no longer publish still belongs to the couple.
+    for (const r of rows) {
+      if (!CUE_TYPES.some((ct) => ct.type === r.cueType)) out.push(r);
+    }
+    return out;
+  };
   const [cues, setCues] = useState<CueRow[]>(toGrid(initialCues));
   const [mustPlay, setMustPlay] = useState<TrackRow[]>(initialMustPlay);
   const [doNotPlay, setDoNotPlay] = useState<TrackRow[]>(initialDoNotPlay);
@@ -158,6 +173,7 @@ export default function MusicSection({
   const [armedMust, setArmedMust] = useState<number | null>(null);
   const [armedDoNot, setArmedDoNot] = useState<number | null>(null);
   const [armedPlaylist, setArmedPlaylist] = useState<number | null>(null);
+  const [armedCue, setArmedCue] = useState<number | null>(null);
   // Playlist panels stay MOUNTED once opened and are only hidden with CSS when
   // collapsed, so the Spotify embed keeps its player state (and never reloads)
   // as the couple opens and closes it while filling in the moments below.
@@ -214,6 +230,50 @@ export default function MusicSection({
 
   const cueSave = useAutosave(saveCues);
   const listSave = useAutosave(saveLists);
+
+  // Display name for a row: the section's own name, numbered only when the
+  // couple has more than one song in that section.
+  function cueLabel(index: number): string {
+    const row = cues[index];
+    const base = CUE_TYPES.find((ct) => ct.type === row.cueType)?.label ?? "Another moment";
+    const siblings = cues.filter((c) => c.cueType === row.cueType);
+    if (siblings.length < 2) return base;
+    return `${base} ${siblings.indexOf(row) + 1}`;
+  }
+
+  // Another song in the same section, inserted right after the last one so
+  // the group stays together.
+  function addCue(cueType: string) {
+    setCues((rows) => {
+      let last = -1;
+      rows.forEach((r, i) => {
+        if (r.cueType === cueType) last = i;
+      });
+      const next = [...rows];
+      // The label is what keeps a row the couple deliberately added from being
+      // dropped by the server before they have typed a song into it.
+      const base = CUE_TYPES.find((ct) => ct.type === cueType)?.label ?? "Another moment";
+      const count = rows.filter((r) => r.cueType === cueType).length;
+      next.splice(last + 1, 0, blank(cueType, `${base} ${count + 1}`));
+      return next;
+    });
+    cueSave.touch();
+  }
+
+  // Clearing the only song in a section leaves the empty section in place;
+  // clearing an extra removes the row entirely.
+  function clearCue(index: number) {
+    setCues((rows) => {
+      const row = rows[index];
+      const siblings = rows.filter((c) => c.cueType === row.cueType);
+      if (siblings.length < 2) {
+        return rows.map((r, i) => (i === index ? blank(r.cueType, "") : r));
+      }
+      return rows.filter((_, i) => i !== index);
+    });
+    setArmedCue(null);
+    cueSave.touch();
+  }
 
   function updateCue(index: number, patch: Partial<CueRow>) {
     setCues((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -333,9 +393,10 @@ export default function MusicSection({
     // Carry the link too, so the moment comes back as a playable row rather
     // than a name the couple has to go verify against Spotify by hand.
     const url = track.spotifyId ? `https://open.spotify.com/track/${track.spotifyId}` : "";
+    const targetIndex = Number(target);
     setCues((rows) =>
-      rows.map((row) =>
-        row.cueType === target
+      rows.map((row, i) =>
+        i === targetIndex
           ? {
               ...row,
               trackTitle: track.title,
@@ -479,9 +540,9 @@ export default function MusicSection({
                                   Add...
                                 </option>
                                 <optgroup label="Big moments">
-                                  {CUE_TYPES.map((ct) => (
-                                    <option key={ct.type} value={ct.type}>
-                                      {ct.label}
+                                  {cues.map((c, ci) => (
+                                    <option key={`${c.cueType}-${ci}`} value={String(ci)}>
+                                      {cueLabel(ci)}
                                     </option>
                                   ))}
                                 </optgroup>
@@ -532,29 +593,40 @@ export default function MusicSection({
         <ul className="space-y-3">
           {cues.map((cue, index) => {
             const meta = CUE_TYPES.find((ct) => ct.type === cue.cueType);
+            const sectionName = meta?.label ?? "moment";
+            const isLastOfType =
+              cues.findLastIndex((c) => c.cueType === cue.cueType) === index;
             const trackId = parseTrackId(cue.spotifyUrl);
             const badTrack = cue.spotifyUrl.trim() !== "" && !trackId;
             return (
               <li
-                key={cue.cueType}
+                key={`${cue.cueType}-${index}`}
                 className="overflow-hidden rounded-xl border border-parchment bg-white"
               >
                 <div className="flex items-center justify-between gap-2 border-b border-parchment bg-parchment/30 px-3 py-2">
-                  <span className="text-sm font-semibold text-charcoal">{meta?.label}</span>
-                  <label className="flex items-center gap-1.5 text-xs text-ink/60">
-                    <input
-                      type="checkbox"
-                      checked={cue.isLivePerformance}
-                      onChange={(e) => updateCue(index, { isLivePerformance: e.target.checked })}
-                      className="accent-terracotta"
+                  <span className="text-sm font-semibold text-charcoal">{cueLabel(index)}</span>
+                  <span className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs text-ink/60">
+                      <input
+                        type="checkbox"
+                        checked={cue.isLivePerformance}
+                        onChange={(e) => updateCue(index, { isLivePerformance: e.target.checked })}
+                        className="accent-terracotta"
+                      />
+                      Played live
+                    </label>
+                    <RemoveButton
+                      label={`Clear ${cueLabel(index)}`}
+                      armed={armedCue === index}
+                      onToggle={(next) => setArmedCue(next ? index : null)}
+                      onRemove={() => clearCue(index)}
                     />
-                    Played live
-                  </label>
+                  </span>
                 </div>
                 <div className="grid gap-3 p-3 sm:grid-cols-2">
                   <div>
                     <input
-                      aria-label={`${meta?.label} Spotify link`}
+                      aria-label={`${cueLabel(index)} Spotify link`}
                       aria-invalid={badTrack || undefined}
                       className={hubInput}
                       value={cue.spotifyUrl}
@@ -573,7 +645,7 @@ export default function MusicSection({
                         // Compact single-track player. Cheap, and it means the
                         // row itself is the song rather than a name for it.
                         src={`https://open.spotify.com/embed/track/${trackId}?utm_source=generator`}
-                        title={`${meta?.label} song`}
+                        title={`${cueLabel(index)} song`}
                         width="100%"
                         height={80}
                         style={{ borderRadius: 10, border: 0, marginTop: 8 }}
@@ -584,7 +656,7 @@ export default function MusicSection({
                     {!trackId && (
                       <div className="mt-2 grid gap-2 sm:grid-cols-2">
                         <input
-                          aria-label={`${meta?.label} track`}
+                          aria-label={`${cueLabel(index)} track`}
                           className={hubInput}
                           value={cue.trackTitle}
                           maxLength={255}
@@ -592,7 +664,7 @@ export default function MusicSection({
                           placeholder="Or just the track name"
                         />
                         <input
-                          aria-label={`${meta?.label} artist`}
+                          aria-label={`${cueLabel(index)} artist`}
                           className={hubInput}
                           value={cue.artist}
                           maxLength={255}
@@ -604,7 +676,7 @@ export default function MusicSection({
                   </div>
                   <div>
                     <textarea
-                      aria-label={`${meta?.label} notes`}
+                      aria-label={`${cueLabel(index)} notes`}
                       className={hubInput}
                       rows={trackId ? 4 : 3}
                       value={cue.notes}
@@ -619,6 +691,17 @@ export default function MusicSection({
                     )}
                   </div>
                 </div>
+                {isLastOfType && (
+                  <div className="border-t border-parchment px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => addCue(cue.cueType)}
+                      className="text-sm font-semibold text-terracotta hover:text-terracotta-dark"
+                    >
+                      + Add another {sectionName.toLowerCase()} song
+                    </button>
+                  </div>
+                )}
               </li>
             );
           })}

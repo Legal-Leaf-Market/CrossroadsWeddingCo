@@ -174,6 +174,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           initialPlaylistsRev={revs.playlists ?? 0}
           initialCues={cues.map((cue) => ({
             cueType: cue.cueType,
+            label: cue.label ?? "",
             trackTitle: cue.trackTitle,
             artist: cue.artist === "Unknown artist" ? "" : cue.artist,
             notes: cue.notes ?? "",

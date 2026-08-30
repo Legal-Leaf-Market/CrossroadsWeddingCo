@@ -125,7 +125,11 @@ export async function getPortalData(token: string) {
       .from(timelineItems)
       .where(eq(timelineItems.weddingId, wedding.id))
       .orderBy(asc(timelineItems.orderIndex)),
-    db.select().from(musicCues).where(eq(musicCues.weddingId, wedding.id)),
+    db
+      .select()
+      .from(musicCues)
+      .where(eq(musicCues.weddingId, wedding.id))
+      .orderBy(asc(musicCues.orderIndex)),
     db
       .select()
       .from(vipRoster)
