@@ -9,6 +9,8 @@ type Details = {
   venueContactEmail: string;
   contactPhone: string;
   vibeNotes: string;
+  weddingSiteUrl: string;
+  dressCode: string;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -144,6 +146,33 @@ export default function DetailsSection({
               We save this once it looks like a full email address
             </span>
           )}
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-charcoal">
+            Your wedding website (optional)
+          </span>
+          <input
+            className={hubInput}
+            value={details.weddingSiteUrl}
+            maxLength={500}
+            onChange={(e) => set("weddingSiteUrl", e.target.value)}
+            placeholder="zola.com/wedding/yournames"
+          />
+          <span className="mt-1 block text-xs text-ink/45">
+            We link your guests back to it from your order of events.
+          </span>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-charcoal">
+            Dress code (optional)
+          </span>
+          <input
+            className={hubInput}
+            value={details.dressCode}
+            maxLength={200}
+            onChange={(e) => set("dressCode", e.target.value)}
+            placeholder="However you told your guests to dress"
+          />
         </label>
         <label className="block sm:col-span-2">
           <span className="mb-1 block text-sm font-semibold text-charcoal">The vibe</span>

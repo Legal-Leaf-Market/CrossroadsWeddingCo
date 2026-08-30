@@ -20,13 +20,31 @@ export default function GuestSchedule({
   venueName,
   items,
   art = null,
+  dressCode = null,
+  weddingSiteUrl = null,
 }: {
   coupleNames: string;
   eventDate: string;
   venueName: string;
   items: GuestScheduleItem[];
   art?: WeddingArt | null;
+  dressCode?: string | null;
+  weddingSiteUrl?: string | null;
 }) {
+  // Couples paste their site with or without a scheme; normalise so the link
+  // never resolves relative to our own domain. Anything that is not http(s)
+  // is dropped rather than rendered as a broken link on a page guests see.
+  const siteHref = (() => {
+    const raw = weddingSiteUrl?.trim();
+    if (!raw) return null;
+    const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      const url = new URL(withScheme);
+      return url.protocol === "https:" || url.protocol === "http:" ? url : null;
+    } catch {
+      return null;
+    }
+  })();
   const ground = "#0f0e0d";
   return (
     <div
@@ -80,6 +98,9 @@ export default function GuestSchedule({
           <p className="text-sm text-white/40 print:text-black/50">
             {eventDate} · {venueName}
           </p>
+          {dressCode?.trim() && (
+            <p className="mt-2 text-sm text-white/60 print:text-black/60">{dressCode.trim()}</p>
+          )}
           {art?.sprig ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -146,6 +167,18 @@ export default function GuestSchedule({
             aria-hidden
             className="mx-auto mt-8 w-72 max-w-full opacity-80 print:hidden"
           />
+        )}
+        {siteHref && (
+          <p className="mt-8 text-center text-sm">
+            <a
+              href={siteHref.toString()}
+              target="_blank"
+              rel="noreferrer"
+              className="text-white/70 underline decoration-white/25 underline-offset-4 hover:text-white print:text-black/70"
+            >
+              Everything else is on their wedding site
+            </a>
+          </p>
         )}
         <p className="mt-10 text-center text-[0.65rem] uppercase tracking-[0.25em] text-white/30 print:text-black/40">
           {SITE_NAME}

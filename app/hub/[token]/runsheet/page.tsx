@@ -53,6 +53,14 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
             {wedding.venueName}
             {wedding.venueAddress ? ` · ${wedding.venueAddress}` : ""}
           </p>
+          {(wedding.dressCode || wedding.weddingSiteUrl) && (
+            // What the room was told: the MC reads the same brief the guests did.
+            <p className="mt-1 text-sm text-ink/60">
+              {wedding.dressCode ? `Dress code: ${wedding.dressCode}` : ""}
+              {wedding.dressCode && wedding.weddingSiteUrl ? " · " : ""}
+              {wedding.weddingSiteUrl ? `Their site: ${wedding.weddingSiteUrl}` : ""}
+            </p>
+          )}
         </header>
 
         <section className="mt-5">

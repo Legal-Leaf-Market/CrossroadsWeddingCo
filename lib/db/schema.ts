@@ -143,6 +143,10 @@ export const weddings = pgTable(
     customTerms: text("custom_terms"),
     /** Slug of a folder under public/wedding-art/, or null for the plain look. */
     artTheme: varchar("art_theme", { length: 60 }),
+    /** The couple's own wedding site (Zola, Squarespace, The Knot). */
+    weddingSiteUrl: varchar("wedding_site_url", { length: 500 }),
+    /** What guests were told to wear, in the couple's own words. */
+    dressCode: varchar("dress_code", { length: 200 }),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull().default("1000.00"),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),

@@ -287,3 +287,11 @@ CREATE INDEX IF NOT EXISTS idx_wedding_documents ON wedding_documents (wedding_i
 -- repository is PUBLIC: keying art by a wedding's share token would publish a
 -- live read credential.
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS art_theme VARCHAR(60);
+
+-- The couple's own wedding website and the dress code they published to guests
+-- (owner directive 2026-08-30). Couples send guests to a Zola or Squarespace
+-- site long before they meet us; our guest-facing order of events should point
+-- back at it rather than compete with it, and the MC needs to know what the
+-- room was told to wear.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS wedding_site_url VARCHAR(500);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS dress_code VARCHAR(200);
