@@ -14,6 +14,19 @@ const schema = z.object({
   isDepositPaid: z.boolean().optional(),
   isBalancePaid: z.boolean().optional(),
   customTerms: z.string().max(5000, "Keep the arrangement under 5,000 characters").optional(),
+  // Which add-ons this wedding actually carries. Drives the service agreement,
+  // so a stale entry puts a service the couple is not getting into their
+  // contract; the owner needs to be able to correct it.
+  addons: z
+    .array(
+      z.object({
+        type: z.enum(["acoustic_set", "bar_service"]),
+        fee: z.number().nonnegative().nullable().optional(),
+        minFee: z.number().nonnegative().optional(),
+      }),
+    )
+    .max(4)
+    .optional(),
   // A folder slug under public/wedding-art/. Constrained so this can never
   // become a path into somewhere else.
   artTheme: z
@@ -61,6 +74,7 @@ export async function PATCH(
     // Empty string clears the bespoke arrangement back to standard terms.
     ...(d.customTerms !== undefined ? { customTerms: d.customTerms.trim() || null } : {}),
     ...(d.artTheme !== undefined ? { artTheme: d.artTheme || null } : {}),
+    ...(d.addons !== undefined ? { addons: d.addons } : {}),
   });
 
   return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });

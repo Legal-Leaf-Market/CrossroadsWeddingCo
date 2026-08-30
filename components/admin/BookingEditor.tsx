@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD } from "@/lib/site";
 import { ART_THEMES } from "@/lib/wedding-art";
 import type { AdminWedding } from "@/lib/admin";
 
@@ -22,6 +23,12 @@ export default function BookingEditor({
   const [balancePaid, setBalancePaid] = useState(wedding.isBalancePaid);
   const [customTerms, setCustomTerms] = useState(wedding.customTerms ?? "");
   const [artTheme, setArtTheme] = useState(wedding.artTheme ?? "");
+  // Add-ons drive the service agreement, so a stale one puts a service the
+  // couple is not getting into their contract.
+  const [acoustic, setAcoustic] = useState(
+    wedding.addons.some((a) => a.type === "acoustic_set"),
+  );
+  const [bar, setBar] = useState(wedding.addons.some((a) => a.type === "bar_service"));
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
 
@@ -43,6 +50,26 @@ export default function BookingEditor({
           isBalancePaid: balancePaid,
           customTerms,
           artTheme,
+          // Keep whatever fee was already recorded; only membership changes here.
+          addons: [
+            ...(acoustic
+              ? [
+                  wedding.addons.find((a) => a.type === "acoustic_set") ?? {
+                    type: "acoustic_set",
+                    fee: ACOUSTIC_ADDON_USD,
+                  },
+                ]
+              : []),
+            ...(bar
+              ? [
+                  wedding.addons.find((a) => a.type === "bar_service") ?? {
+                    type: "bar_service",
+                    fee: null,
+                    minFee: BARTENDER_MIN_USD,
+                  },
+                ]
+              : []),
+          ],
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -111,6 +138,31 @@ export default function BookingEditor({
           className="w-full rounded-lg border border-parchment bg-white px-3 py-2 text-charcoal placeholder:text-ink/40 focus:border-terracotta focus:outline-none"
         />
       </label>
+      <div className="mt-3 text-sm">
+        <span className="mb-1 block font-semibold text-charcoal">
+          Add-ons on this booking (these appear in their service agreement)
+        </span>
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={acoustic}
+              onChange={(e) => setAcoustic(e.target.checked)}
+              className="accent-terracotta"
+            />
+            Live solo acoustic set
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={bar}
+              onChange={(e) => setBar(e.target.checked)}
+              className="accent-terracotta"
+            />
+            Bar service
+          </label>
+        </div>
+      </div>
       <label className="mt-3 block text-sm">
         <span className="mb-1 block font-semibold text-charcoal">
           Art theme (their own invitation art on the guest schedule and hub header)

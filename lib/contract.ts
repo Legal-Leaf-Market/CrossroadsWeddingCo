@@ -21,7 +21,7 @@ import {
 // before it carries real weight. Bump CONTRACT_VERSION on any wording change
 // so accepted snapshots stay traceable to the text that was accepted.
 
-export const CONTRACT_VERSION = "2026-08-30";
+export const CONTRACT_VERSION = "2026-08-30b";
 
 export type ContractInput = {
   coupleNames: string;
@@ -56,21 +56,26 @@ export function buildContract(input: ContractInput): ContractSection[] {
   const hasDj = input.services.includes("dj");
   const hasAcoustic = input.services.includes("acoustic");
   const hasBar = input.services.includes("bartender");
+  // On a bespoke deal the standard rates are context, not an invoice. Saying
+  // "$1,000 flat" beside a service the couple settled another way reads like a
+  // bill, so those lines name the usual rate and point at the cost section.
+  const bespoke = Boolean(input.customTerms?.trim());
+  const rate = (n: number) => (bespoke ? `normally ${money(n)}` : `${money(n)} flat`);
 
   const whatWeDo: string[] = [];
   if (hasDj) {
     whatWeDo.push(
-      `DJ and MC for the day, ${money(DJ_DAY_RATE_USD)} flat. That covers ceremony sound, cocktail hour, and reception, all of our own equipment set up before guests arrive and struck after they leave, MC duties dialed to whatever you want them to be, and running your day-of timeline: calling cues, lining up the wedding party, and keeping the schedule moving.`,
+      `DJ and MC for the day, ${rate(DJ_DAY_RATE_USD)}. That covers ceremony sound, cocktail hour, and reception, all of our own equipment set up before guests arrive and struck after they leave, MC duties dialed to whatever you want them to be, and running your day-of timeline: calling cues, lining up the wedding party, and keeping the schedule moving.`,
     );
   }
   if (hasAcoustic) {
     whatWeDo.push(
-      `A live solo acoustic set, ${money(ACOUSTIC_ADDON_USD)} flat. One performer, singer-songwriter style, for your ceremony or your cocktail hour. One hour is the sweet spot and two hours is the maximum. With enough notice, which means at least 30 days before the wedding, we will learn up to three songs of your choosing; everything else comes from our standing repertoire.`,
+      `A live solo acoustic set, ${rate(ACOUSTIC_ADDON_USD)}. One performer, singer-songwriter style, for your ceremony or your cocktail hour. One hour is the sweet spot and two hours is the maximum. With enough notice, which means at least 30 days before the wedding, we will learn up to three songs of your choosing; everything else comes from our standing repertoire.`,
     );
   }
   if (hasBar) {
     whatWeDo.push(
-      `Bar service, starting at ${money(BARTENDER_MIN_USD)}. That minimum is not the final price: your guest count and what you are serving set the real number, and we quote it to you in writing before the wedding. We provide licensed, experienced bartenders who set up, serve all night, and break down the bar.`,
+      `Bar service, starting at ${money(BARTENDER_MIN_USD)}${bespoke ? " as a rule" : ""}. That minimum is not the final price: your guest count and what you are serving set the real number, and we quote it to you in writing before the wedding. We provide licensed, experienced bartenders who set up, serve all night, and break down the bar.`,
     );
   }
 
@@ -86,7 +91,10 @@ export function buildContract(input: ContractInput): ContractSection[] {
     {
       heading: "What it costs, and when it is due",
       paragraphs: input.customTerms?.trim()
-        ? input.customTerms.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean)
+        ? [
+            `Your wedding is on an arrangement we agreed directly, not our standard pricing. The rates named above are what these services normally cost; what you owe is only what follows.`,
+            ...input.customTerms.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean),
+          ]
         : [
         hasBar && input.services.length === 1
           ? `Your bar service starts at ${money(BARTENDER_MIN_USD)} and gets quoted in writing once we know your guest count and what you are pouring.`

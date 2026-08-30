@@ -157,6 +157,7 @@ export async function updateAdminWedding(
     isBalancePaid?: boolean;
     customTerms?: string | null;
     artTheme?: string | null;
+    addons?: { type: string; fee?: number | null; minFee?: number }[];
     status?: (typeof weddings.$inferSelect)["status"];
   },
 ): Promise<boolean> {
@@ -168,6 +169,7 @@ export async function updateAdminWedding(
   if (patch.isBalancePaid !== undefined) set.isBalancePaid = patch.isBalancePaid;
   if (patch.customTerms !== undefined) set.customTerms = patch.customTerms;
   if (patch.artTheme !== undefined) set.artTheme = patch.artTheme;
+  if (patch.addons !== undefined) set.addons = patch.addons;
   if (patch.status !== undefined) set.status = patch.status;
   await db.update(weddings).set(set).where(eq(weddings.id, weddingId));
   return true;
