@@ -96,8 +96,15 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
               <p className="mt-2 text-sm text-ink/50">No cues chosen yet.</p>
             ) : (
               <ul className="mt-2 space-y-1 text-sm">
-                {CUE_TYPES.filter((ct) => cues.some((c) => c.cueType === ct.type)).map((ct) => {
-                  const cue = cues.find((c) => c.cueType === ct.type)!;
+                {/* A section can hold several songs now, so every stored cue
+                    prints, in the order the couple put them in. */}
+                {cues.map((cue, i) => {
+                  const ct = CUE_TYPES.find((t) => t.type === cue.cueType);
+                  const siblings = cues.filter((c) => c.cueType === cue.cueType);
+                  const label =
+                    siblings.length > 1
+                      ? `${ct?.label ?? cue.cueType} ${siblings.indexOf(cue) + 1}`
+                      : (ct?.label ?? cue.cueType);
                   const track = [
                     cue.trackTitle,
                     cue.artist && cue.artist !== "Unknown artist" ? cue.artist : "",
@@ -105,8 +112,8 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
                     .filter(Boolean)
                     .join(", ");
                   return (
-                    <li key={ct.type}>
-                      <span className="font-semibold">{ct.label}:</span> {track}
+                    <li key={`${cue.cueType}-${i}`}>
+                      <span className="font-semibold">{label}:</span> {track}
                       {cue.isLivePerformance ? " (live)" : ""}
                       {cue.notes && (
                         <span className="block text-ink/60">{cue.notes}</span>

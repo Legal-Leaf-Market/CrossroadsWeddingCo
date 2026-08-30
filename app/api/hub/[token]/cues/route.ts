@@ -1,15 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { musicCues } from "@/lib/db/schema";
-import { CUE_TYPES, getWeddingByToken, withSectionRev, type Tx } from "@/lib/hub";
+import { getWeddingByToken, withSectionRev, type Tx } from "@/lib/hub";
 import { CONFLICT_MESSAGE } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const cueTypeValues = CUE_TYPES.map((c) => c.type) as [string, ...string[]];
 
 const schema = z.object({
   rev: z.number().int().min(0).optional().default(0),
@@ -17,7 +15,11 @@ const schema = z.object({
   cues: z
     .array(
       z.object({
-        cueType: z.enum(cueTypeValues),
+        // No longer an enum: a wedding can carry two processionals, or a
+        // moment we never thought of. The type is a grouping hint for the
+        // send-to-a-moment menu; the label is what the couple actually reads.
+        cueType: z.string().trim().max(60).regex(/^[a-z0-9_]*$/),
+        label: z.string().trim().max(120).optional().default(""),
         trackTitle: z.string().trim().max(255),
         artist: z.string().trim().max(255),
         timeCue: z.string().trim().max(100).optional().default(""),
@@ -26,13 +28,18 @@ const schema = z.object({
         isLivePerformance: z.boolean().optional().default(false),
       }),
     )
-    .max(CUE_TYPES.length),
+    .max(40),
 });
 
 async function currentCues(ex: Tx | typeof db, weddingId: string) {
-  const rows = await ex.select().from(musicCues).where(eq(musicCues.weddingId, weddingId));
+  const rows = await ex
+    .select()
+    .from(musicCues)
+    .where(eq(musicCues.weddingId, weddingId))
+    .orderBy(asc(musicCues.orderIndex));
   return rows.map((c) => ({
     cueType: c.cueType,
+    label: c.label ?? "",
     trackTitle: c.trackTitle,
     artist: c.artist === "Unknown artist" ? "" : c.artist,
     notes: c.notes ?? "",
@@ -57,15 +64,17 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  // The cue grid always shows all eight moments, so a fully blank row is a
-  // visible "cleared" state, not a hidden drop. A row with only an artist
-  // typed so far still counts as filled and must round-trip.
+  // A standard moment left blank is a visible "not chosen yet" state, so it
+  // is dropped rather than stored. A row the couple added themselves is kept
+  // on its label alone: they named it deliberately and it must not vanish
+  // while they are still deciding the song.
   const filled = parsed.data.cues.filter(
     (c) =>
       c.trackTitle.length > 0 ||
       c.artist.length > 0 ||
       c.notes.length > 0 ||
-      c.spotifyUrl.length > 0,
+      c.spotifyUrl.length > 0 ||
+      c.label.length > 0,
   );
   const result = await withSectionRev(
     wedding.id,
@@ -76,9 +85,11 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
       await tx.delete(musicCues).where(eq(musicCues.weddingId, wedding.id));
       if (filled.length > 0) {
         await tx.insert(musicCues).values(
-          filled.map((c) => ({
+          filled.map((c, index) => ({
             weddingId: wedding.id,
             cueType: c.cueType,
+            label: c.label || null,
+            orderIndex: index,
             trackTitle: c.trackTitle,
             artist: c.artist,
             timeCue: c.timeCue || null,

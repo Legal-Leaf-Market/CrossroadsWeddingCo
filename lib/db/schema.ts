@@ -202,6 +202,10 @@ export const musicCues = pgTable("music_cues", {
   chordChartContent: text("chord_chart_content"),
   audioFileUrl: varchar("audio_file_url", { length: 500 }),
   isLivePerformance: boolean("is_live_performance").default(false),
+  /** The couple's own name for this moment, e.g. "Processional 2". */
+  label: varchar("label", { length: 120 }),
+  /** Songs are an ordered list; several can share a cue type. */
+  orderIndex: integer("order_index").notNull().default(0),
   // The couple's own note for this moment, shown to the DJ on the run sheet.
   notes: text("notes"),
 });

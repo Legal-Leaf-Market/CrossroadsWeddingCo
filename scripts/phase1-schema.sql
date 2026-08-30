@@ -295,3 +295,10 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS art_theme VARCHAR(60);
 -- room was told to wear.
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS wedding_site_url VARCHAR(500);
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS dress_code VARCHAR(200);
+
+-- Songs are a list, not a fixed grid (owner directive 2026-08-30). A wedding
+-- can need two or three processional songs, or a moment we never thought of,
+-- so a cue carries its own label and its own place in the order rather than
+-- being keyed one-per-type.
+ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS label VARCHAR(120);
+ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS order_index INTEGER NOT NULL DEFAULT 0;
