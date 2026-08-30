@@ -34,7 +34,7 @@ export type WeddingArt = {
   footer?: string;
 };
 
-const ART_BY_THEME: Record<string, WeddingArt> = {
+export const ART_BY_THEME: Record<string, WeddingArt> = {
   // Watercolor florals on near-black. Corners cut from the delivered 900x2400
   // columns, which are kept alongside so they can be re-cut.
   "kat-tanis": {
@@ -49,11 +49,6 @@ const ART_BY_THEME: Record<string, WeddingArt> = {
     footer: "moons-divider.png",
   },
 };
-
-export function weddingArt(theme: string | null | undefined): WeddingArt | null {
-  if (!theme) return null;
-  return ART_BY_THEME[theme] ?? null;
-}
 
 /** Slugs the owner dashboard can offer. */
 export const ART_THEMES = Object.keys(ART_BY_THEME);

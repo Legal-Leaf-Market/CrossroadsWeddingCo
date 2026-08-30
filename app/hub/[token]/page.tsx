@@ -11,7 +11,7 @@ import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
 import { listDocuments } from "@/lib/documents";
 import { countUnread } from "@/lib/messages";
 import { SITE_NAME } from "@/lib/site";
-import { weddingArt } from "@/lib/wedding-art";
+import { resolveWeddingArt } from "@/lib/wedding-art-server";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +47,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   // A couple with their own invitation art gets it on their hub header too,
   // quietly: this is a working page full of forms, so the flowers stay a
   // corner accent and never sit under an input.
-  const art = weddingArt(wedding.artTheme);
+  const art = resolveWeddingArt(wedding.artTheme, wedding.shareToken);
   const storedPlaylists = normalizePlaylistLinks(wedding.spotifyPlaylistUrls);
   const playlistLinks =
     storedPlaylists.length === 0 && wedding.spotifyPlaylistUrl
