@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { adminKeyMatches } from "@/lib/admin";
-import { SITE_URL } from "@/lib/site";
+import { spotifyRedirectUri } from "@/lib/spotify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,14 +37,14 @@ export async function GET(req: NextRequest) {
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: `${SITE_URL}/api/spotify/callback`,
+      redirect_uri: spotifyRedirectUri(),
     }).toString(),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     console.error("[spotify] code exchange failed:", res.status, detail.slice(0, 300));
     return new NextResponse(
-      `Token exchange failed (${res.status}). Check that the app's redirect URI is exactly ${SITE_URL}/api/spotify/callback and try again.`,
+      `Token exchange failed (${res.status}). Check that the app's redirect URI is exactly ${spotifyRedirectUri()} and try again.`,
       { status: 502, headers: { "Content-Type": "text/plain" } },
     );
   }
