@@ -14,6 +14,14 @@ const schema = z.object({
   isDepositPaid: z.boolean().optional(),
   isBalancePaid: z.boolean().optional(),
   customTerms: z.string().max(5000, "Keep the arrangement under 5,000 characters").optional(),
+  // A folder slug under public/wedding-art/. Constrained so this can never
+  // become a path into somewhere else.
+  artTheme: z
+    .string()
+    .trim()
+    .max(60)
+    .regex(/^[a-z0-9-]*$/, "Use lowercase letters, numbers and dashes.")
+    .optional(),
   status: z
     .enum([
       "inquiry",
@@ -52,6 +60,7 @@ export async function PATCH(
     ...d,
     // Empty string clears the bespoke arrangement back to standard terms.
     ...(d.customTerms !== undefined ? { customTerms: d.customTerms.trim() || null } : {}),
+    ...(d.artTheme !== undefined ? { artTheme: d.artTheme || null } : {}),
   });
 
   return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });

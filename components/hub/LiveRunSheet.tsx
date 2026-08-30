@@ -34,6 +34,7 @@ export default function LiveRunSheet({
   const [offline, setOffline] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [armedReset, setArmedReset] = useState(false);
   const busyRef = useRef(false);
   // Bumped by every action so a poll snapshot taken BEFORE the action can
   // never land after it and roll the console back to pre-tap state.
@@ -103,6 +104,11 @@ export default function LiveRunSheet({
   const showControls = Boolean(controlPath) || demo;
   const view = computeLive(blocks);
   const lastId = blocks.length > 0 ? blocks[blocks.length - 1].id : null;
+  // Resetting the first block clears it and everything after, so one call puts
+  // the whole night back to the scheduled times. Two taps: wiping a run that is
+  // actually under way would be the worst possible mis-tap at a wedding.
+  const firstId = blocks.length > 0 ? blocks[0].id : null;
+  const anyStarted = blocks.some((b) => b.actualStart !== null || b.isCompleted);
 
   return (
     <div>
@@ -118,6 +124,40 @@ export default function LiveRunSheet({
         >
           {view.allDone ? "That's a wrap" : driftLabel(view.driftMinutes)}
         </span>
+        {showControls && anyStarted && firstId && (
+          <span className="ml-auto">
+            {armedReset ? (
+              <span className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setArmedReset(false);
+                    void act("reset", firstId);
+                  }}
+                  className="min-h-9 rounded-full bg-terracotta-dark px-4 py-1.5 text-sm font-semibold text-cream disabled:opacity-50"
+                >
+                  Yes, reset everything
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setArmedReset(false)}
+                  className="min-h-9 px-2 py-1.5 text-sm font-semibold text-ink/60 hover:text-charcoal"
+                >
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setArmedReset(true)}
+                className="min-h-9 rounded-full border border-parchment px-4 py-1.5 text-sm font-semibold text-ink/60 hover:border-terracotta hover:text-terracotta"
+              >
+                Reset the night
+              </button>
+            )}
+          </span>
+        )}
         {offline && (
           <span className="text-xs font-semibold text-terracotta-dark" role="status">
             Reconnecting; times shown may be a moment old

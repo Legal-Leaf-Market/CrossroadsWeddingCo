@@ -280,3 +280,10 @@ CREATE TABLE IF NOT EXISTS wedding_documents (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_wedding_documents ON wedding_documents (wedding_id, created_at);
+
+-- Per-wedding art theme (owner directive 2026-08-30). Couples can bring their
+-- own invitation art for the guest-facing pages. The slug names a folder under
+-- public/wedding-art/, and it lives on the row rather than in code because the
+-- repository is PUBLIC: keying art by a wedding's share token would publish a
+-- live read credential.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS art_theme VARCHAR(60);

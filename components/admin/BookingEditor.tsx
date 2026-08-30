@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ART_THEMES } from "@/lib/wedding-art";
 import type { AdminWedding } from "@/lib/admin";
 
 // The owner's only write surface: the money, the paid flags, the status, and
@@ -20,6 +21,7 @@ export default function BookingEditor({
   const [depositPaid, setDepositPaid] = useState(wedding.isDepositPaid);
   const [balancePaid, setBalancePaid] = useState(wedding.isBalancePaid);
   const [customTerms, setCustomTerms] = useState(wedding.customTerms ?? "");
+  const [artTheme, setArtTheme] = useState(wedding.artTheme ?? "");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
 
@@ -40,6 +42,7 @@ export default function BookingEditor({
           isDepositPaid: depositPaid,
           isBalancePaid: balancePaid,
           customTerms,
+          artTheme,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -107,6 +110,23 @@ export default function BookingEditor({
           placeholder="Leave empty for standard pricing. Anything typed here appears word for word in their agreement instead of the usual deposit and balance terms."
           className="w-full rounded-lg border border-parchment bg-white px-3 py-2 text-charcoal placeholder:text-ink/40 focus:border-terracotta focus:outline-none"
         />
+      </label>
+      <label className="mt-3 block text-sm">
+        <span className="mb-1 block font-semibold text-charcoal">
+          Art theme (their own invitation art on the guest schedule and hub header)
+        </span>
+        <select
+          value={artTheme}
+          onChange={(e) => setArtTheme(e.target.value)}
+          className="w-full rounded-lg border border-parchment bg-white px-3 py-2 text-charcoal focus:border-terracotta focus:outline-none"
+        >
+          <option value="">None, the plain look</option>
+          {ART_THEMES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
       </label>
       <div className="mt-3 flex items-center gap-3">
         <button

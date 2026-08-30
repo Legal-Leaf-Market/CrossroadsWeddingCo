@@ -36,7 +36,7 @@ export default async function GuestSchedulePage({
       eventDate={formatEventDate(wedding.eventDate)}
       venueName={wedding.venueName}
       items={items}
-      art={weddingArt(wedding.shareToken)}
+      art={weddingArt(wedding.artTheme)}
     />
   );
 }

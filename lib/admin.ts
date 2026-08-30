@@ -43,6 +43,8 @@ export type AdminWedding = {
   contractAcceptedAt: string | null;
   /** Bespoke arrangement that replaces the agreement's cost section. */
   customTerms: string | null;
+  /** Folder slug under public/wedding-art/, or null for the plain look. */
+  artTheme: string | null;
 };
 
 export type AdminLead = {
@@ -88,6 +90,7 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     unreadMessages,
     contractAcceptedAt: w.contractAcceptedAt ? w.contractAcceptedAt.toISOString() : null,
     customTerms: w.customTerms,
+    artTheme: w.artTheme,
   };
 }
 
@@ -153,6 +156,7 @@ export async function updateAdminWedding(
     isDepositPaid?: boolean;
     isBalancePaid?: boolean;
     customTerms?: string | null;
+    artTheme?: string | null;
     status?: (typeof weddings.$inferSelect)["status"];
   },
 ): Promise<boolean> {
@@ -163,6 +167,7 @@ export async function updateAdminWedding(
   if (patch.isDepositPaid !== undefined) set.isDepositPaid = patch.isDepositPaid;
   if (patch.isBalancePaid !== undefined) set.isBalancePaid = patch.isBalancePaid;
   if (patch.customTerms !== undefined) set.customTerms = patch.customTerms;
+  if (patch.artTheme !== undefined) set.artTheme = patch.artTheme;
   if (patch.status !== undefined) set.status = patch.status;
   await db.update(weddings).set(set).where(eq(weddings.id, weddingId));
   return true;
