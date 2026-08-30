@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CUE_TYPES, MAX_PLAYLIST_LINKS, parsePlaylistId, parseTrackId } from "@/lib/hub-constants";
 import {
   hubInput,
@@ -111,9 +111,13 @@ export type FetchedPlaylist = {
   state: "loading" | "ready" | "error";
   name?: string;
   total?: number;
-  tracks?: { title: string; artist: string }[];
+  tracks?: FetchedTrack[];
   message?: string;
 };
+
+/** One track as the playlist route returns it. spotifyId is what makes a
+ *  sent track land in a moment already playable. */
+export type FetchedTrack = { title: string; artist: string; spotifyId?: string };
 
 export default function MusicSection({
   token,
@@ -133,7 +137,7 @@ export default function MusicSection({
   initialCuesRev: number;
   initialPlaylistsRev: number;
   /** Preview-only: playlist id -> tracks, served without touching the API. */
-  demoTracks?: Record<string, { name: string; tracks: { title: string; artist: string }[] }>;
+  demoTracks?: Record<string, { name: string; tracks: FetchedTrack[] }>;
 }) {
   const toGrid = (rows: CueRow[]) =>
     CUE_TYPES.map(
@@ -216,6 +220,51 @@ export default function MusicSection({
     cueSave.touch();
   }
 
+  // A pasted link names the song in the embed but not in our database, so the
+  // printed run sheet would read "Processional:" with nothing after it. Look
+  // the track up once per id and fill the blank track and artist boxes. Never
+  // overwrites what the couple typed, and stays quiet when the lookup fails or
+  // Spotify isn't connected: the embed still plays either way.
+  const namedTrackIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const pending = cues
+      .map((cue) => ({ cue, trackId: parseTrackId(cue.spotifyUrl) }))
+      .filter(
+        (row): row is { cue: CueRow; trackId: string } =>
+          row.trackId !== null &&
+          row.cue.trackTitle.trim() === "" &&
+          !namedTrackIds.current.has(row.trackId),
+      );
+    if (pending.length === 0) return;
+
+    for (const { cue, trackId } of pending) {
+      namedTrackIds.current.add(trackId);
+      void (async () => {
+        try {
+          const res = await fetch(`/api/hub/${token}/track?id=${trackId}`);
+          if (!res.ok) return;
+          const track = (await res.json()) as { title?: string; artist?: string };
+          if (!track.title) return;
+          let filled = false;
+          setCues((rows) =>
+            rows.map((row) => {
+              // Re-check on the freshest rows: the couple may have typed a
+              // name or swapped the link while this request was in flight.
+              if (row.cueType !== cue.cueType) return row;
+              if (row.trackTitle.trim() !== "") return row;
+              if (parseTrackId(row.spotifyUrl) !== trackId) return row;
+              filled = true;
+              return { ...row, trackTitle: track.title!, artist: row.artist || (track.artist ?? "") };
+            }),
+          );
+          if (filled) cueSave.touch();
+        } catch {
+          // Offline or blocked: leave the row as the couple left it.
+        }
+      })();
+    }
+  }, [cues, token, cueSave]);
+
   async function togglePlaylist(playlistId: string, url: string) {
     if (openIds.includes(playlistId)) {
       setOpenIds((ids) => ids.filter((id) => id !== playlistId));
@@ -268,7 +317,7 @@ export default function MusicSection({
   // "Send a track somewhere": into one of the big-moment slots (overwriting
   // what's there; the row sits right above and shows the change), or onto the
   // must-play list (deduped).
-  function placeTrack(track: { title: string; artist: string }, target: string) {
+  function placeTrack(track: FetchedTrack, target: string) {
     if (target === "must_play") {
       setMustPlay((rows) => {
         const exists = rows.some(
@@ -281,9 +330,19 @@ export default function MusicSection({
       listSave.touch();
       return;
     }
+    // Carry the link too, so the moment comes back as a playable row rather
+    // than a name the couple has to go verify against Spotify by hand.
+    const url = track.spotifyId ? `https://open.spotify.com/track/${track.spotifyId}` : "";
     setCues((rows) =>
       rows.map((row) =>
-        row.cueType === target ? { ...row, trackTitle: track.title, artist: track.artist } : row,
+        row.cueType === target
+          ? {
+              ...row,
+              trackTitle: track.title,
+              artist: track.artist,
+              spotifyUrl: url || row.spotifyUrl,
+            }
+          : row,
       ),
     );
     cueSave.touch();

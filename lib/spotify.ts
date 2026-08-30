@@ -117,6 +117,22 @@ export async function getPlaylist(playlistId: string): Promise<SpotifyPlaylist> 
 }
 
 /** Track search for the Phase 2 portal's must-play / do-not-play pickers. */
+/**
+ * One track by id, for filling in the name and artist behind a link the couple
+ * pasted. Without this the printed run sheet shows an empty cue: the embed
+ * knows the song, our database only knows the URL.
+ */
+export async function getTrack(trackId: string): Promise<SpotifyTrack | null> {
+  const token = await getToken();
+  const res = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Spotify track fetch failed (${res.status})`);
+  const t = (await res.json()) as { id: string; name: string; artists: { name: string }[] };
+  return { title: t.name, artist: t.artists.map((a) => a.name).join(", "), spotifyId: t.id };
+}
+
 export async function searchTracks(query: string, limit = 10): Promise<SpotifyTrack[]> {
   const token = await getToken();
   const res = await fetch(
