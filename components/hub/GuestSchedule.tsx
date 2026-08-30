@@ -1,5 +1,6 @@
 import SchedulePrintButton from "@/components/hub/SchedulePrintButton";
 import { hhmmToMinutes, minutesToLabel } from "@/lib/live";
+import type { WeddingArt } from "@/lib/wedding-art";
 import { SITE_NAME } from "@/lib/site";
 
 export type GuestScheduleItem = {
@@ -18,15 +19,45 @@ export default function GuestSchedule({
   eventDate,
   venueName,
   items,
+  art = null,
 }: {
   coupleNames: string;
   eventDate: string;
   venueName: string;
   items: GuestScheduleItem[];
+  art?: WeddingArt | null;
 }) {
+  // Art delivered on pure black is composited with screen, which drops the
+  // black and keeps the colour, so it needs the page ground to be black too.
+  const blend = art && !art.transparent ? "screen" : undefined;
+  const ground = blend ? "#000000" : "#0f0e0d";
   return (
-    <div className="min-h-screen bg-[#0f0e0d] px-6 py-12 text-white print:bg-white print:text-black">
-      <div className="mx-auto max-w-2xl">
+    <div
+      className="relative min-h-screen overflow-hidden px-6 py-12 text-white print:bg-white print:text-black"
+      style={{ backgroundColor: ground }}
+    >
+      {art && (
+        // Decoration only, and never over the text: the columns hug the edges,
+        // sit behind everything, and are hidden entirely on print and on the
+        // narrowest phones where there is no margin to spare.
+        <div aria-hidden className="pointer-events-none absolute inset-0 hidden sm:block print:hidden">
+          {/* eslint-disable @next/next/no-img-element */}
+          <img
+            src={`${art.dir}/${art.left}`}
+            alt=""
+            className="absolute left-0 top-0 h-full w-auto max-w-[26%] object-cover object-left opacity-90"
+            style={{ mixBlendMode: blend }}
+          />
+          <img
+            src={`${art.dir}/${art.right ?? art.left}`}
+            alt=""
+            className="absolute right-0 top-0 h-full w-auto max-w-[26%] object-cover object-right opacity-90"
+            style={{ mixBlendMode: blend, transform: art.right ? undefined : "scaleX(-1)" }}
+          />
+          {/* eslint-enable @next/next/no-img-element */}
+        </div>
+      )}
+      <div className="relative mx-auto max-w-2xl">
         <div className="flex justify-end">
           <SchedulePrintButton />
         </div>
@@ -42,7 +73,18 @@ export default function GuestSchedule({
           <p className="text-sm text-white/40 print:text-black/50">
             {eventDate} · {venueName}
           </p>
-          <div className="mx-auto mt-7 h-px w-24 bg-white/25 print:bg-black/25" />
+          {art?.sprig ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`${art.dir}/${art.sprig}`}
+              alt=""
+              aria-hidden
+              className="mx-auto mt-6 w-56 max-w-full print:hidden"
+              style={{ mixBlendMode: blend }}
+            />
+          ) : (
+            <div className="mx-auto mt-7 h-px w-24 bg-white/25 print:bg-black/25" />
+          )}
         </header>
 
         {items.length === 0 ? (
@@ -66,7 +108,8 @@ export default function GuestSchedule({
                 >
                   <span
                     aria-hidden
-                    className="absolute left-0 top-[9px] h-[15px] w-[15px] rounded-full border border-white/40 bg-[#0f0e0d] sm:left-1/2 sm:-translate-x-1/2 print:border-black/40 print:bg-white"
+                    className="absolute left-0 top-[9px] h-[15px] w-[15px] rounded-full border border-white/40 sm:left-1/2 sm:-translate-x-1/2 print:border-black/40 print:bg-white"
+                    style={{ backgroundColor: ground }}
                   />
                   <div
                     className={`sm:w-1/2 ${
