@@ -378,6 +378,21 @@ export default function MusicSection({
                       allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                       loading="lazy"
                     />
+                    {/* Spotify's player is a cross-origin iframe: we cannot add a
+                        per-row menu inside it, so this is the two-tap path to a
+                        single song's link. */}
+                    <p className="mt-2 text-xs text-ink/60">
+                      Need one song&apos;s link for a moment below?{" "}
+                      <a
+                        href={`https://open.spotify.com/playlist/${playlistId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-terracotta underline decoration-parchment underline-offset-2"
+                      >
+                        Open this playlist in Spotify
+                      </a>
+                      , tap the three dots beside the song, then Share, then Copy Song Link.
+                    </p>
                     {data?.state === "ready" && data.tracks && data.tracks.length > 0 && (
                       <>
                         <p className="mb-2 mt-3 text-xs text-ink/60">
@@ -450,9 +465,10 @@ export default function MusicSection({
       <div className="mt-6 border-t border-parchment pt-5">
         <h3 className="text-sm font-semibold text-charcoal">Your songs, moment by moment</h3>
         <p className="mb-3 text-xs text-ink/50">
-          Paste a song&apos;s Spotify link into any row and it becomes playable right here, so
-          we are both listening to the same thing. Then tell us how to handle it. Leave any
-          row blank and we choose it together on your call.
+          Grab a song&apos;s link from Spotify (three dots beside the song, Share, Copy Song
+          Link), paste it into any row, and it becomes playable right here, so we are both
+          listening to the same thing. Then tell us how to handle it. Leave any row blank and
+          we choose it together on your call.
         </p>
         <ul className="space-y-3">
           {cues.map((cue, index) => {
@@ -489,8 +505,8 @@ export default function MusicSection({
                     />
                     {badTrack && (
                       <p className="mt-1 text-xs text-terracotta-dark">
-                        That is not a song link. In Spotify, tap a song, then Share, then Copy
-                        link.
+                        That is not a song link. In Spotify, tap the three dots beside the
+                        song, then Share, then Copy Song Link.
                       </p>
                     )}
                     {trackId && (
