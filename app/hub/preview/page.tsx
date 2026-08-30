@@ -23,8 +23,16 @@ export default function HubPreviewPage() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <header className="border-b border-parchment bg-white">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-6 py-5">
+      <header className="relative overflow-hidden border-b border-parchment bg-white">
+        {/* Mirrors the real hub's accent for a couple who brought their own art. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/wedding-art/kat-tanis/corner-right-top.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -right-5 -top-7 w-24 opacity-25 sm:-right-6 sm:-top-8 sm:w-52 sm:opacity-40"
+        />
+        <div className="relative mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-6 py-5">
           <div>
             <p className="text-sm font-semibold text-terracotta">{SITE_NAME}</p>
             <h1 className="text-2xl text-charcoal">Jordan Hayes &amp; Taylor Morgan</h1>

@@ -31,6 +31,19 @@ export default function GuestSchedulePreviewPage() {
         { id: "11", title: "Open floor", startTime: "19:00" },
         { id: "12", title: "Last song and send-off", startTime: "21:00" },
       ]}
+      // Exercises the art path so the framed layout can be measured without a
+      // database. Real weddings get theirs from lib/wedding-art.ts.
+      art={{
+        dir: "/wedding-art/kat-tanis",
+        corners: {
+          leftTop: "corner-left-top.png",
+          leftBottom: "corner-left-bottom.png",
+          rightTop: "corner-right-top.png",
+          rightBottom: "corner-right-bottom.png",
+        },
+        sprig: "sprig-divider.png",
+        footer: "moons-divider.png",
+      }}
     />
   );
 }
