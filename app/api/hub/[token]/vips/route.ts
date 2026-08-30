@@ -21,6 +21,9 @@ const schema = z.object({
         fullName: z.string().trim().max(255),
         phoneticSpelling: z.string().trim().max(255).optional().default(""),
         entranceSongOverride: z.string().trim().max(255).optional().default(""),
+        // Free text: pronouns, how they're related, anything the MC should
+        // know before saying this person's name out loud.
+        notes: z.string().trim().max(500).optional().default(""),
       }),
     )
     .max(40),
@@ -37,6 +40,7 @@ async function currentVips(ex: Tx | typeof db, weddingId: string) {
     fullName: v.fullName,
     phoneticSpelling: v.phoneticSpelling,
     entranceSongOverride: v.entranceSongOverride ?? "",
+    notes: v.notes ?? "",
   }));
 }
 
@@ -72,6 +76,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
             fullName: v.fullName,
             phoneticSpelling: v.phoneticSpelling,
             entranceSongOverride: v.entranceSongOverride || null,
+            notes: v.notes || null,
           })),
         );
       }

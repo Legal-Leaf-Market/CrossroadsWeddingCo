@@ -180,6 +180,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             fullName: v.fullName,
             phoneticSpelling: v.phoneticSpelling,
             entranceSongOverride: v.entranceSongOverride ?? "",
+            notes: v.notes ?? "",
           }))}
         />
         <p className="pb-8 text-center text-xs text-ink/40">
