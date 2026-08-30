@@ -480,6 +480,23 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   of the iframe into our page is impossible by browser design (cross-origin), so
   tap-to-send stays the mechanism.
 
+- **The couple's documents are the official record (2026-08-30, Jacob):** a couple who has
+  already sent guests an order-of-events graphic, a wedding-party card and a printed
+  timeline is working from those, not from us. Our run sheet SHADOWS their paperwork, and
+  the couple must be able to audit one against the other without leaving the hub. So
+  `wedding_documents` stores their files (bytes in Postgres: no blob store is configured,
+  it is a handful of images per wedding, and a document must never outlive its wedding
+  row), and the hub's "Your documents" section sits directly ABOVE the schedule. Upload
+  and remove are per-file requests, deliberately outside the debounced autosave engine.
+  Only inert types are accepted (PNG, JPG, WEBP, GIF, HEIC, PDF: no SVG, no HTML, both
+  execute script from our own origin), 4 MB each to stay under Vercel's 4.5 MB body cap,
+  12 per wedding. The file route is scoped to the token's own wedding and answers with
+  nosniff plus a CSP sandbox.
+- **Guest order of events (2026-08-30):** `/schedule/[share_token]` renders the couple's
+  timeline as a guest-facing schedule, times and titles only, never the MC notes on the
+  same rows. Same zero-auth read-only token as the vendor live view. It reads live data,
+  so unlike an exported graphic it cannot drift from the run sheet.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import CountdownHero from "@/components/hub/CountdownHero";
 import DetailsSection from "@/components/hub/DetailsSection";
+import DocumentsSection from "@/components/hub/DocumentsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
 import { getPortalData, TOKEN_RE } from "@/lib/hub";
 import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
+import { listDocuments } from "@/lib/documents";
 import { countUnread } from "@/lib/messages";
 import { SITE_NAME } from "@/lib/site";
 
@@ -32,7 +34,10 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   const data = await getPortalData(token);
   if (!data) notFound();
   const { wedding, timeline, cues, vips, playlists } = data;
-  const unreadMessages = await countUnread(wedding.id, "couple");
+  const [unreadMessages, documents] = await Promise.all([
+    countUnread(wedding.id, "couple"),
+    listDocuments(wedding.id),
+  ]);
   const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
   // The hub-managed playlist links, seeded from the single link captured at
   // booking when the couple hasn't managed the list yet. The playlists route
@@ -135,6 +140,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             vibeNotes: wedding.notes ?? "",
           }}
         />
+        <DocumentsSection token={token} initial={documents} />
         <TimelineSection
           token={token}
           initialRev={revs.timeline ?? 0}

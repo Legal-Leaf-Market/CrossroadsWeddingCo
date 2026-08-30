@@ -262,3 +262,21 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS custom_terms TEXT;
 -- what a song is for and how to handle it ("fade it early, it runs long"), and
 -- the DJ reads it off the run sheet.
 ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- The couple's own documents (owner directive 2026-08-30). Kat's order-of-
+-- events graphic, wedding-party card and printed timeline are the OFFICIAL
+-- communication; our run sheet shadows them. They live beside our schedule in
+-- the hub so the couple can audit one against the other. Bytes go in Postgres
+-- deliberately: no blob store is configured, the files are a handful of images
+-- per wedding, and a hub document must never outlive the wedding row.
+CREATE TABLE IF NOT EXISTS wedding_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wedding_id UUID REFERENCES weddings(id) ON DELETE CASCADE,
+    label VARCHAR(120) NOT NULL DEFAULT '',
+    file_name VARCHAR(255) NOT NULL DEFAULT '',
+    mime_type VARCHAR(100) NOT NULL,
+    byte_size INTEGER NOT NULL,
+    data BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_wedding_documents ON wedding_documents (wedding_id, created_at);
