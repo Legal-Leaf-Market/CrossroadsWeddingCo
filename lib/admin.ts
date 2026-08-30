@@ -39,6 +39,8 @@ export type AdminWedding = {
   createdAt: string;
   /** Couple messages the team hasn't opened yet. */
   unreadMessages: number;
+  /** ISO timestamp the couple accepted the service agreement, null if not yet. */
+  contractAcceptedAt: string | null;
 };
 
 export type AdminLead = {
@@ -82,6 +84,7 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     notes: w.notes,
     createdAt: w.createdAt.toISOString(),
     unreadMessages,
+    contractAcceptedAt: w.contractAcceptedAt ? w.contractAcceptedAt.toISOString() : null,
   };
 }
 

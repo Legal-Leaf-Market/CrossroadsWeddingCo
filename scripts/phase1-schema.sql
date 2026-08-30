@@ -243,3 +243,11 @@ CREATE TABLE IF NOT EXISTS wedding_messages (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_wedding_messages_thread ON wedding_messages (wedding_id, created_at);
+
+-- Service agreement (owner directive 2026-08-30). The couple accepts in the
+-- hub; the snapshot freezes the exact terms they agreed to (services, prices,
+-- date, venue) so later edits to the wedding row can never rewrite history.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_version VARCHAR(20);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_accepted_at TIMESTAMPTZ;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_accepted_name VARCHAR(255);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_snapshot JSONB;

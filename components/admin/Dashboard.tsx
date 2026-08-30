@@ -89,6 +89,15 @@ function WeddingCard({
             {a.fee != null ? ` $${a.fee}` : a.minFee != null ? ` from $${a.minFee}` : ""}
           </span>
         ))}
+        <span
+          className={
+            wedding.contractAcceptedAt
+              ? "rounded-full bg-sage/25 px-2 py-0.5 font-semibold text-ink"
+              : "rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-ink"
+          }
+        >
+          agreement {wedding.contractAcceptedAt ? "signed" : "unsigned"}
+        </span>
         {wedding.checkinsSent.length > 0 && (
           <span className="rounded-full bg-charcoal/5 px-2 py-0.5 text-ink/50">
             check-ins: {wedding.checkinsSent.join(", ")}d
