@@ -66,6 +66,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ token: str
       services,
       totalUsd: Number(wedding.totalAmount),
       depositUsd: Number(wedding.depositAmount),
+      customTerms: wedding.customTerms,
     }),
   };
 

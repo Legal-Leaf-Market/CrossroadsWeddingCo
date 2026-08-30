@@ -137,6 +137,9 @@ export const weddings = pgTable(
     contractAcceptedAt: timestamp("contract_accepted_at", { withTimezone: true }),
     contractAcceptedName: varchar("contract_accepted_name", { length: 255 }),
     contractSnapshot: jsonb("contract_snapshot"),
+    // Free-text arrangement that replaces the agreement's standard cost
+    // section: legacy deals, trades, comped weddings.
+    customTerms: text("custom_terms"),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull().default("1000.00"),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),

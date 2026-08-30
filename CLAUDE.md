@@ -448,6 +448,24 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   bumps on any wording change so snapshots stay traceable. **NOT lawyer-reviewed: Jacob should
   have an Indiana attorney read it before it carries real weight.**
 
+- **Custom arrangements + owner write access (2026-08-30, Jacob):** some weddings predate
+  the pricing model or settle in trade (Kat & Tanis: equipment plus cash, deposit and
+  balance already square). `weddings.custom_terms` holds free text that replaces the
+  agreement's cost section verbatim, and the dashboard gained its first write surface, an
+  "Edit money" panel per booking (total, deposit received, balance settled, custom
+  arrangement) behind `PATCH /api/admin/[key]/wedding/[id]`. This deliberately relaxes the
+  earlier read-only dashboard rule: the money fields have no couple-facing home, so the
+  owner needs somewhere to set them. Everything else about a wedding still comes only from
+  the couple's hub.
+- **Spotify playlists embed natively (2026-08-30):** unfolding a playlist in the hub now
+  renders Spotify's own iframe player (`open.spotify.com/embed/playlist/{id}`), which needs
+  no API, no keys, and no login from us, and plays full tracks for any viewer already
+  signed into Spotify in that browser (30-second previews otherwise). The API-backed track
+  list with send-to-a-moment still sits below it and lights up when SPOTIFY_REFRESH_TOKEN
+  lands; until then that area shows a quiet line instead of an error. Dragging a song out
+  of the iframe into our page is impossible by browser design (cross-origin), so
+  tap-to-send stays the mechanism.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

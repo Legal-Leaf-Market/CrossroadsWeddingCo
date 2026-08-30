@@ -41,6 +41,8 @@ export type AdminWedding = {
   unreadMessages: number;
   /** ISO timestamp the couple accepted the service agreement, null if not yet. */
   contractAcceptedAt: string | null;
+  /** Bespoke arrangement that replaces the agreement's cost section. */
+  customTerms: string | null;
 };
 
 export type AdminLead = {
@@ -85,6 +87,7 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     createdAt: w.createdAt.toISOString(),
     unreadMessages,
     contractAcceptedAt: w.contractAcceptedAt ? w.contractAcceptedAt.toISOString() : null,
+    customTerms: w.customTerms,
   };
 }
 
@@ -135,4 +138,32 @@ export async function getAdminData(): Promise<AdminData> {
       createdAt: l.createdAt.toISOString(),
     })),
   };
+}
+
+/**
+ * The one write the owner dashboard allows: the money and status fields no
+ * couple-facing surface can set. Everything else about a wedding still comes
+ * from the couple's own hub. Undefined fields are left alone.
+ */
+export async function updateAdminWedding(
+  weddingId: string,
+  patch: {
+    totalAmount?: string;
+    depositAmount?: string;
+    isDepositPaid?: boolean;
+    isBalancePaid?: boolean;
+    customTerms?: string | null;
+    status?: (typeof weddings.$inferSelect)["status"];
+  },
+): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/.test(weddingId)) return false;
+  const set: Record<string, unknown> = { updatedAt: new Date() };
+  if (patch.totalAmount !== undefined) set.totalAmount = patch.totalAmount;
+  if (patch.depositAmount !== undefined) set.depositAmount = patch.depositAmount;
+  if (patch.isDepositPaid !== undefined) set.isDepositPaid = patch.isDepositPaid;
+  if (patch.isBalancePaid !== undefined) set.isBalancePaid = patch.isBalancePaid;
+  if (patch.customTerms !== undefined) set.customTerms = patch.customTerms;
+  if (patch.status !== undefined) set.status = patch.status;
+  await db.update(weddings).set(set).where(eq(weddings.id, weddingId));
+  return true;
 }

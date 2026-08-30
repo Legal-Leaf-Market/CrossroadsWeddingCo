@@ -38,6 +38,7 @@ export default async function ContractPage({
           services,
           totalUsd: Number(wedding.totalAmount),
           depositUsd: Number(wedding.depositAmount),
+          customTerms: wedding.customTerms,
         });
 
   return (
