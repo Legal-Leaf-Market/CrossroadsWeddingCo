@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import GuestSchedule from "@/components/hub/GuestSchedule";
 import { getLiveBlocks, getWeddingByShareToken } from "@/lib/hub";
 import { formatEventDate } from "@/lib/hub-constants";
-import { weddingArt } from "@/lib/wedding-art";
+import { resolveWeddingArt } from "@/lib/wedding-art-server";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export default async function GuestSchedulePage({
       eventDate={formatEventDate(wedding.eventDate)}
       venueName={wedding.venueName}
       items={items}
-      art={weddingArt(wedding.artTheme)}
+      art={resolveWeddingArt(wedding.artTheme, wedding.shareToken)}
     />
   );
 }
