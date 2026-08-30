@@ -1,5 +1,6 @@
 import {
   boolean,
+  customType,
   date,
   index,
   integer,
@@ -215,6 +216,26 @@ export const weddingMessages = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("idx_wedding_messages_thread").on(t.weddingId, t.createdAt)],
+);
+
+// 7b. The couple's own documents: their order-of-events graphic, wedding-party
+// card, printed timeline. These are the official communication; our run sheet
+// shadows them, so they sit beside our schedule in the hub for auditing.
+export const weddingDocuments = pgTable(
+  "wedding_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id").references(() => weddings.id, { onDelete: "cascade" }),
+    label: varchar("label", { length: 120 }).notNull().default(""),
+    fileName: varchar("file_name", { length: 255 }).notNull().default(""),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    byteSize: integer("byte_size").notNull(),
+    data: customType<{ data: Buffer; driverData: Buffer }>({
+      dataType: () => "bytea",
+    })("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_wedding_documents").on(t.weddingId, t.createdAt)],
 );
 
 // 8. VIP pronunciation & wedding-party roster

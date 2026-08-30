@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import CountdownHero from "@/components/hub/CountdownHero";
 import DetailsSection from "@/components/hub/DetailsSection";
+import DocumentsSection from "@/components/hub/DocumentsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
@@ -67,6 +68,7 @@ export default function HubPreviewPage() {
             vibeNotes: "Golden hour garden party. Motown for cocktails, 90s and 2000s once the floor opens.",
           }}
         />
+        <DocumentsSection token={SAMPLE_TOKEN} demo initial={[]} />
         <TimelineSection
           token={SAMPLE_TOKEN}
           initialRev={0}
