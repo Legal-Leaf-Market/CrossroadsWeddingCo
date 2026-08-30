@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/site";
 // Spotify is a priority integration (CLAUDE.md §9.2): couples curate playlists
 // in their own accounts and share the link. This module reads those shared
 // playlists and searches the catalog via the client-credentials flow, no user
@@ -131,4 +132,13 @@ export async function searchTracks(query: string, limit = 10): Promise<SpotifyTr
     artist: t.artists.map((a) => a.name).join(", "),
     spotifyId: t.id,
   }));
+}
+
+/**
+ * The one string that must match the Spotify app's registered redirect URI,
+ * character for character. Both halves of the owner authorization read it from
+ * here so they can never drift apart.
+ */
+export function spotifyRedirectUri(): string {
+  return `${SITE_URL}/api/spotify/callback`;
 }
