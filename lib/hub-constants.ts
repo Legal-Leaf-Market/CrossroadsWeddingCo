@@ -58,6 +58,24 @@ export function normalizePlaylistLinks(value: unknown): PlaylistLink[] {
  * input is not a playlist link. Lives here (client-safe) so the hub UI and
  * the API routes validate identically; lib/spotify re-exports it.
  */
+/**
+ * A single Spotify track link (share link or URI) to its id, null when the
+ * input is not one. Mirrors parsePlaylistId so the hub UI and the API agree.
+ */
+export function parseTrackId(input: string): string | null {
+  const trimmed = input.trim();
+  const uri = trimmed.match(/^spotify:track:([A-Za-z0-9]+)$/);
+  if (uri) return uri[1];
+  try {
+    const url = new URL(trimmed);
+    if (!/(^|\.)spotify\.com$/.test(url.hostname)) return null;
+    const match = url.pathname.match(/\/track\/([A-Za-z0-9]+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 export function parsePlaylistId(input: string): string | null {
   const trimmed = input.trim();
   const uri = trimmed.match(/^spotify:playlist:([A-Za-z0-9]+)$/);

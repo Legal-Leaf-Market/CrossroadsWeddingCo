@@ -457,6 +457,12 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   earlier read-only dashboard rule: the money fields have no couple-facing home, so the
   owner needs somewhere to set them. Everything else about a wedding still comes only from
   the couple's hub.
+- **Songs are the rows (2026-08-30, Jacob, second pass):** the big-moment grid became
+  song cards. Each moment card takes the song's own Spotify link (`music_cues.spotify_url`,
+  parsed by `parseTrackId`) and renders Spotify's compact single-track player inline, with
+  a notes column beside it and a played-live checkbox in the card header. No link yet means
+  plain track and artist boxes instead, so nothing depends on Spotify. This is the shape
+  Jacob asked for: annotate the song itself rather than name it in a form.
 - **Music is one section (2026-08-30, Jacob):** the hub's two music cards merged into a
   single "Music" card: playlists with their embedded players at the top, then the big
   moments, then must-play and do-not-play. Playlist panels stay MOUNTED once opened and are

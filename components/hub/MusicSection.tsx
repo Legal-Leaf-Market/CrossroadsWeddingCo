@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CUE_TYPES, MAX_PLAYLIST_LINKS, parsePlaylistId } from "@/lib/hub-constants";
+import { CUE_TYPES, MAX_PLAYLIST_LINKS, parsePlaylistId, parseTrackId } from "@/lib/hub-constants";
 import {
   hubInput,
   RemoveButton,
@@ -17,6 +17,8 @@ export type CueRow = {
   trackTitle: string;
   artist: string;
   notes: string;
+  /** The song's own Spotify link; renders as a playable row when set. */
+  spotifyUrl: string;
   isLivePerformance: boolean;
 };
 
@@ -141,6 +143,7 @@ export default function MusicSection({
           trackTitle: "",
           artist: "",
           notes: "",
+          spotifyUrl: "",
           isLivePerformance: false,
         },
     );
@@ -157,8 +160,6 @@ export default function MusicSection({
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [mountedIds, setMountedIds] = useState<string[]>([]);
   const [fetched, setFetched] = useState<Record<string, FetchedPlaylist>>({});
-  // Which big moment is expanded for editing; the rest stay collapsed to one line.
-  const [openMoment, setOpenMoment] = useState<string | null>(null);
   const cuesRev = useRef(initialCuesRev);
   const playlistsRev = useRef(initialPlaylistsRev);
   const cuesSaveIds = useRef<string[]>([]);
@@ -287,11 +288,6 @@ export default function MusicSection({
     );
     cueSave.touch();
   }
-
-  const cueSummary = (cue: CueRow) => {
-    const t = [cue.trackTitle, cue.artist].filter((x) => x.trim()).join(" · ");
-    return t || "Not chosen yet";
-  };
 
   return (
     <SectionCard
@@ -452,82 +448,102 @@ export default function MusicSection({
       </div>
 
       <div className="mt-6 border-t border-parchment pt-5">
-        <h3 className="text-sm font-semibold text-charcoal">The big moments</h3>
-        <p className="mb-2 text-xs text-ink/50">
-          Tap a moment to choose its song, tell us how to handle it, and mark it live if you
-          want it played on guitar instead of the speakers. Leave any of them blank and we
-          pick together on your call.
+        <h3 className="text-sm font-semibold text-charcoal">Your songs, moment by moment</h3>
+        <p className="mb-3 text-xs text-ink/50">
+          Paste a song&apos;s Spotify link into any row and it becomes playable right here, so
+          we are both listening to the same thing. Then tell us how to handle it. Leave any
+          row blank and we choose it together on your call.
         </p>
-        <ul className="divide-y divide-parchment rounded-xl border border-parchment">
+        <ul className="space-y-3">
           {cues.map((cue, index) => {
             const meta = CUE_TYPES.find((ct) => ct.type === cue.cueType);
-            const isOpen = openMoment === cue.cueType;
-            const filled = cue.trackTitle.trim() !== "" || cue.artist.trim() !== "";
+            const trackId = parseTrackId(cue.spotifyUrl);
+            const badTrack = cue.spotifyUrl.trim() !== "" && !trackId;
             return (
-              <li key={cue.cueType}>
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpenMoment(isOpen ? null : cue.cueType)}
-                  className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-parchment/30"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-charcoal">
-                      {meta?.label}
-                      {cue.isLivePerformance && (
-                        <span className="ml-2 rounded-full bg-terracotta/15 px-2 py-0.5 text-[11px] font-semibold text-terracotta">
-                          live
-                        </span>
-                      )}
-                    </span>
-                    <span
-                      className={`block truncate text-sm ${filled ? "text-ink/70" : "text-ink/40"}`}
-                    >
-                      {cueSummary(cue)}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-lg font-semibold text-terracotta">
-                    {isOpen ? "\u2212" : "+"}
-                  </span>
-                </button>
-                {isOpen && (
-                  <div className="space-y-2 bg-parchment/20 px-3 pb-4 pt-1">
+              <li
+                key={cue.cueType}
+                className="overflow-hidden rounded-xl border border-parchment bg-white"
+              >
+                <div className="flex items-center justify-between gap-2 border-b border-parchment bg-parchment/30 px-3 py-2">
+                  <span className="text-sm font-semibold text-charcoal">{meta?.label}</span>
+                  <label className="flex items-center gap-1.5 text-xs text-ink/60">
                     <input
-                      aria-label={`${meta?.label} track`}
-                      className={hubInput}
-                      value={cue.trackTitle}
-                      maxLength={255}
-                      onChange={(e) => updateCue(index, { trackTitle: e.target.value })}
-                      placeholder="Track"
+                      type="checkbox"
+                      checked={cue.isLivePerformance}
+                      onChange={(e) => updateCue(index, { isLivePerformance: e.target.checked })}
+                      className="accent-terracotta"
                     />
+                    Played live
+                  </label>
+                </div>
+                <div className="grid gap-3 p-3 sm:grid-cols-2">
+                  <div>
                     <input
-                      aria-label={`${meta?.label} artist`}
+                      aria-label={`${meta?.label} Spotify link`}
+                      aria-invalid={badTrack || undefined}
                       className={hubInput}
-                      value={cue.artist}
-                      maxLength={255}
-                      onChange={(e) => updateCue(index, { artist: e.target.value })}
-                      placeholder="Artist"
+                      value={cue.spotifyUrl}
+                      maxLength={500}
+                      onChange={(e) => updateCue(index, { spotifyUrl: e.target.value })}
+                      placeholder="Paste the song's Spotify link"
                     />
+                    {badTrack && (
+                      <p className="mt-1 text-xs text-terracotta-dark">
+                        That is not a song link. In Spotify, tap a song, then Share, then Copy
+                        link.
+                      </p>
+                    )}
+                    {trackId && (
+                      <iframe
+                        // Compact single-track player. Cheap, and it means the
+                        // row itself is the song rather than a name for it.
+                        src={`https://open.spotify.com/embed/track/${trackId}?utm_source=generator`}
+                        title={`${meta?.label} song`}
+                        width="100%"
+                        height={80}
+                        style={{ borderRadius: 10, border: 0, marginTop: 8 }}
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                      />
+                    )}
+                    {!trackId && (
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <input
+                          aria-label={`${meta?.label} track`}
+                          className={hubInput}
+                          value={cue.trackTitle}
+                          maxLength={255}
+                          onChange={(e) => updateCue(index, { trackTitle: e.target.value })}
+                          placeholder="Or just the track name"
+                        />
+                        <input
+                          aria-label={`${meta?.label} artist`}
+                          className={hubInput}
+                          value={cue.artist}
+                          maxLength={255}
+                          onChange={(e) => updateCue(index, { artist: e.target.value })}
+                          placeholder="Artist"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
                     <textarea
                       aria-label={`${meta?.label} notes`}
                       className={hubInput}
-                      rows={2}
+                      rows={trackId ? 4 : 3}
                       value={cue.notes}
                       maxLength={2000}
                       onChange={(e) => updateCue(index, { notes: e.target.value })}
-                      placeholder="Anything we should know: fade it early, start it when the doors open, skip the long intro..."
+                      placeholder="How should we handle it? Fade it early, start when the doors open, skip the long intro, announce it first..."
                     />
-                    <label className="flex items-center gap-2 text-sm text-ink/70">
-                      <input
-                        type="checkbox"
-                        checked={cue.isLivePerformance}
-                        onChange={(e) => updateCue(index, { isLivePerformance: e.target.checked })}
-                        className="accent-terracotta"
-                      />
-                      Play this one live on guitar
-                    </label>
+                    {trackId && (cue.trackTitle.trim() || cue.artist.trim()) && (
+                      <p className="mt-1 truncate text-xs text-ink/40">
+                        {[cue.trackTitle, cue.artist].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
                   </div>
-                )}
+                </div>
               </li>
             );
           })}
