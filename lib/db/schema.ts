@@ -195,6 +195,8 @@ export const musicCues = pgTable("music_cues", {
   chordChartContent: text("chord_chart_content"),
   audioFileUrl: varchar("audio_file_url", { length: 500 }),
   isLivePerformance: boolean("is_live_performance").default(false),
+  // The couple's own note for this moment, shown to the DJ on the run sheet.
+  notes: text("notes"),
 });
 
 // 7b. Wedding messages: the one master conversation per wedding (AppFolio

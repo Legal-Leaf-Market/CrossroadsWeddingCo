@@ -88,8 +88,8 @@ export default function HubPreviewPage() {
           initialCuesRev={0}
           initialPlaylistsRev={0}
           initialCues={[
-            { cueType: "processional", trackTitle: "Can't Help Falling in Love", artist: "Kina Grannis", isLivePerformance: true },
-            { cueType: "first_dance", trackTitle: "Lover", artist: "Taylor Swift", isLivePerformance: false },
+            { cueType: "processional", trackTitle: "Can't Help Falling in Love", artist: "Kina Grannis", notes: "Start it when the doors open, not before.", isLivePerformance: true },
+            { cueType: "first_dance", trackTitle: "Lover", artist: "Taylor Swift", notes: "", isLivePerformance: false },
           ]}
           initialMustPlay={[
             { trackTitle: "September", artist: "Earth, Wind & Fire" },
