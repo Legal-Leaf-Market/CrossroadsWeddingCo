@@ -257,3 +257,8 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_snapshot JSONB;
 -- standard cost section of the service agreement verbatim, so the couple's
 -- paperwork matches the deal they actually made.
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS custom_terms TEXT;
+
+-- Per-moment notes on music cues (owner directive 2026-08-30): couples explain
+-- what a song is for and how to handle it ("fade it early, it runs long"), and
+-- the DJ reads it off the run sheet.
+ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS notes TEXT;

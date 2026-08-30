@@ -457,6 +457,14 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   earlier read-only dashboard rule: the money fields have no couple-facing home, so the
   owner needs somewhere to set them. Everything else about a wedding still comes only from
   the couple's hub.
+- **Music is one section (2026-08-30, Jacob):** the hub's two music cards merged into a
+  single "Music" card: playlists with their embedded players at the top, then the big
+  moments, then must-play and do-not-play. Playlist panels stay MOUNTED once opened and are
+  hidden with CSS when collapsed, so the embed never reloads and several can stay open at
+  once while the couple picks songs. Each big moment is now a collapsible row (summary line
+  when closed) holding track, artist, a free-text note, and the live-on-guitar checkbox;
+  `music_cues.notes` is additive and prints on the run sheet under its moment. A cue row
+  with only a note typed still saves.
 - **Spotify playlists embed natively (2026-08-30):** unfolding a playlist in the hub now
   renders Spotify's own iframe player (`open.spotify.com/embed/playlist/{id}`), which needs
   no API, no keys, and no login from us, and plays full tracks for any viewer already

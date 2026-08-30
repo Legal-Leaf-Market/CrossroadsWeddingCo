@@ -100,6 +100,9 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
                     <li key={ct.type}>
                       <span className="font-semibold">{ct.label}:</span> {track}
                       {cue.isLivePerformance ? " (live)" : ""}
+                      {cue.notes && (
+                        <span className="block text-ink/60">{cue.notes}</span>
+                      )}
                     </li>
                   );
                 })}

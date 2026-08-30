@@ -21,6 +21,7 @@ const schema = z.object({
         trackTitle: z.string().trim().max(255),
         artist: z.string().trim().max(255),
         timeCue: z.string().trim().max(100).optional().default(""),
+        notes: z.string().trim().max(2000).optional().default(""),
         isLivePerformance: z.boolean().optional().default(false),
       }),
     )
@@ -33,6 +34,7 @@ async function currentCues(ex: Tx | typeof db, weddingId: string) {
     cueType: c.cueType,
     trackTitle: c.trackTitle,
     artist: c.artist === "Unknown artist" ? "" : c.artist,
+    notes: c.notes ?? "",
     isLivePerformance: c.isLivePerformance ?? false,
   }));
 }
@@ -56,7 +58,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
   // The cue grid always shows all eight moments, so a fully blank row is a
   // visible "cleared" state, not a hidden drop. A row with only an artist
   // typed so far still counts as filled and must round-trip.
-  const filled = parsed.data.cues.filter((c) => c.trackTitle.length > 0 || c.artist.length > 0);
+  const filled = parsed.data.cues.filter(
+    (c) => c.trackTitle.length > 0 || c.artist.length > 0 || c.notes.length > 0,
+  );
   const result = await withSectionRev(
     wedding.id,
     "cues",
@@ -72,6 +76,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
             trackTitle: c.trackTitle,
             artist: c.artist,
             timeCue: c.timeCue || null,
+            notes: c.notes || null,
             isLivePerformance: c.isLivePerformance,
           })),
         );

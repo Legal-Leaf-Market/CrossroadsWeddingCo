@@ -16,6 +16,7 @@ export type CueRow = {
   cueType: string;
   trackTitle: string;
   artist: string;
+  notes: string;
   isLivePerformance: boolean;
 };
 
@@ -139,6 +140,7 @@ export default function MusicSection({
           cueType: ct.type,
           trackTitle: "",
           artist: "",
+          notes: "",
           isLivePerformance: false,
         },
     );
@@ -149,10 +151,14 @@ export default function MusicSection({
   const [armedMust, setArmedMust] = useState<number | null>(null);
   const [armedDoNot, setArmedDoNot] = useState<number | null>(null);
   const [armedPlaylist, setArmedPlaylist] = useState<number | null>(null);
-  // Which playlist row is unfolded, and each playlist's fetched tracks,
-  // cached by playlist id so collapse/reopen never refetches.
-  const [expanded, setExpanded] = useState<string | null>(null);
+  // Playlist panels stay MOUNTED once opened and are only hidden with CSS when
+  // collapsed, so the Spotify embed keeps its player state (and never reloads)
+  // as the couple opens and closes it while filling in the moments below.
+  const [openIds, setOpenIds] = useState<string[]>([]);
+  const [mountedIds, setMountedIds] = useState<string[]>([]);
   const [fetched, setFetched] = useState<Record<string, FetchedPlaylist>>({});
+  // Which big moment is expanded for editing; the rest stay collapsed to one line.
+  const [openMoment, setOpenMoment] = useState<string | null>(null);
   const cuesRev = useRef(initialCuesRev);
   const playlistsRev = useRef(initialPlaylistsRev);
   const cuesSaveIds = useRef<string[]>([]);
@@ -210,11 +216,12 @@ export default function MusicSection({
   }
 
   async function togglePlaylist(playlistId: string, url: string) {
-    if (expanded === playlistId) {
-      setExpanded(null);
+    if (openIds.includes(playlistId)) {
+      setOpenIds((ids) => ids.filter((id) => id !== playlistId));
       return;
     }
-    setExpanded(playlistId);
+    setOpenIds((ids) => [...ids, playlistId]);
+    setMountedIds((ids) => (ids.includes(playlistId) ? ids : [...ids, playlistId]));
     if (fetched[playlistId]?.state === "ready") return;
 
     if (demoTracks?.[playlistId]) {
@@ -281,232 +288,272 @@ export default function MusicSection({
     cueSave.touch();
   }
 
+  const cueSummary = (cue: CueRow) => {
+    const t = [cue.trackTitle, cue.artist].filter((x) => x.trim()).join(" · ");
+    return t || "Not chosen yet";
+  };
+
   return (
-    <div className="space-y-6">
-      <SectionCard
-        title="The big moments"
-        subtitle="One track per moment. Leave anything blank and we'll pick it together on the call. Tick the guitar box for moments you want played live."
-        badge={<SaveBadge state={cueSave.state} message={cueSave.message} />}
-      >
-        <ul className="space-y-3">
-          {cues.map((cue, index) => {
-            const meta = CUE_TYPES.find((ct) => ct.type === cue.cueType);
+    <SectionCard
+      title="Music"
+      subtitle="Your playlists live at the top: open one and it stays open, so you can play it while you pick the songs for each moment below."
+      badge={
+        <span className="flex items-center gap-3">
+          <SaveBadge state={listSave.state} message={listSave.message} />
+          <SaveBadge state={cueSave.state} message={cueSave.message} />
+        </span>
+      }
+    >
+      <div>
+        <h3 className="text-sm font-semibold text-charcoal">Your Spotify playlists</h3>
+        <p className="mb-2 text-xs text-ink/50">
+          In Spotify: Share, then Copy link. Name each one so we know where it belongs in the day.
+        </p>
+        <ul className="space-y-2">
+          {playlists.map((p, index) => {
+            const playlistId = parsePlaylistId(p.url);
+            const isOpen = playlistId !== null && openIds.includes(playlistId);
+            const isMounted = playlistId !== null && mountedIds.includes(playlistId);
+            const data = playlistId ? fetched[playlistId] : undefined;
             return (
-              <li key={cue.cueType} className="grid gap-2 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-center">
-                <span className="text-sm font-semibold text-charcoal">{meta?.label}</span>
-                <input
-                  aria-label={`${meta?.label} track`}
-                  className={hubInput}
-                  value={cue.trackTitle}
-                  maxLength={255}
-                  onChange={(e) => updateCue(index, { trackTitle: e.target.value })}
-                  placeholder="Track"
-                />
-                <input
-                  aria-label={`${meta?.label} artist`}
-                  className={hubInput}
-                  value={cue.artist}
-                  maxLength={255}
-                  onChange={(e) => updateCue(index, { artist: e.target.value })}
-                  placeholder="Artist"
-                />
-                <label className="flex items-center gap-1 text-xs text-ink/60" title="Played live on acoustic guitar">
+              <li key={index}>
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
                   <input
-                    type="checkbox"
-                    checked={cue.isLivePerformance}
-                    onChange={(e) => updateCue(index, { isLivePerformance: e.target.checked })}
-                    className="accent-terracotta"
+                    aria-label="Playlist name"
+                    className={`${hubInput} basis-40 sm:basis-56 sm:flex-none`}
+                    value={p.label}
+                    maxLength={100}
+                    onChange={(e) => {
+                      setPlaylists((r) => r.map((row, i) => (i === index ? { ...row, label: e.target.value } : row)));
+                      listSave.touch();
+                    }}
+                    placeholder="Cocktail hour"
                   />
-                  Live
-                </label>
+                  <input
+                    aria-label="Playlist link"
+                    aria-invalid={badLink(p) || undefined}
+                    className={`${hubInput} min-w-40 flex-1`}
+                    value={p.url}
+                    maxLength={500}
+                    onChange={(e) => {
+                      setPlaylists((r) => r.map((row, i) => (i === index ? { ...row, url: e.target.value } : row)));
+                      listSave.touch();
+                    }}
+                    placeholder="https://open.spotify.com/playlist/..."
+                  />
+                  {playlistId && (
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      aria-label={isOpen ? "Hide playlist" : "Show playlist"}
+                      onClick={() => void togglePlaylist(playlistId, p.url)}
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-lg font-semibold ${
+                        isOpen
+                          ? "border-terracotta bg-terracotta text-cream"
+                          : "border-parchment text-terracotta hover:border-terracotta"
+                      }`}
+                    >
+                      {isOpen ? "\u2212" : "+"}
+                    </button>
+                  )}
+                  <RemoveButton
+                    label="Remove playlist"
+                    armed={armedPlaylist === index}
+                    onToggle={(next) => setArmedPlaylist(next ? index : null)}
+                    onRemove={() => {
+                      setPlaylists((r) => r.filter((_, i) => i !== index));
+                      setArmedPlaylist(null);
+                      listSave.touch();
+                    }}
+                  />
+                </div>
+                {isMounted && (
+                  <div
+                    // Hidden, never unmounted: the embed keeps its player state
+                    // so collapsing and reopening never restarts the music.
+                    className={`mt-2 rounded-xl border border-parchment bg-parchment/30 p-3 ${isOpen ? "" : "hidden"}`}
+                  >
+                    <iframe
+                      src={`https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator`}
+                      title={`${p.label || "Playlist"} on Spotify`}
+                      width="100%"
+                      height={352}
+                      style={{ borderRadius: 12, border: 0 }}
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"
+                    />
+                    {data?.state === "ready" && data.tracks && data.tracks.length > 0 && (
+                      <>
+                        <p className="mb-2 mt-3 text-xs text-ink/60">
+                          Send any of these straight to a moment below.
+                        </p>
+                        <ul className="max-h-60 space-y-1 overflow-y-auto pr-1">
+                          {data.tracks.map((t, ti) => (
+                            <li
+                              key={`${t.title}-${ti}`}
+                              className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5"
+                            >
+                              <span className="min-w-0 flex-1 truncate text-sm text-charcoal">
+                                {t.title}
+                                <span className="text-ink/50"> · {t.artist}</span>
+                              </span>
+                              <select
+                                aria-label={`Send ${t.title} to`}
+                                value=""
+                                onChange={(e) => {
+                                  if (e.target.value) placeTrack(t, e.target.value);
+                                }}
+                                className="w-20 shrink-0 rounded-lg border border-parchment bg-white px-2 py-1.5 text-xs font-semibold text-terracotta"
+                              >
+                                <option value="" disabled>
+                                  Add...
+                                </option>
+                                <optgroup label="Big moments">
+                                  {CUE_TYPES.map((ct) => (
+                                    <option key={ct.type} value={ct.type}>
+                                      {ct.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                                <optgroup label="Lists">
+                                  <option value="must_play">Must play</option>
+                                </optgroup>
+                              </select>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                )}
               </li>
             );
           })}
         </ul>
-      </SectionCard>
-
-      <SectionCard
-        title="Your playlists and hard lines"
-        subtitle="Build your playlists in your own Spotify and paste the share links: cocktail hour, dinner, dance floor, however you split it. Must-plays are promises; the do-not-play list is law."
-        badge={<SaveBadge state={listSave.state} message={listSave.message} />}
-      >
-        <div>
-          <h3 className="text-sm font-semibold text-charcoal">Spotify playlists</h3>
-          <p className="mb-2 text-xs text-ink/50">
-            In Spotify: Share, then Copy link. Name each one so we know where it belongs in the day.
+        {playlists.some(badLink) && (
+          <p className="mt-2 text-xs text-terracotta-dark">
+            A highlighted link doesn&apos;t look like a Spotify playlist. In Spotify: Share,
+            then Copy link.
           </p>
-          <ul className="space-y-2">
-            {playlists.map((p, index) => {
-              const playlistId = parsePlaylistId(p.url);
-              const isOpen = playlistId !== null && expanded === playlistId;
-              const data = playlistId ? fetched[playlistId] : undefined;
-              return (
-                <li key={index}>
-                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+        )}
+        {playlists.length < MAX_PLAYLIST_LINKS && (
+          <button
+            type="button"
+            onClick={() => {
+              setPlaylists((r) => [...r, { label: "", url: "" }]);
+              setArmedPlaylist(null);
+              listSave.touch();
+            }}
+            className="mt-2 text-sm font-semibold text-terracotta hover:text-terracotta-dark"
+          >
+            + Add a playlist
+          </button>
+        )}
+      </div>
+
+      <div className="mt-6 border-t border-parchment pt-5">
+        <h3 className="text-sm font-semibold text-charcoal">The big moments</h3>
+        <p className="mb-2 text-xs text-ink/50">
+          Tap a moment to choose its song, tell us how to handle it, and mark it live if you
+          want it played on guitar instead of the speakers. Leave any of them blank and we
+          pick together on your call.
+        </p>
+        <ul className="divide-y divide-parchment rounded-xl border border-parchment">
+          {cues.map((cue, index) => {
+            const meta = CUE_TYPES.find((ct) => ct.type === cue.cueType);
+            const isOpen = openMoment === cue.cueType;
+            const filled = cue.trackTitle.trim() !== "" || cue.artist.trim() !== "";
+            return (
+              <li key={cue.cueType}>
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenMoment(isOpen ? null : cue.cueType)}
+                  className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-parchment/30"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-charcoal">
+                      {meta?.label}
+                      {cue.isLivePerformance && (
+                        <span className="ml-2 rounded-full bg-terracotta/15 px-2 py-0.5 text-[11px] font-semibold text-terracotta">
+                          live
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`block truncate text-sm ${filled ? "text-ink/70" : "text-ink/40"}`}
+                    >
+                      {cueSummary(cue)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-lg font-semibold text-terracotta">
+                    {isOpen ? "\u2212" : "+"}
+                  </span>
+                </button>
+                {isOpen && (
+                  <div className="space-y-2 bg-parchment/20 px-3 pb-4 pt-1">
                     <input
-                      aria-label="Playlist name"
-                      className={`${hubInput} basis-40 sm:basis-56 sm:flex-none`}
-                      value={p.label}
-                      maxLength={100}
-                      onChange={(e) => {
-                        setPlaylists((r) => r.map((row, i) => (i === index ? { ...row, label: e.target.value } : row)));
-                        listSave.touch();
-                      }}
-                      placeholder="Cocktail hour"
+                      aria-label={`${meta?.label} track`}
+                      className={hubInput}
+                      value={cue.trackTitle}
+                      maxLength={255}
+                      onChange={(e) => updateCue(index, { trackTitle: e.target.value })}
+                      placeholder="Track"
                     />
                     <input
-                      aria-label="Playlist link"
-                      aria-invalid={badLink(p) || undefined}
-                      className={`${hubInput} min-w-40 flex-1`}
-                      value={p.url}
-                      maxLength={500}
-                      onChange={(e) => {
-                        setPlaylists((r) => r.map((row, i) => (i === index ? { ...row, url: e.target.value } : row)));
-                        listSave.touch();
-                      }}
-                      placeholder="https://open.spotify.com/playlist/..."
+                      aria-label={`${meta?.label} artist`}
+                      className={hubInput}
+                      value={cue.artist}
+                      maxLength={255}
+                      onChange={(e) => updateCue(index, { artist: e.target.value })}
+                      placeholder="Artist"
                     />
-                    {playlistId && (
-                      <button
-                        type="button"
-                        aria-expanded={isOpen}
-                        aria-label={isOpen ? "Hide tracks" : "Show tracks"}
-                        onClick={() => void togglePlaylist(playlistId, p.url)}
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-lg font-semibold ${
-                          isOpen
-                            ? "border-terracotta bg-terracotta text-cream"
-                            : "border-parchment text-terracotta hover:border-terracotta"
-                        }`}
-                      >
-                        {isOpen ? "−" : "+"}
-                      </button>
-                    )}
-                    <RemoveButton
-                      label="Remove playlist"
-                      armed={armedPlaylist === index}
-                      onToggle={(next) => setArmedPlaylist(next ? index : null)}
-                      onRemove={() => {
-                        setPlaylists((r) => r.filter((_, i) => i !== index));
-                        setArmedPlaylist(null);
-                        listSave.touch();
-                      }}
+                    <textarea
+                      aria-label={`${meta?.label} notes`}
+                      className={hubInput}
+                      rows={2}
+                      value={cue.notes}
+                      maxLength={2000}
+                      onChange={(e) => updateCue(index, { notes: e.target.value })}
+                      placeholder="Anything we should know: fade it early, start it when the doors open, skip the long intro..."
                     />
-                  </div>
-                  {isOpen && (
-                    <div className="mt-2 rounded-xl border border-parchment bg-parchment/30 p-3">
-                      {/* The real Spotify player. No API and no login involved,
-                          so this works for any public playlist even when the
-                          track-list fetch below cannot. */}
-                      <iframe
-                        src={`https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator`}
-                        title={`${p.label || "Playlist"} on Spotify`}
-                        width="100%"
-                        height={352}
-                        style={{ borderRadius: 12, border: 0 }}
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                        loading="lazy"
+                    <label className="flex items-center gap-2 text-sm text-ink/70">
+                      <input
+                        type="checkbox"
+                        checked={cue.isLivePerformance}
+                        onChange={(e) => updateCue(index, { isLivePerformance: e.target.checked })}
+                        className="accent-terracotta"
                       />
-                      {(!data || data.state === "loading") && (
-                        <p className="py-3 text-center text-sm text-ink/60">Loading tracks...</p>
-                      )}
-                      {data?.state === "error" && (
-                        <p className="mt-3 text-center text-xs text-ink/50">
-                          Play it right here any time. To send single songs straight to your big
-                          moments, use the track boxes above for now.
-                        </p>
-                      )}
-                      {data?.state === "ready" && (
-                        <>
-                          <p className="mb-2 mt-3 text-xs text-ink/60">
-                            <span className="font-semibold text-charcoal">{data.name}</span>
-                            {" · "}
-                            {data.total} track{data.total === 1 ? "" : "s"}. Send any of them
-                            straight to a big moment or your must-plays.
-                          </p>
-                          <ul className="max-h-72 space-y-1 overflow-y-auto pr-1">
-                            {data.tracks?.map((t, ti) => (
-                              <li
-                                key={`${t.title}-${ti}`}
-                                className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5"
-                              >
-                                <span className="min-w-0 flex-1 truncate text-sm text-charcoal">
-                                  {t.title}
-                                  <span className="text-ink/50"> · {t.artist}</span>
-                                </span>
-                                <select
-                                  aria-label={`Send ${t.title} to`}
-                                  value=""
-                                  onChange={(e) => {
-                                    if (e.target.value) placeTrack(t, e.target.value);
-                                  }}
-                                  className="w-20 shrink-0 rounded-lg border border-parchment bg-white px-2 py-1.5 text-xs font-semibold text-terracotta"
-                                >
-                                  <option value="" disabled>
-                                    Add...
-                                  </option>
-                                  <optgroup label="Big moments">
-                                    {CUE_TYPES.map((ct) => (
-                                      <option key={ct.type} value={ct.type}>
-                                        {ct.label}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                  <optgroup label="Lists">
-                                    <option value="must_play">Must play</option>
-                                  </optgroup>
-                                </select>
-                              </li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          {playlists.some(badLink) && (
-            <p className="mt-2 text-xs text-terracotta-dark">
-              A highlighted link doesn&apos;t look like a Spotify playlist. In Spotify: Share,
-              then Copy link.
-            </p>
-          )}
-          {playlists.length < MAX_PLAYLIST_LINKS && (
-            <button
-              type="button"
-              onClick={() => {
-                setPlaylists((r) => [...r, { label: "", url: "" }]);
-                setArmedPlaylist(null);
-                listSave.touch();
-              }}
-              className="mt-2 text-sm font-semibold text-terracotta hover:text-terracotta-dark"
-            >
-              + Add a playlist
-            </button>
-          )}
-        </div>
-        <div className="mt-5 grid gap-6 sm:grid-cols-2">
-          <TrackList
-            label="Must play"
-            hint="These make the night. We work them in, guaranteed."
-            rows={mustPlay}
-            setRows={setMustPlay}
-            onTouched={listSave.touch}
-            armedRemove={armedMust}
-            setArmedRemove={setArmedMust}
-          />
-          <TrackList
-            label="Do not play"
-            hint="Hard vetoes. Songs, or whole genres, that never touch the speakers."
-            rows={doNotPlay}
-            setRows={setDoNotPlay}
-            onTouched={listSave.touch}
-            armedRemove={armedDoNot}
-            setArmedRemove={setArmedDoNot}
-          />
-        </div>
-      </SectionCard>
-    </div>
+                      Play this one live on guitar
+                    </label>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="mt-6 grid gap-6 border-t border-parchment pt-5 sm:grid-cols-2">
+        <TrackList
+          label="Must play"
+          hint="These make the night. We work them in, guaranteed."
+          rows={mustPlay}
+          setRows={setMustPlay}
+          onTouched={listSave.touch}
+          armedRemove={armedMust}
+          setArmedRemove={setArmedMust}
+        />
+        <TrackList
+          label="Do not play"
+          hint="Hard vetoes. Songs, or whole genres, that never touch the speakers."
+          rows={doNotPlay}
+          setRows={setDoNotPlay}
+          onTouched={listSave.touch}
+          armedRemove={armedDoNot}
+          setArmedRemove={setArmedDoNot}
+        />
+      </div>
+    </SectionCard>
   );
 }
