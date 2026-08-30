@@ -11,6 +11,7 @@ import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
 import { listDocuments } from "@/lib/documents";
 import { countUnread } from "@/lib/messages";
 import { SITE_NAME } from "@/lib/site";
+import { weddingArt } from "@/lib/wedding-art";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,10 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   // booking when the couple hasn't managed the list yet. The playlists route
   // nulls that single column on every managed save, so a deleted seed row
   // stays deleted instead of resurrecting on reload.
+  // A couple with their own invitation art gets it on their hub header too,
+  // quietly: this is a working page full of forms, so the flowers stay a
+  // corner accent and never sit under an input.
+  const art = weddingArt(wedding.shareToken);
   const storedPlaylists = normalizePlaylistLinks(wedding.spotifyPlaylistUrls);
   const playlistLinks =
     storedPlaylists.length === 0 && wedding.spotifyPlaylistUrl
@@ -51,8 +56,17 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
 
   return (
     <div className="min-h-screen bg-cream">
-      <header className="border-b border-parchment bg-white">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-6 py-5">
+      <header className="relative overflow-hidden border-b border-parchment bg-white">
+        {art && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={`${art.dir}/${art.corners.rightTop}`}
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute -right-5 -top-7 w-24 opacity-25 sm:-right-6 sm:-top-8 sm:w-52 sm:opacity-40"
+          />
+        )}
+        <div className="relative mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-6 py-5">
           <div>
             <p className="text-sm font-semibold text-terracotta">{SITE_NAME}</p>
             <h1 className="text-2xl text-charcoal">{wedding.coupleNames}</h1>
