@@ -136,9 +136,14 @@ function WeddingCard({
           Live
         </a>
         {wedding.shareToken && (
-          <a href={`/live/${wedding.shareToken}`} className="rounded-full border border-parchment px-4 py-1.5 font-semibold text-ink/70 hover:border-terracotta hover:text-terracotta">
-            Vendor view
-          </a>
+          <>
+            <a href={`/live/${wedding.shareToken}`} className="rounded-full border border-parchment px-4 py-1.5 font-semibold text-ink/70 hover:border-terracotta hover:text-terracotta">
+              Vendor view
+            </a>
+            <a href={`/schedule/${wedding.shareToken}`} className="rounded-full border border-parchment px-4 py-1.5 font-semibold text-ink/70 hover:border-terracotta hover:text-terracotta">
+              Guest schedule
+            </a>
+          </>
         )}
         <BookingEditor
           wedding={wedding}

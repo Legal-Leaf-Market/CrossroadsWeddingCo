@@ -10,7 +10,11 @@ export const CUE_TYPES = [
   { type: "first_dance", label: "First dance" },
   { type: "father_daughter", label: "Father-daughter dance" },
   { type: "mother_son", label: "Mother-son dance" },
+  { type: "kids_dance", label: "Dance with the kids" },
   { type: "cake_cutting", label: "Cake cutting" },
+  { type: "bouquet_toss", label: "Bouquet toss" },
+  { type: "garter_toss", label: "Garter toss" },
+  { type: "money_dance", label: "Dollar dance" },
   { type: "last_song", label: "Last song" },
 ] as const;
 

@@ -79,6 +79,14 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             >
               Run sheet
             </a>
+            {wedding.shareToken && (
+              <a
+                href={`/schedule/${wedding.shareToken}`}
+                className="rounded-full border border-parchment px-4 py-1.5 text-sm font-semibold text-ink/70 hover:border-terracotta hover:text-terracotta"
+              >
+                Guest schedule
+              </a>
+            )}
           </div>
         </div>
       </header>
