@@ -33,6 +33,8 @@ export default function GuestSchedulePreviewPage() {
       ]}
       // Exercises the art path so the framed layout can be measured without a
       // database. Real weddings get theirs from lib/wedding-art.ts.
+      dressCode="Garden party formal, comfortable shoes for the lawn"
+      weddingSiteUrl="zola.com/wedding/jordanandtaylor"
       art={{
         dir: "/wedding-art/kat-tanis",
         corners: {

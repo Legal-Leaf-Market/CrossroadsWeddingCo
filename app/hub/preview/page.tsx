@@ -74,6 +74,8 @@ export default function HubPreviewPage() {
             venueContactEmail: "events@sycamorebarn.com",
             contactPhone: "(812) 555-0142",
             vibeNotes: "Golden hour garden party. Motown for cocktails, 90s and 2000s once the floor opens.",
+            weddingSiteUrl: "zola.com/wedding/jordanandtaylor",
+            dressCode: "Garden party formal, comfortable shoes for the lawn",
           }}
         />
         <DocumentsSection token={SAMPLE_TOKEN} demo initial={[]} />

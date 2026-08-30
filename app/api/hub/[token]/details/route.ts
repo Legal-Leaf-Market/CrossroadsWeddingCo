@@ -23,6 +23,11 @@ const schema = z.object({
   // links are managed by the rev-guarded playlists route, which also clears
   // the legacy single column. A writable side door here would bypass that.
   vibeNotes: z.string().trim().max(5000).optional(),
+  // Their own wedding site and the dress code their guests already read. Kept
+  // deliberately loose: a couple pasting "zola.com/wedding/x" without the
+  // scheme should not have their whole save rejected. The renderer normalises.
+  weddingSiteUrl: z.string().trim().max(500).optional(),
+  dressCode: z.string().trim().max(200).optional(),
 });
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
@@ -52,6 +57,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ token: st
         : {}),
       ...(d.contactPhone !== undefined ? { contactPhone: d.contactPhone || null } : {}),
       ...(d.vibeNotes !== undefined ? { notes: d.vibeNotes || null } : {}),
+      ...(d.weddingSiteUrl !== undefined ? { weddingSiteUrl: d.weddingSiteUrl || null } : {}),
+      ...(d.dressCode !== undefined ? { dressCode: d.dressCode || null } : {}),
       updatedAt: new Date(),
     })
     .where(eq(weddings.id, wedding.id));

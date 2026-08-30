@@ -152,6 +152,8 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             venueContactEmail: wedding.venueContactEmail ?? "",
             contactPhone: wedding.contactPhone ?? "",
             vibeNotes: wedding.notes ?? "",
+            weddingSiteUrl: wedding.weddingSiteUrl ?? "",
+            dressCode: wedding.dressCode ?? "",
           }}
         />
         <DocumentsSection token={token} initial={documents} />

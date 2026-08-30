@@ -37,6 +37,8 @@ export default async function GuestSchedulePage({
       venueName={wedding.venueName}
       items={items}
       art={resolveWeddingArt(wedding.artTheme, wedding.shareToken)}
+      dressCode={wedding.dressCode}
+      weddingSiteUrl={wedding.weddingSiteUrl}
     />
   );
 }
