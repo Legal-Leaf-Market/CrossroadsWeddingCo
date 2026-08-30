@@ -122,8 +122,8 @@ export default function HubPreviewPage() {
           token={SAMPLE_TOKEN}
           initialRev={0}
           initial={[
-            { role: "Maid of Honor", fullName: "Siobhan Nguyen", phoneticSpelling: "shi-VAWN NWIN", entranceSongOverride: "" },
-            { role: "Best Man", fullName: "Marcus Hayes", phoneticSpelling: "MAR-kus HAYZ", entranceSongOverride: "" },
+            { role: "Maid of Honor", fullName: "Siobhan Nguyen", phoneticSpelling: "shi-VAWN NWIN", entranceSongOverride: "", notes: "Goes by Shiv, they/them" },
+            { role: "Best Man", fullName: "Marcus Hayes", phoneticSpelling: "MAR-kus HAYZ", entranceSongOverride: "", notes: "" },
           ]}
         />
         <p className="pb-8 text-center text-xs text-ink/40">

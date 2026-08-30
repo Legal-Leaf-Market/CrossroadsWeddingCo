@@ -123,6 +123,7 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
                     {v.role ? <span className="font-semibold">{v.role}: </span> : null}
                     {v.fullName}
                     {v.phoneticSpelling ? ` (${v.phoneticSpelling})` : ""}
+                    {v.notes ? <span className="block text-ink/60">{v.notes}</span> : null}
                   </li>
                 ))}
               </ul>
