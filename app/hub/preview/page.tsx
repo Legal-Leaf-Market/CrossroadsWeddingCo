@@ -88,8 +88,8 @@ export default function HubPreviewPage() {
           initialCuesRev={0}
           initialPlaylistsRev={0}
           initialCues={[
-            { cueType: "processional", trackTitle: "Can't Help Falling in Love", artist: "Kina Grannis", notes: "Start it when the doors open, not before.", isLivePerformance: true },
-            { cueType: "first_dance", trackTitle: "Lover", artist: "Taylor Swift", notes: "", isLivePerformance: false },
+            { cueType: "processional", trackTitle: "Can't Help Falling in Love", artist: "Kina Grannis", notes: "Start it when the doors open, not before.", spotifyUrl: "", isLivePerformance: true },
+            { cueType: "first_dance", trackTitle: "Lover", artist: "Taylor Swift", notes: "Fade it out around 3:10, we head straight into the father-daughter dance.", spotifyUrl: "https://open.spotify.com/track/1dGr1c8CrMLDpV6mPbImSI", isLivePerformance: false },
           ]}
           initialMustPlay={[
             { trackTitle: "September", artist: "Earth, Wind & Fire" },

@@ -147,6 +147,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             trackTitle: cue.trackTitle,
             artist: cue.artist === "Unknown artist" ? "" : cue.artist,
             notes: cue.notes ?? "",
+            spotifyUrl: cue.spotifyUrl ?? "",
             isLivePerformance: cue.isLivePerformance ?? false,
           }))}
           initialMustPlay={playlists

@@ -22,6 +22,7 @@ const schema = z.object({
         artist: z.string().trim().max(255),
         timeCue: z.string().trim().max(100).optional().default(""),
         notes: z.string().trim().max(2000).optional().default(""),
+        spotifyUrl: z.string().trim().max(500).optional().default(""),
         isLivePerformance: z.boolean().optional().default(false),
       }),
     )
@@ -35,6 +36,7 @@ async function currentCues(ex: Tx | typeof db, weddingId: string) {
     trackTitle: c.trackTitle,
     artist: c.artist === "Unknown artist" ? "" : c.artist,
     notes: c.notes ?? "",
+    spotifyUrl: c.spotifyUrl ?? "",
     isLivePerformance: c.isLivePerformance ?? false,
   }));
 }
@@ -59,7 +61,11 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
   // visible "cleared" state, not a hidden drop. A row with only an artist
   // typed so far still counts as filled and must round-trip.
   const filled = parsed.data.cues.filter(
-    (c) => c.trackTitle.length > 0 || c.artist.length > 0 || c.notes.length > 0,
+    (c) =>
+      c.trackTitle.length > 0 ||
+      c.artist.length > 0 ||
+      c.notes.length > 0 ||
+      c.spotifyUrl.length > 0,
   );
   const result = await withSectionRev(
     wedding.id,
@@ -77,6 +83,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
             artist: c.artist,
             timeCue: c.timeCue || null,
             notes: c.notes || null,
+            spotifyUrl: c.spotifyUrl || null,
             isLivePerformance: c.isLivePerformance,
           })),
         );
