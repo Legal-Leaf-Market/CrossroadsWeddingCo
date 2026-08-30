@@ -3,8 +3,13 @@
  *
  * Couples arrive with an invitation suite they have already sent to guests,
  * and the guest page reads better when it looks like it came from the same
- * set. Art lives under public/wedding-art/<slug>/ and is keyed here by share
- * token, so a wedding without art simply renders the plain dark page.
+ * set. Art lives under public/wedding-art/<slug>/ and is keyed here by that
+ * slug, which is stored on the wedding row (weddings.art_theme). A wedding
+ * with no theme simply renders the plain dark page.
+ *
+ * Keyed by slug and NOT by share token on purpose: this repository is public,
+ * and a share token is a live read credential for that couple's schedule.
+ * Nothing that identifies a client belongs in here, only folder names.
  *
  * Entries go in only once the files are actually in the repo: a missing PNG
  * would render as a broken image on a page guests see.
@@ -29,11 +34,10 @@ export type WeddingArt = {
   footer?: string;
 };
 
-const ART_BY_SHARE_TOKEN: Record<string, WeddingArt> = {
-  // Kat & Tanis, 2026-11-07, Forge on 4th. Watercolor florals matched to their
-  // invitation suite; corners cut from the delivered 900x2400 columns, which
-  // are kept alongside so they can be re-cut.
-  "9c3eb87495740cceaf2f5622368cea9ecbfc009a9255713e": {
+const ART_BY_THEME: Record<string, WeddingArt> = {
+  // Watercolor florals on near-black. Corners cut from the delivered 900x2400
+  // columns, which are kept alongside so they can be re-cut.
+  "kat-tanis": {
     dir: "/wedding-art/kat-tanis",
     corners: {
       leftTop: "corner-left-top.png",
@@ -46,7 +50,10 @@ const ART_BY_SHARE_TOKEN: Record<string, WeddingArt> = {
   },
 };
 
-export function weddingArt(shareToken: string | null): WeddingArt | null {
-  if (!shareToken) return null;
-  return ART_BY_SHARE_TOKEN[shareToken] ?? null;
+export function weddingArt(theme: string | null | undefined): WeddingArt | null {
+  if (!theme) return null;
+  return ART_BY_THEME[theme] ?? null;
 }
+
+/** Slugs the owner dashboard can offer. */
+export const ART_THEMES = Object.keys(ART_BY_THEME);
