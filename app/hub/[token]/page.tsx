@@ -88,6 +88,29 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           eventDate={wedding.eventDate}
           startTime={timeline[0]?.scheduledStartTime.slice(0, 5) ?? null}
         />
+        {!wedding.contractAcceptedAt ? (
+          <a
+            href={`/hub/${token}/contract`}
+            className="block rounded-2xl border-2 border-terracotta bg-white p-5 hover:bg-parchment/30"
+          >
+            <p className="font-semibold text-charcoal">Your service agreement is ready to read</p>
+            <p className="mt-1 text-sm text-ink/70">
+              Plain English, no legal maze: what we're providing, what it costs, and when it's
+              due. Give it a read and accept it here whenever you're ready.
+            </p>
+            <span className="mt-3 inline-block text-sm font-semibold text-terracotta">
+              Read and accept &rarr;
+            </span>
+          </a>
+        ) : (
+          <a
+            href={`/hub/${token}/contract`}
+            className="block rounded-2xl border border-parchment bg-white px-5 py-3 text-sm text-ink/70 hover:border-terracotta"
+          >
+            <span className="font-semibold text-charcoal">Agreement accepted.</span> Your copy
+            lives here any time you want it.
+          </a>
+        )}
         <p className="text-sm text-ink/60">
           Everything here saves as you type and lands directly in front of your crew. Fill in
           what you know, skip what you don&apos;t, and we walk the rest together on your call.

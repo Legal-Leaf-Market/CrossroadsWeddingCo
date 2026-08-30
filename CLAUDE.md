@@ -421,8 +421,9 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   and to the partner-economics records.
 
 - **Kat McKinney's wedding is the first live one: November 7 (2026-08-28, Jacob).**
-  Partner's name heard as "tennis" on voice, VERIFY the real name before it appears
-  anywhere. Jacob DJs; the new partners shadow (Kat's permission requested by
+  Partner is **Tanis** (confirmed 2026-08-30 from her own hub record; the earlier
+  "tennis" was a voice-transcription artifact). Married name on her run sheet: **Copeland**.
+  Venue: **Forge on 4th, 418 4th St, Columbus, IN 47201**. Jacob DJs; the new partners shadow (Kat's permission requested by
   Messenger). The couple gets workshop status: features get trialed with them first.
   Their deal includes the pilot referral program: for each future wedding they refer
   that books, the referrer gets $75 and the referred couple gets $25 off, capping our
@@ -430,6 +431,22 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   tracking for referrals is future work; for now it lives in this record and the
   contract. The hub's "Your email" field (Details section) was added same-day so
   Jacob can put Kat's real email on her booking record himself.
+
+- **Service agreement (2026-08-30, Jacob asked for it):** plain-language contract generated
+  from `lib/contract.ts` off the same constants as the site, so a price can never differ
+  between what a couple reads and what they sign. Couple reads and accepts at
+  `/hub/[token]/contract` (typed name + explicit checkbox, same magic-link credential as
+  the rest of the hub); acceptance writes `contract_accepted_at/name/version` plus a
+  `contract_snapshot` jsonb freezing the exact terms, so later edits to the wedding row
+  can never rewrite what was agreed. Re-accepting is refused (409), not overwritten. Clauses
+  encode the standing decisions: balance 24h after start time with that window doubling as
+  the comments-and-concerns period and the invoice adjustable, serve-only bar (host provides,
+  we never sell or supply, ATC permits, venue permit at licensed venues), cash/check for now,
+  acoustic 1hr/2hr max and 3 learned songs with 30 days notice, travel surcharge, cancellation
+  (deposit non-refundable; 50% of remainder inside 30 days), our-cancellation full refund,
+  force majeure, gear damage, marketing photo use with opt-out by message. `CONTRACT_VERSION`
+  bumps on any wording change so snapshots stay traceable. **NOT lawyer-reviewed: Jacob should
+  have an Indiana attorney read it before it carries real weight.**
 
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New

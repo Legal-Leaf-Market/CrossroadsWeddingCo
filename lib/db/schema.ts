@@ -131,6 +131,12 @@ export const weddings = pgTable(
     hubSectionRevs: jsonb("hub_section_revs").notNull().default({}),
     // Milestone check-in texts already sent for this wedding, e.g. [90, 30].
     checkinsSent: jsonb("checkins_sent").notNull().default([]),
+    // Service agreement: version accepted, who typed their name, when, and a
+    // frozen snapshot of the terms as of acceptance.
+    contractVersion: varchar("contract_version", { length: 20 }),
+    contractAcceptedAt: timestamp("contract_accepted_at", { withTimezone: true }),
+    contractAcceptedName: varchar("contract_accepted_name", { length: 255 }),
+    contractSnapshot: jsonb("contract_snapshot"),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull().default("1000.00"),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),
