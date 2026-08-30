@@ -394,15 +394,30 @@ export default function MusicSection({
                   </div>
                   {isOpen && (
                     <div className="mt-2 rounded-xl border border-parchment bg-parchment/30 p-3">
+                      {/* The real Spotify player. No API and no login involved,
+                          so this works for any public playlist even when the
+                          track-list fetch below cannot. */}
+                      <iframe
+                        src={`https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator`}
+                        title={`${p.label || "Playlist"} on Spotify`}
+                        width="100%"
+                        height={352}
+                        style={{ borderRadius: 12, border: 0 }}
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                      />
                       {(!data || data.state === "loading") && (
                         <p className="py-3 text-center text-sm text-ink/60">Loading tracks...</p>
                       )}
                       {data?.state === "error" && (
-                        <p className="py-3 text-center text-sm text-ink/60">{data.message}</p>
+                        <p className="mt-3 text-center text-xs text-ink/50">
+                          Play it right here any time. To send single songs straight to your big
+                          moments, use the track boxes above for now.
+                        </p>
                       )}
                       {data?.state === "ready" && (
                         <>
-                          <p className="mb-2 text-xs text-ink/60">
+                          <p className="mb-2 mt-3 text-xs text-ink/60">
                             <span className="font-semibold text-charcoal">{data.name}</span>
                             {" · "}
                             {data.total} track{data.total === 1 ? "" : "s"}. Send any of them

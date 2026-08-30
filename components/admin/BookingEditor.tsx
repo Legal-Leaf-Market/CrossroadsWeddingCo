@@ -1,0 +1,131 @@
+"use client";
+
+import { useState } from "react";
+import type { AdminWedding } from "@/lib/admin";
+
+// The owner's only write surface: the money, the paid flags, the status, and
+// a bespoke arrangement for weddings that predate the pricing model or settle
+// in trade. Everything else about a wedding still comes from the couple's hub.
+export default function BookingEditor({
+  wedding,
+  basePath,
+  demo = false,
+}: {
+  wedding: AdminWedding;
+  basePath: string;
+  demo?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [total, setTotal] = useState(wedding.totalAmount);
+  const [depositPaid, setDepositPaid] = useState(wedding.isDepositPaid);
+  const [balancePaid, setBalancePaid] = useState(wedding.isBalancePaid);
+  const [customTerms, setCustomTerms] = useState(wedding.customTerms ?? "");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+
+  async function save() {
+    setBusy(true);
+    setNote("");
+    if (demo) {
+      setBusy(false);
+      setNote("Saved (preview only)");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/${basePath.split("/").pop()}/wedding/${wedding.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          totalAmount: Number(total).toFixed(2),
+          isDepositPaid: depositPaid,
+          isBalancePaid: balancePaid,
+          customTerms,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      setNote(res.ok ? "Saved. Refresh to see it on the card." : json.error || "That didn't save.");
+    } catch {
+      setNote("No connection. Nothing saved.");
+    }
+    setBusy(false);
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded-full border border-parchment px-4 py-1.5 text-sm font-semibold text-ink/70 hover:border-terracotta hover:text-terracotta"
+      >
+        Edit money
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 w-full rounded-xl border border-terracotta bg-parchment/20 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm">
+          <span className="mb-1 block font-semibold text-charcoal">Total ($)</span>
+          <input
+            value={total}
+            onChange={(e) => setTotal(e.target.value)}
+            inputMode="decimal"
+            className="w-full rounded-lg border border-parchment bg-white px-3 py-2 text-charcoal focus:border-terracotta focus:outline-none"
+          />
+        </label>
+        <div className="flex items-end gap-4 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={depositPaid}
+              onChange={(e) => setDepositPaid(e.target.checked)}
+              className="accent-terracotta"
+            />
+            Deposit received
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={balancePaid}
+              onChange={(e) => setBalancePaid(e.target.checked)}
+              className="accent-terracotta"
+            />
+            Balance settled
+          </label>
+        </div>
+      </div>
+      <label className="mt-3 block text-sm">
+        <span className="mb-1 block font-semibold text-charcoal">
+          Custom arrangement (replaces the money section of their agreement)
+        </span>
+        <textarea
+          value={customTerms}
+          rows={4}
+          maxLength={5000}
+          onChange={(e) => setCustomTerms(e.target.value)}
+          placeholder="Leave empty for standard pricing. Anything typed here appears word for word in their agreement instead of the usual deposit and balance terms."
+          className="w-full rounded-lg border border-parchment bg-white px-3 py-2 text-charcoal placeholder:text-ink/40 focus:border-terracotta focus:outline-none"
+        />
+      </label>
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={busy}
+          className="rounded-full bg-terracotta px-5 py-2 text-sm font-semibold text-cream hover:bg-terracotta-dark disabled:opacity-50"
+        >
+          {busy ? "Saving..." : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-sm font-semibold text-ink/60 hover:text-terracotta"
+        >
+          Close
+        </button>
+        {note && <span className="text-sm text-ink/70">{note}</span>}
+      </div>
+    </div>
+  );
+}

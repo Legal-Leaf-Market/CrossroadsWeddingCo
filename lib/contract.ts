@@ -31,6 +31,8 @@ export type ContractInput = {
   services: string[];
   totalUsd: number;
   depositUsd: number;
+  /** Replaces the standard cost section verbatim when the deal is bespoke. */
+  customTerms?: string | null;
 };
 
 export type ContractSection = { heading: string; paragraphs: string[] };
@@ -83,7 +85,9 @@ export function buildContract(input: ContractInput): ContractSection[] {
     { heading: "What we are providing", paragraphs: whatWeDo },
     {
       heading: "What it costs, and when it is due",
-      paragraphs: [
+      paragraphs: input.customTerms?.trim()
+        ? input.customTerms.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean)
+        : [
         hasBar && input.services.length === 1
           ? `Your bar service starts at ${money(BARTENDER_MIN_USD)} and gets quoted in writing once we know your guest count and what you are pouring.`
           : `Your total is ${money(input.totalUsd)}${hasBar ? `, plus whatever your bar quote comes to above the ${money(BARTENDER_MIN_USD)} minimum included here` : ""}.`,

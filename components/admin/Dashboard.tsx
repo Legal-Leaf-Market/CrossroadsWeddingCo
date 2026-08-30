@@ -1,3 +1,4 @@
+import BookingEditor from "@/components/admin/BookingEditor";
 import type { AdminData, AdminWedding } from "@/lib/admin";
 import { daysOut, formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME } from "@/lib/site";
@@ -105,6 +106,12 @@ function WeddingCard({
         )}
       </div>
 
+      {wedding.customTerms && (
+        <p className="mt-3 whitespace-pre-wrap rounded-lg bg-gold/10 px-3 py-2 text-sm text-ink/80">
+          <span className="font-semibold text-charcoal">Custom arrangement: </span>
+          {wedding.customTerms}
+        </p>
+      )}
       {wedding.notes && <p className="mt-3 text-sm text-ink/60">{wedding.notes}</p>}
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
@@ -133,6 +140,11 @@ function WeddingCard({
             Vendor view
           </a>
         )}
+        <BookingEditor
+          wedding={wedding}
+          basePath={basePath}
+          demo={basePath === "/admin/preview"}
+        />
       </div>
     </div>
   );
