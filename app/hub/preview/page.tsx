@@ -104,6 +104,9 @@ export default function HubPreviewPage() {
             "37i9dQZF1DXdPec7aLTmlC": {
               name: "Cocktail hour",
               tracks: [
+                // Carries a real id so the preview exercises "Add..." landing a
+                // playable row, not just the text fill.
+                { title: "Lover", artist: "Taylor Swift", spotifyId: "1dGr1c8CrMLDpV6mPbImSI" },
                 { title: "Golden Hour", artist: "Kacey Musgraves" },
                 { title: "Fly Me to the Moon", artist: "Frank Sinatra" },
                 { title: "Best Part", artist: "Daniel Caesar, H.E.R." },
