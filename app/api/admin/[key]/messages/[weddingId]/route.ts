@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminKeyMatches, getAdminWedding } from "@/lib/admin";
 import { sendHubMessagePointer } from "@/lib/email";
 import { addMessage, getThread, markThreadRead } from "@/lib/messages";
+import { TEAM_NAMES } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
 const postSchema = z.object({
   body: z.string().trim().min(1, "Say something first.").max(4000),
-  senderName: z.enum(["Jake", "Nic"]).default("Jake"),
+  senderName: z.enum(TEAM_NAMES).default(TEAM_NAMES[0]),
 });
 
 export async function POST(req: NextRequest, ctx: Ctx) {

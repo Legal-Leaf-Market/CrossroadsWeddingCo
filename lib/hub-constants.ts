@@ -111,3 +111,21 @@ export function daysOut(eventDate: string): number {
   const ms = new Date(`${eventDate}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime();
   return Math.round(ms / 86_400_000);
 }
+
+/**
+ * Who can reply on a thread. The chat picker renders this, and the admin POST
+ * route validates against it, so both halves stay in step: before this was
+ * shared, the roster lived in three places (the picker's list, a hardcoded
+ * localStorage check, and a z.enum on the server) and adding a teammate to the
+ * dropdown silently posted their messages as Jake.
+ *
+ * Adding someone is a one-line change here. Names are stored on every message
+ * row, so renaming an entry does not rewrite history: past messages keep the
+ * name they were sent under.
+ */
+export const TEAM_NAMES = ["Jake", "Nic", "Brayton", "Ashton"] as const;
+export type TeamName = (typeof TEAM_NAMES)[number];
+
+export function isTeamName(v: unknown): v is TeamName {
+  return typeof v === "string" && (TEAM_NAMES as readonly string[]).includes(v);
+}

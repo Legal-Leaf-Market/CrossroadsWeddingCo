@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VENUE_TIME_ZONE } from "@/lib/site";
+import { TEAM_NAMES, isTeamName, type TeamName } from "@/lib/hub-constants";
 
 // The one-master-thread chat, rendered for both sides: the couple in the hub
 // (viewer="couple") and Jake/Nic in the admin inbox (viewer="team"). Both see
@@ -22,7 +23,7 @@ export type ChatMessage = {
 
 const MAX_BODY = 4000;
 const POLL_MS = 12_000;
-const TEAM_NAMES = ["Jake", "Nic"] as const;
+
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);
@@ -53,7 +54,7 @@ export default function ChatThread({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [teamName, setTeamName] = useState<(typeof TEAM_NAMES)[number]>(TEAM_NAMES[0]);
+  const [teamName, setTeamName] = useState<TeamName>(TEAM_NAMES[0]);
   const listRef = useRef<HTMLDivElement>(null);
   const pollSeq = useRef(0);
   const stickToBottom = useRef(true);
@@ -63,7 +64,7 @@ export default function ChatThread({
     if (viewer !== "team") return;
     try {
       const stored = window.localStorage.getItem("crossroads-team-name");
-      if (stored === "Jake" || stored === "Nic") setTeamName(stored);
+      if (isTeamName(stored)) setTeamName(stored);
     } catch {}
   }, [viewer]);
 
@@ -245,7 +246,8 @@ export default function ChatThread({
               <select
                 value={teamName}
                 onChange={(e) => {
-                  const v = e.target.value === "Nic" ? "Nic" : "Jake";
+                  const v = e.target.value;
+                  if (!isTeamName(v)) return;
                   setTeamName(v);
                   try {
                     window.localStorage.setItem("crossroads-team-name", v);
