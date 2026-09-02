@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import CallSection from "@/components/hub/CallSection";
 import CountdownHero from "@/components/hub/CountdownHero";
 import DetailsSection from "@/components/hub/DetailsSection";
 import DocumentsSection from "@/components/hub/DocumentsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
+import { isCallsConfigured } from "@/lib/calls";
 import { SITE_NAME } from "@/lib/site";
 
 // Dev-only layout preview of the planning hub, rendered with sample data so the
@@ -78,6 +80,7 @@ export default function HubPreviewPage() {
             dressCode: "Garden party formal, comfortable shoes for the lawn",
           }}
         />
+        {isCallsConfigured() && <CallSection token={SAMPLE_TOKEN} />}
         <DocumentsSection token={SAMPLE_TOKEN} demo initial={[]} />
         <TimelineSection
           token={SAMPLE_TOKEN}

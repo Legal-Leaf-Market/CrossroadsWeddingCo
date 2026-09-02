@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import CallSection from "@/components/hub/CallSection";
 import CountdownHero from "@/components/hub/CountdownHero";
 import DetailsSection from "@/components/hub/DetailsSection";
 import DocumentsSection from "@/components/hub/DocumentsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
+import { isCallsConfigured } from "@/lib/calls";
 import { getPortalData, TOKEN_RE } from "@/lib/hub";
 import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
 import { listDocuments } from "@/lib/documents";
@@ -156,6 +158,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             dressCode: wedding.dressCode ?? "",
           }}
         />
+        {isCallsConfigured() && <CallSection token={token} />}
         <DocumentsSection token={token} initial={documents} />
         <TimelineSection
           token={token}
