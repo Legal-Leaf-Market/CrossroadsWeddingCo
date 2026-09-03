@@ -341,3 +341,12 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_invite_emails TEXT[] NOT NULL 
 -- wrong is worse than one that asks. Existing weddings fall back to offering
 -- couple_names as a single option until someone adds their own.
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_speakers TEXT[] NOT NULL DEFAULT '{}';
+
+-- Archiving, not deleting (owner directive 2026-09-03). Test bookings made
+-- while building the site clutter the dashboard, and the obvious fix is a
+-- delete button. A delete button on a table of real weddings is a mistake
+-- waiting for a tired Friday: the row that goes is the one somebody is
+-- standing at a venue for. Archived weddings vanish from the dashboard and
+-- live on their own screen, which costs nothing and cannot lose anything.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_weddings_archived ON weddings (archived_at);

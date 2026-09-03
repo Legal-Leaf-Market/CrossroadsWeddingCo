@@ -1,3 +1,4 @@
+import ArchiveButton from "@/components/admin/ArchiveButton";
 import BookingEditor from "@/components/admin/BookingEditor";
 import type { AdminData, AdminWedding } from "@/lib/admin";
 import { daysOut, formatEventDate } from "@/lib/hub-constants";
@@ -45,6 +46,8 @@ function WeddingCard({
   upcoming: boolean;
   basePath: string;
 }) {
+  // basePath is "/admin/<key>"; the API wants the key on its own.
+  const adminKey = basePath.split("/").pop() ?? "";
   const d = daysOut(wedding.eventDate);
   return (
     <div className="rounded-2xl border border-parchment bg-white p-5">
@@ -64,6 +67,11 @@ function WeddingCard({
         <div className="flex flex-col items-end gap-1.5">
           {statusChip(wedding.status)}
           <p className="text-sm font-semibold text-charcoal">{money(wedding.totalAmount)}</p>
+          <ArchiveButton
+            adminKey={adminKey}
+            weddingId={wedding.id}
+            archived={wedding.archivedAt !== null}
+          />
         </div>
       </div>
 
@@ -166,6 +174,12 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
             {data.upcoming.length} upcoming · {data.past.length} past or cancelled. This page is
             read-only and this link is the key: don&apos;t share it.
           </p>
+          <a
+            href={`${basePath}/archived`}
+            className="mt-2 inline-block text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
+          >
+            Archived bookings
+          </a>
         </div>
       </header>
 

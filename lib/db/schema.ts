@@ -127,6 +127,9 @@ export const weddings = pgTable(
     // First names allowed on the couple's side of the message thread. Declared,
     // not authenticated: see the note in phase1-schema.sql.
     hubSpeakers: text("hub_speakers").array().notNull().default([]),
+    // Set when the wedding is hidden from the dashboard. Never deleted: see
+    // the note in phase1-schema.sql.
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     contactEmail: varchar("contact_email", { length: 255 }),
     contactPhone: varchar("contact_phone", { length: 50 }),
     eventDate: date("event_date").notNull(),

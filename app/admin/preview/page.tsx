@@ -14,6 +14,7 @@ const SAMPLE: AdminData = {
   upcoming: [
     {
       id: "1",
+      archivedAt: null,
       coupleNames: "Jordan Hayes & Taylor Morgan",
       eventDate: "2027-06-12",
       venueName: "The Sycamore Barn",
@@ -39,6 +40,7 @@ const SAMPLE: AdminData = {
     },
     {
       id: "2",
+      archivedAt: null,
       coupleNames: "Sam Ellis & Riley Cooper",
       eventDate: "2026-10-03",
       venueName: "Backyard in Seymour",
@@ -63,6 +65,7 @@ const SAMPLE: AdminData = {
   past: [
     {
       id: "3",
+      archivedAt: null,
       coupleNames: "Alex Reed & Casey Brooks",
       eventDate: "2026-05-30",
       venueName: "Mill Race Park",

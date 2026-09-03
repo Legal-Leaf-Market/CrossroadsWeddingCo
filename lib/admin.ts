@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { leads, weddingMessages, weddings } from "@/lib/db/schema";
 
@@ -45,6 +45,8 @@ export type AdminWedding = {
   customTerms: string | null;
   /** Folder slug under public/wedding-art/, or null for the plain look. */
   artTheme: string | null;
+  /** ISO timestamp this was hidden from the dashboard, null while visible. */
+  archivedAt: string | null;
 };
 
 export type AdminLead = {
@@ -72,6 +74,7 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     : [];
   return {
     id: w.id,
+    archivedAt: w.archivedAt ? w.archivedAt.toISOString() : null,
     coupleNames: w.coupleNames,
     eventDate: w.eventDate,
     venueName: w.venueName,
@@ -103,7 +106,7 @@ export async function getAdminWedding(weddingId: string): Promise<AdminWedding |
 
 export async function getAdminData(): Promise<AdminData> {
   const [allWeddings, recentLeads, unreadRows] = await Promise.all([
-    db.select().from(weddings).orderBy(weddings.eventDate),
+    db.select().from(weddings).where(isNull(weddings.archivedAt)).orderBy(weddings.eventDate),
     db.select().from(leads).orderBy(desc(leads.createdAt)).limit(10),
     db
       .select({
@@ -141,6 +144,32 @@ export async function getAdminData(): Promise<AdminData> {
       createdAt: l.createdAt.toISOString(),
     })),
   };
+}
+
+/** Everything hidden from the dashboard, newest archived first. */
+export async function getArchivedWeddings(): Promise<AdminWedding[]> {
+  const rows = await db
+    .select()
+    .from(weddings)
+    .where(isNotNull(weddings.archivedAt))
+    .orderBy(desc(weddings.archivedAt));
+  return rows.map((w) => toAdminWedding(w));
+}
+
+/**
+ * Hide or restore a wedding. Nothing is deleted and nothing cascades: the
+ * couple's hub link, their messages, and their run sheet all keep working
+ * while it is archived, because archiving is about our dashboard being
+ * readable, not about ending a booking. Cancelling a real wedding is what
+ * `status` is for.
+ */
+export async function setWeddingArchived(weddingId: string, archived: boolean): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/.test(weddingId)) return false;
+  await db
+    .update(weddings)
+    .set({ archivedAt: archived ? new Date() : null, updatedAt: new Date() })
+    .where(eq(weddings.id, weddingId));
+  return true;
 }
 
 /**
