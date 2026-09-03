@@ -42,12 +42,19 @@ export default function ChatThread({
   viewer,
   coupleNames,
   initialMessages,
+  speakers: initialSpeakers = [],
+  accessEndpoint,
   demo = false,
 }: {
   endpoint: string;
   viewer: "couple" | "team";
   coupleNames: string;
   initialMessages: ChatMessage[];
+  /** Names offered on the couple's side. Empty for weddings booked before the
+   *  roster existed, which fall back to the household name. */
+  speakers?: string[];
+  /** Where a new first name is registered. Absent in demo twins. */
+  accessEndpoint?: string;
   demo?: boolean;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -55,9 +62,64 @@ export default function ChatThread({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [teamName, setTeamName] = useState<TeamName>(TEAM_NAMES[0]);
+  const [speakers, setSpeakers] = useState<string[]>(initialSpeakers);
+  const [hubName, setHubName] = useState<string>("");
+  const [namingSelf, setNamingSelf] = useState(false);
+  const [newName, setNewName] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const pollSeq = useRef(0);
   const stickToBottom = useRef(true);
+
+  // Keyed per wedding, unlike the team's single key: a planner with two
+  // couples on one laptop must not answer one thread under the other's name.
+  const hubNameKey = `crossroads-hub-name:${endpoint}`;
+
+  useEffect(() => {
+    if (viewer !== "couple") return;
+    try {
+      const stored = window.localStorage.getItem(hubNameKey);
+      if (stored) setHubName(stored);
+    } catch {}
+  }, [viewer, hubNameKey]);
+
+  function chooseHubName(name: string) {
+    setHubName(name);
+    try {
+      window.localStorage.setItem(hubNameKey, name);
+    } catch {}
+  }
+
+  async function registerName() {
+    const name = newName.replace(/\s+/g, " ").trim();
+    if (name.length < 2) return;
+    if (!accessEndpoint || demo) {
+      setSpeakers((prev) => (prev.includes(name) ? prev : [...prev, name]));
+      chooseHubName(name);
+      setNamingSelf(false);
+      setNewName("");
+      return;
+    }
+    try {
+      const res = await fetch(accessEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error || "Could not save that name.");
+        return;
+      }
+      // Server returns the whole roster, so two people naming themselves at
+      // once converge instead of one overwriting the other.
+      if (Array.isArray(json.speakers)) setSpeakers(json.speakers);
+      chooseHubName(name);
+      setNamingSelf(false);
+      setNewName("");
+    } catch {
+      setError("Could not save that name.");
+    }
+  }
 
   // Remember which teammate is replying across visits, one device each.
   useEffect(() => {
@@ -110,7 +172,7 @@ export default function ChatThread({
     if (!body || sending) return;
     setSending(true);
     setError("");
-    const senderName = viewer === "team" ? teamName : coupleNames;
+    const senderName = viewer === "team" ? teamName : hubName || coupleNames;
     if (demo) {
       setMessages((prev) => [
         ...prev,
@@ -261,7 +323,59 @@ export default function ChatThread({
               </select>
             </label>
           ) : (
-            <span>We reply here, not by email.</span>
+            <span className="flex flex-wrap items-center gap-1.5">
+              {namingSelf ? (
+                <>
+                  <span>Your first name</span>
+                  <input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void registerName();
+                      }
+                      if (e.key === "Escape") setNamingSelf(false);
+                    }}
+                    maxLength={40}
+                    autoFocus
+                    placeholder="Diane"
+                    aria-label="Your first name"
+                    className="w-28 rounded-lg border border-parchment bg-white px-2 py-1 text-xs text-charcoal"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void registerName()}
+                    className="rounded-lg bg-terracotta px-2 py-1 text-xs font-semibold text-cream"
+                  >
+                    Save
+                  </button>
+                </>
+              ) : (
+                <>
+                  <label className="flex items-center gap-1.5">
+                    Sending as
+                    <select
+                      value={hubName || coupleNames}
+                      onChange={(e) => {
+                        if (e.target.value === "__new__") {
+                          setNamingSelf(true);
+                          return;
+                        }
+                        chooseHubName(e.target.value);
+                      }}
+                      className="rounded-lg border border-parchment bg-white px-2 py-1 text-xs text-charcoal"
+                    >
+                      {(speakers.length ? speakers : [coupleNames]).map((n) => (
+                        <option key={n}>{n}</option>
+                      ))}
+                      <option value="__new__">Someone else...</option>
+                    </select>
+                  </label>
+                  <span className="text-ink/40">We reply here, not by email.</span>
+                </>
+              )}
+            </span>
           )}
           <button type="button" onClick={download} className="underline decoration-parchment underline-offset-2 hover:text-terracotta">
             Download conversation

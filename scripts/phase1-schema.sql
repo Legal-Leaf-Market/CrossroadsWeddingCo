@@ -323,3 +323,21 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS partner_two_last VARCHAR(120);
 -- invite is a list of addresses, not an account: everyone reads the same hub
 -- through the same credential.
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_invite_emails TEXT[] NOT NULL DEFAULT '{}';
+
+-- Who can speak on the couple's side of the thread (owner directive
+-- 2026-09-03). Before this, every message from the hub was stored under
+-- couple_names, so a bride and her mother-in-law reading the same thread both
+-- appeared as "Jane & Sam" and neither the couple nor the crew could tell who
+-- had actually written anything.
+--
+-- This mirrors the team side exactly, and for the same reason: there is no
+-- per-person login on either side of this product, so identity is declared,
+-- not proven. The team picks from TEAM_NAMES; the hub picks from this list.
+-- Nothing here is an access control. The hub URL is still the only credential,
+-- and anyone holding it can pick any name on it.
+--
+-- Deliberately NOT backfilled by splitting couple_names on "&": "Jane & Sam"
+-- is a display string, not a schema, and a hub that guesses a person's name
+-- wrong is worse than one that asks. Existing weddings fall back to offering
+-- couple_names as a single option until someone adds their own.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_speakers TEXT[] NOT NULL DEFAULT '{}';

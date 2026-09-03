@@ -124,6 +124,9 @@ export const weddings = pgTable(
     partnerTwoLast: varchar("partner_two_last", { length: 120 }),
     // Extra addresses the couple asked us to let into their hub.
     hubInviteEmails: text("hub_invite_emails").array().notNull().default([]),
+    // First names allowed on the couple's side of the message thread. Declared,
+    // not authenticated: see the note in phase1-schema.sql.
+    hubSpeakers: text("hub_speakers").array().notNull().default([]),
     contactEmail: varchar("contact_email", { length: 255 }),
     contactPhone: varchar("contact_phone", { length: 50 }),
     eventDate: date("event_date").notNull(),

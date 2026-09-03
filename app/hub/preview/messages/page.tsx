@@ -37,6 +37,7 @@ export default function HubMessagesPreviewPage() {
           demo
           viewer="couple"
           coupleNames="Jordan Hayes & Taylor Morgan"
+          speakers={["Jordan", "Taylor"]}
           initialMessages={SAMPLE_THREAD}
         />
       </main>

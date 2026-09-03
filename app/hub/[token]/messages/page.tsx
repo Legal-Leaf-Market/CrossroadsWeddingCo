@@ -50,6 +50,8 @@ export default async function HubMessagesPage({
           endpoint={`/api/hub/${token}/messages`}
           viewer="couple"
           coupleNames={wedding.coupleNames}
+          speakers={wedding.hubSpeakers ?? []}
+          accessEndpoint={`/api/hub/${token}/access`}
           initialMessages={messages}
         />
       </main>

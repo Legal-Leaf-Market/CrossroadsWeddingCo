@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import AccessSection from "@/components/hub/AccessSection";
 import CallSection from "@/components/hub/CallSection";
 import CountdownHero from "@/components/hub/CountdownHero";
 import DetailsSection from "@/components/hub/DetailsSection";
@@ -81,6 +82,7 @@ export default function HubPreviewPage() {
           }}
         />
         {isCallsConfigured() && <CallSection token={SAMPLE_TOKEN} />}
+        <AccessSection token={SAMPLE_TOKEN} demo initial={["planner@example.com"]} />
         <DocumentsSection token={SAMPLE_TOKEN} demo initial={[]} />
         <TimelineSection
           token={SAMPLE_TOKEN}

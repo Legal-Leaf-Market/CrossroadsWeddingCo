@@ -193,6 +193,9 @@ export async function POST(req: NextRequest) {
       partnerTwoFirst: data.partnerTwoFirst || null,
       partnerTwoLast: data.partnerTwoLast || null,
       hubInviteEmails: data.hubInviteEmails,
+      // Seed the message picker with the couple themselves. Anyone they invite
+      // adds their own first name the first time they write.
+      hubSpeakers: firstNames,
       contactEmail: data.email,
       contactPhone: data.phone || null,
       eventDate: data.eventDate,

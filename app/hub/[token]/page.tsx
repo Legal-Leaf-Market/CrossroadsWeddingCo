@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import AccessSection from "@/components/hub/AccessSection";
 import CallSection from "@/components/hub/CallSection";
 import CountdownHero from "@/components/hub/CountdownHero";
 import DetailsSection from "@/components/hub/DetailsSection";
@@ -159,6 +160,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           }}
         />
         {isCallsConfigured() && <CallSection token={token} />}
+        <AccessSection token={token} initial={wedding.hubInviteEmails ?? []} />
         <DocumentsSection token={token} initial={documents} />
         <TimelineSection
           token={token}
