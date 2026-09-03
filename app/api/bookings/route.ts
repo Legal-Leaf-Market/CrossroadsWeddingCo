@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { nameSlug } from "@/lib/hub-constants";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
@@ -38,12 +39,32 @@ function noStore(json: unknown, status = 200) {
   });
 }
 
+const NAME_MAX = 120;
+const nameField = z.string().trim().max(NAME_MAX, "That name is a little long");
+
 const bookingSchema = z.object({
+  // The four-field shape (owner directive 2026-09-03). Surnames are what make
+  // a hub URL readable, so they are captured rather than parsed back out of a
+  // single string.
+  partnerOneFirst: nameField.optional().default(""),
+  partnerOneLast: nameField.optional().default(""),
+  partnerTwoFirst: nameField.optional().default(""),
+  partnerTwoLast: nameField.optional().default(""),
+  // Extra people the couple wants in their hub: a planner, a parent, the maid
+  // of honour. Capped so a scripted post cannot mail-bomb through this form.
+  hubInviteEmails: z
+    .array(z.email("One of those invite emails doesn't look right").max(255))
+    .max(10, "That's as many people as we can add here. Send us the rest and we'll add them.")
+    .optional()
+    .default([]),
+  // Still accepted, and still the display name. An old cached form that posts
+  // only this keeps booking, exactly like the `addons` shape below.
   coupleNames: z
-    .string("Please tell us your names")
+    .string()
     .trim()
-    .min(2, "Please tell us your names")
-    .max(255, "That's a little long for the names field"),
+    .max(255, "That's a little long for the names field")
+    .optional()
+    .default(""),
   email: z.email("That email doesn't look right").max(255),
   phone: z.string().trim().max(50, "That phone number is too long").optional().default(""),
   eventDate: z.string("Please pick a date").regex(/^\d{4}-\d{2}-\d{2}$/, "Please pick a date"),
@@ -130,7 +151,30 @@ export async function POST(req: NextRequest) {
     ...(hasBartender ? [{ type: "bar_service", fee: null, minFee: BARTENDER_MIN_USD }] : []),
   ];
 
-  const accessToken = randomBytes(24).toString("hex");
+  // "Jane & Sam" for the hub heading. The four-field form builds it from first
+  // names; a cached old form supplies it directly.
+  const firstNames = [data.partnerOneFirst, data.partnerTwoFirst].filter(Boolean);
+  const coupleNames = firstNames.length ? firstNames.join(" & ") : data.coupleNames;
+  if (!coupleNames || coupleNames.length < 2) {
+    return noStore({ error: "Please tell us your names" }, 400);
+  }
+
+  // A readable hub URL: kennedy-carter-9f3a1c7e42b6d508.
+  //
+  // The slug is decoration. Names are public, so a bare /hub/kennedy-carter
+  // would be guessable by anyone who saw a save-the-date and enumerable in
+  // bulk against common surname pairs, and this URL is the ONLY credential
+  // protecting the couple's contact details, documents, private thread with
+  // us, and the wedding party's names and phone-book. The 64 bits after the
+  // last dash are what actually hold the door shut.
+  //
+  // No collision handling is needed: two couples who share both surnames get
+  // the same readable half and different suffixes, which is unambiguous.
+  // Falling back to the display name keeps a cached old form readable too.
+  const slug = nameSlug(data.partnerOneLast, data.partnerTwoLast) === "couple"
+    ? nameSlug(coupleNames)
+    : nameSlug(data.partnerOneLast, data.partnerTwoLast);
+  const accessToken = `${slug}-${randomBytes(8).toString("hex")}`;
   // Read-only credential for the /live/[token] vendor view; independent of
   // the write-capable access token by design.
   const shareToken = randomBytes(24).toString("hex");
@@ -143,7 +187,12 @@ export async function POST(req: NextRequest) {
     await db.insert(weddings).values({
       accessToken,
       shareToken,
-      coupleNames: data.coupleNames,
+      coupleNames,
+      partnerOneFirst: data.partnerOneFirst || null,
+      partnerOneLast: data.partnerOneLast || null,
+      partnerTwoFirst: data.partnerTwoFirst || null,
+      partnerTwoLast: data.partnerTwoLast || null,
+      hubInviteEmails: data.hubInviteEmails,
       contactEmail: data.email,
       contactPhone: data.phone || null,
       eventDate: data.eventDate,
@@ -182,7 +231,7 @@ export async function POST(req: NextRequest) {
           .join("\n") || null;
       await db.execute(sql`
         insert into leads (name, email, event_date, venue, services, message)
-        values (${data.coupleNames}, ${data.email}, ${data.eventDate},
+        values (${coupleNames}, ${data.email}, ${data.eventDate},
                 ${data.venueName}, ${services.join(", ") || null}, ${message})
       `);
       stored = "leads";
@@ -210,7 +259,7 @@ export async function POST(req: NextRequest) {
   // line and a slightly quieter couple.
   const dispatches: Promise<void>[] = [
     sendBookingEmails({
-      coupleNames: data.coupleNames,
+      coupleNames,
       email: data.email,
       phone: data.phone || undefined,
       eventDate: data.eventDate,
@@ -227,7 +276,7 @@ export async function POST(req: NextRequest) {
   if (data.phone) {
     dispatches.push(
       sendBookingTexts({
-        coupleNames: data.coupleNames,
+        coupleNames,
         phone: data.phone,
         eventDate: data.eventDate,
         venueName: data.venueName,

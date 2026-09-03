@@ -114,6 +114,16 @@ export const weddings = pgTable(
     shareToken: varchar("share_token", { length: 64 }).unique(),
     clientUserId: uuid("client_user_id").references(() => users.id, { onDelete: "set null" }),
     coupleNames: varchar("couple_names", { length: 255 }).notNull(),
+    // Display name for the hub heading, e.g. "Jane & Sam". The four fields
+    // below are the structured version: first names for addressing them,
+    // surnames for building a readable hub URL. Nullable because weddings
+    // booked before 2026-09-03 only ever had the single free-text field.
+    partnerOneFirst: varchar("partner_one_first", { length: 120 }),
+    partnerOneLast: varchar("partner_one_last", { length: 120 }),
+    partnerTwoFirst: varchar("partner_two_first", { length: 120 }),
+    partnerTwoLast: varchar("partner_two_last", { length: 120 }),
+    // Extra addresses the couple asked us to let into their hub.
+    hubInviteEmails: text("hub_invite_emails").array().notNull().default([]),
     contactEmail: varchar("contact_email", { length: 255 }),
     contactPhone: varchar("contact_phone", { length: 50 }),
     eventDate: date("event_date").notNull(),

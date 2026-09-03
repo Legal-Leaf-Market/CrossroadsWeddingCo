@@ -26,6 +26,9 @@ export default function BookingForm({
   const [hubPath, setHubPath] = useState<string | null>(null);
   const [services, setServices] = useState<string[]>(initialServices);
   const [noPlaylist, setNoPlaylist] = useState(false);
+  // Extra people the couple wants in their hub. Starts as one empty row so the
+  // field is visible and self-explanatory; the plus button adds more.
+  const [inviteEmails, setInviteEmails] = useState<string[]>([""]);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
   // Screen readers lose their place when the form unmounts, so land focus on
@@ -63,7 +66,11 @@ export default function BookingForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          coupleNames: data.get("coupleNames"),
+          partnerOneFirst: data.get("partnerOneFirst"),
+          partnerOneLast: data.get("partnerOneLast"),
+          partnerTwoFirst: data.get("partnerTwoFirst"),
+          partnerTwoLast: data.get("partnerTwoLast"),
+          hubInviteEmails: inviteEmails.map((e) => e.trim()).filter(Boolean),
           email: data.get("email"),
           phone: data.get("phone"),
           eventDate: data.get("eventDate"),
@@ -145,13 +152,75 @@ export default function BookingForm({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-cream/80">Your names</span>
-          <input name="coupleNames" required minLength={2} className={inputClass} placeholder="Jane & Sam" />
+          <span className="mb-1 block text-sm font-semibold text-cream/80">Your first name</span>
+          <input name="partnerOneFirst" required maxLength={120} className={inputClass} placeholder="Jane" />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-cream/80">Your last name</span>
+          <input name="partnerOneLast" required maxLength={120} className={inputClass} placeholder="Kennedy" />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-cream/80">Partner&apos;s first name</span>
+          <input name="partnerTwoFirst" required maxLength={120} className={inputClass} placeholder="Sam" />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-cream/80">Partner&apos;s last name</span>
+          <input name="partnerTwoLast" required maxLength={120} className={inputClass} placeholder="Carter" />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-semibold text-cream/80">Email</span>
           <input name="email" type="email" required className={inputClass} placeholder="you@example.com" />
         </label>
+
+        {/* Invites live beside the couple's own email because that is where
+            someone thinks "my planner should see this too". Each row is its own
+            input rather than a comma-separated string: type="email" then
+            validates each address in the browser, one at a time. */}
+        <div className="block">
+          <span className="mb-1 block text-sm font-semibold text-cream/80">
+            Invite someone to the hub (optional)
+          </span>
+          <div className="space-y-2">
+            {inviteEmails.map((value, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  type="email"
+                  value={value}
+                  maxLength={255}
+                  onChange={(e) =>
+                    setInviteEmails((prev) => prev.map((v, j) => (j === i ? e.target.value : v)))
+                  }
+                  className={inputClass}
+                  placeholder="planner@example.com"
+                  aria-label={`Invite email ${i + 1}`}
+                />
+                {inviteEmails.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setInviteEmails((prev) => prev.filter((_, j) => j !== i))}
+                    className="shrink-0 rounded-lg border border-cream/20 px-3 text-cream/60 hover:text-cream"
+                    aria-label={`Remove invite email ${i + 1}`}
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {inviteEmails.length < 10 && (
+            <button
+              type="button"
+              onClick={() => setInviteEmails((prev) => [...prev, ""])}
+              className="mt-2 rounded-full border border-cream/25 px-4 py-1.5 text-sm font-medium text-cream/80 hover:border-terracotta hover:text-cream"
+            >
+              + Add another
+            </button>
+          )}
+          <span className="mt-1 block text-xs text-cream/50">
+            Anyone you add can see and edit your planning hub, so add people you trust with your
+            details.
+          </span>
+        </div>
         <label className="block">
           <span className="mb-1 block text-sm font-semibold text-cream/80">Phone (optional)</span>
           <input name="phone" type="tel" className={inputClass} placeholder="(812) 555-0100" />

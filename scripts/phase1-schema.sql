@@ -302,3 +302,24 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS dress_code VARCHAR(200);
 -- being keyed one-per-type.
 ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS label VARCHAR(120);
 ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS order_index INTEGER NOT NULL DEFAULT 0;
+
+-- Couple names as four fields instead of one free-text string (owner directive
+-- 2026-09-03). The booking form asked for "Jane & Sam" in a single box, which
+-- is fine to print at the top of a hub and useless for anything else. Surnames
+-- are what make a hub URL readable, so they have to be captured separately.
+--
+-- couple_names stays and stays authoritative for display: it holds the first
+-- names ("Jane & Sam") and existing rows keep whatever was typed. Nothing
+-- backfills the four columns for old weddings, because guessing which half of
+-- "Jane & Sam" is a surname is how you end up addressing a couple wrongly on
+-- their own wedding portal.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS partner_one_first VARCHAR(120);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS partner_one_last VARCHAR(120);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS partner_two_first VARCHAR(120);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS partner_two_last VARCHAR(120);
+
+-- Extra people the couple wants in their hub: a planner, a parent, a maid of
+-- honour. Stored on the wedding rather than in their own table because an
+-- invite is a list of addresses, not an account: everyone reads the same hub
+-- through the same credential.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS hub_invite_emails TEXT[] NOT NULL DEFAULT '{}';

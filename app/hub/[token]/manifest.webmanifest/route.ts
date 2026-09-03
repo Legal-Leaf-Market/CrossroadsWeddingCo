@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { TOKEN_RE } from "@/lib/hub-constants";
+import { isHubToken } from "@/lib/hub-constants";
 import { SITE_NAME } from "@/lib/site";
 
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 // but the path the requester already knows.
 export async function GET(_req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  if (!TOKEN_RE.test(token)) {
+  if (!isHubToken(token)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   return NextResponse.json(

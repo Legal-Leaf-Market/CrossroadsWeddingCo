@@ -28,7 +28,53 @@ export const TIMELINE_CATEGORIES = [
   "dance",
 ] as const;
 
-export const TOKEN_RE = /^[a-f0-9]{48}$/;
+/**
+ * A hub token is a credential, not an identifier. There is no login on the
+ * portal: whoever holds the URL can read the couple's contact details, venue
+ * address, uploaded documents, private message thread with us, and the VIP
+ * roster, which is the full wedding party's names and phonetic spellings. So
+ * the readable part of the URL is decoration and the entropy is what protects
+ * it.
+ *
+ * Two shapes resolve, and both must keep working:
+ *
+ *   legacy   a3f91c7e...            48 hex, minted before names were captured
+ *   current  kennedy-carter-9f3a1c7e42b6d508
+ *
+ * The current shape reads as the couple and still carries 64 bits after the
+ * last dash. Names are public (The Knot, a save-the-date, Instagram), so a
+ * slug on its own would be guessable and enumerable in bulk.
+ */
+export const LEGACY_TOKEN_RE = /^[a-f0-9]{48}$/;
+export const NAMED_TOKEN_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*-[a-f0-9]{16}$/;
+
+export function isHubToken(value: string): boolean {
+  return LEGACY_TOKEN_RE.test(value) || NAMED_TOKEN_RE.test(value);
+}
+
+/** Kept as the legacy name so existing imports do not all have to move. */
+export const TOKEN_RE = LEGACY_TOKEN_RE;
+
+/**
+ * The readable half, built from the two surnames. Accents are folded rather
+ * than dropped so "Muñoz" becomes "munoz" and not "muoz", and anything else
+ * outside a-z0-9 collapses to a single dash.
+ */
+export function nameSlug(...parts: string[]): string {
+  const cleaned = parts
+    .map((p) =>
+      p
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, ""),
+    )
+    .filter(Boolean);
+  // A couple with no usable surnames still needs a URL, and "couple" beside 64
+  // bits of entropy is no worse than the 48-hex tokens this replaces.
+  return cleaned.join("-").slice(0, 60).replace(/-+$/, "") || "couple";
+}
 
 /** HH:MM, 24-hour. Shared by the timeline route's zod schema and the client's pre-save guard. */
 export const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;

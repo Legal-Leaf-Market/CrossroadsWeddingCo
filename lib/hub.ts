@@ -8,12 +8,20 @@ import {
   weddings,
   type Wedding,
 } from "@/lib/db/schema";
-import { TOKEN_RE } from "@/lib/hub-constants";
+import { isHubToken } from "@/lib/hub-constants";
 
 // Server-side hub data access. Client-safe constants (CUE_TYPES, categories,
 // TOKEN_RE, daysOut) live in lib/hub-constants.ts so client components never
 // pull in lib/db; they are re-exported here for server callers.
-export { CUE_TYPES, TIMELINE_CATEGORIES, TOKEN_RE, daysOut, type CueType } from "@/lib/hub-constants";
+export {
+  CUE_TYPES,
+  TIMELINE_CATEGORIES,
+  TOKEN_RE,
+  isHubToken,
+  nameSlug,
+  daysOut,
+  type CueType,
+} from "@/lib/hub-constants";
 
 /** The hub sections protected by per-section revision counters. */
 export type SectionKey = "timeline" | "cues" | "vips" | "playlists";
@@ -76,7 +84,7 @@ export async function withSectionRev<T>(
 }
 
 export async function getWeddingByToken(token: string): Promise<Wedding | null> {
-  if (!TOKEN_RE.test(token)) return null;
+  if (!isHubToken(token)) return null;
   const [wedding] = await db
     .select()
     .from(weddings)
@@ -87,7 +95,7 @@ export async function getWeddingByToken(token: string): Promise<Wedding | null> 
 
 /** Read-only lookup for the vendor live view; grants no writes anywhere. */
 export async function getWeddingByShareToken(token: string): Promise<Wedding | null> {
-  if (!TOKEN_RE.test(token)) return null;
+  if (!isHubToken(token)) return null;
   const [wedding] = await db
     .select()
     .from(weddings)

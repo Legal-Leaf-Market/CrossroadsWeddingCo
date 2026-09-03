@@ -8,7 +8,7 @@ import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
 import { isCallsConfigured } from "@/lib/calls";
-import { getPortalData, TOKEN_RE } from "@/lib/hub";
+import { getPortalData, isHubToken } from "@/lib/hub";
 import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
 import { listDocuments } from "@/lib/documents";
 import { countUnread } from "@/lib/messages";
@@ -27,7 +27,7 @@ export async function generateMetadata({
     title: "Your planning hub",
     robots: { index: false, follow: false },
     // Per-wedding manifest so a pinned home-screen icon opens this hub.
-    ...(TOKEN_RE.test(token) ? { manifest: `/hub/${token}/manifest.webmanifest` } : {}),
+    ...(isHubToken(token) ? { manifest: `/hub/${token}/manifest.webmanifest` } : {}),
   };
 }
 
