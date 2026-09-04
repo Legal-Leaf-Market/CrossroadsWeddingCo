@@ -572,6 +572,43 @@ decisions absorbed from it:
   dev-only sample-data twins of the portal pages that 404 in production builds.
 
 ### 9.6 Phase log
+- **Phase 3, sixth slice (2026-09-04): native intro-call booking with office hours.**
+  Replaces the unset `NEXT_PUBLIC_BOOKING_URL` Calendly hole, and it is what the QR
+  code on every printed business card resolves to: `/book?with=<slug>` for jake, nic,
+  brayton, ashton (`lib/schedulers.ts`; **those slugs are printed, so add, never
+  rename**). Two tables (`office_hours`, `appointments`), a public
+  `/api/bookings/call` (GET the calendar, POST one booking), an owner editor at
+  `/admin/[key]/hours`, and a Resend pair on success. Notification addresses come
+  from `SCHEDULER_EMAIL_{JAKE,NIC,BRAYTON,ASHTON}` and fall back to `OWNER_EMAIL`,
+  because a card in someone's wallet must not lead to a booking that reaches nobody.
+  The load-bearing outcomes, all measured against a real Postgres and headless
+  Chromium rather than reasoned about:
+  - **Office hours are wall clock, appointments are instants**, and the conversion is
+    the whole feature. `lib/scheduling.ts` is pure and takes `now`, so
+    `node --experimental-strip-types scripts/verify-scheduling.mjs` checks it across
+    both Indiana DST transitions in both directions. Run that script when you touch
+    this arithmetic. Its three load-bearing cases are mutation-tested: dropping the
+    second offset pass, dropping the touching-block dedupe, and letting a slot
+    straddle two blocks each fail it, and the single-pass mutation is off by exactly
+    the hour the clock moved.
+  - **The double-booking guard is a partial unique index, not a check before the
+    insert.** Two people at one bridal expo tap the same 6:00 within a second; a
+    read-then-write cannot see the request racing it. Verified with three
+    simultaneous POSTs: one 200, two 409, exactly one row. It is partial on
+    `cancelled_at` so cancelling reopens the slot, also verified.
+  - **Drizzle wraps the driver error**, so the `23505` SQLSTATE is on `.cause` and
+    reading `err.code` directly is silently always undefined. The first race put a
+    500 and "Internal Server Error" in front of the losing couple instead of "someone
+    just took that time". `isUniqueViolation` walks the cause chain. This path only
+    exists under real concurrency, so it cannot be found by reading the code.
+  - **Nothing is ever offered that its owner did not agree to.** A person with no
+    office hours has no slots, and the page says so and hands the visitor to the date
+    form; it does not seed a plausible week. Server-side every POST re-derives the
+    grid from that person's own hours, so an off-grid instant, a wrong weekday and a
+    past time are all refused whatever the client posts.
+  - `lib/team.ts` is deliberately still the two-person public "who you get" section
+    and is NOT this list. Adding Brayton and Ashton there needs bios and photos from
+    Jacob; keeping the lists apart is what let the cards ship before those exist.
 - **Phase 1 (live 2026-08-26):** flat-rate site, city pages, booking flow writing `weddings`
   rows (legacy `leads` fallback), Resend emails from jake@, Stripe scaffolded and gated,
   schema self-applying at build.

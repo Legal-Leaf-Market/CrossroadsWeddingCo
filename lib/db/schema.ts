@@ -323,6 +323,49 @@ export const leads = pgTable("leads", {
   status: varchar("status", { length: 50 }).default("new"),
 });
 
+// 12. Office hours and intro-call appointments.
+//
+// Deliberately NOT keyed to talent_profiles or users. The people bookable here
+// are the four on the printed business cards, identified by the same slug the
+// card's QR code carries (/book?with=brayton). Nobody on this side of the
+// product has an account, and inventing one so a calendar could join to it
+// would put a login between a couple at a bridal expo and a phone call.
+export const officeHours = pgTable(
+  "office_hours",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    personSlug: varchar("person_slug", { length: 40 }).notNull(),
+    /** 0 = Sunday, matching Date#getDay. */
+    weekday: integer("weekday").notNull(),
+    /** Minutes from venue-local midnight. See scripts/phase1-schema.sql. */
+    startMinute: integer("start_minute").notNull(),
+    endMinute: integer("end_minute").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_office_hours_person").on(t.personSlug, t.weekday)],
+);
+
+export const appointments = pgTable(
+  "appointments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    personSlug: varchar("person_slug", { length: 40 }).notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    durationMinutes: integer("duration_minutes").notNull().default(30),
+    name: varchar("name", { length: 120 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 50 }),
+    eventDate: date("event_date"),
+    notes: text("notes").notNull().default(""),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_appointments_person").on(t.personSlug, t.startsAt)],
+);
+
+export type OfficeHourRow = typeof officeHours.$inferSelect;
+export type Appointment = typeof appointments.$inferSelect;
+
 export type Lead = typeof leads.$inferSelect;
 export type Wedding = typeof weddings.$inferSelect;
 export type NewWedding = typeof weddings.$inferInsert;

@@ -174,12 +174,20 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
             {data.upcoming.length} upcoming · {data.past.length} past or cancelled. This page is
             read-only and this link is the key: don&apos;t share it.
           </p>
-          <a
-            href={`${basePath}/archived`}
-            className="mt-2 inline-block text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
-          >
-            Archived bookings
-          </a>
+          <div className="mt-2 flex flex-wrap gap-4">
+            <a
+              href={`${basePath}/hours`}
+              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
+            >
+              Call times
+            </a>
+            <a
+              href={`${basePath}/archived`}
+              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
+            >
+              Archived bookings
+            </a>
+          </div>
         </div>
       </header>
 
