@@ -620,9 +620,26 @@ decisions absorbed from it:
     a fortnight in August and the next deploy quietly reopens every one of them.
     Verified across four deploys on a real Postgres: seeds 16 rows, a second deploy
     is a no-op, a hand edit survives, and deliberately cleared calendars stay cleared.
-  - `lib/team.ts` is deliberately still the two-person public "who you get" section
-    and is NOT this list. Adding Brayton and Ashton there needs bios and photos from
-    Jacob; keeping the lists apart is what let the cards ship before those exist.
+  - **`lib/team.ts` is now the single source for who these four are** (owner
+    directive 2026-09-04, "add brayton and ashton to the team page"). It holds name,
+    title, roles and bio; `lib/schedulers.ts` reads it and adds only a notify address,
+    so a title cannot say one thing in "who you get" and another on the page a QR code
+    opens. Titles are the ones on the printed cards, which corrected two existing
+    entries: Jake and Nic were showing CEO and COO, their holding-company titles
+    rather than their jobs at a wedding, and Nic's roles line omitted DJ and MC while
+    the card in a couple's hand says he does both. All four DJ and MC.
+  - **Bios are role, not biography.** Nic's is the only one carrying a hard claim
+    (about twenty years, a current Indiana ATC permit) because it is the only one
+    anybody has stated. Do not invent an experience, a credential or a number here:
+    this is the section couples read to decide whether to trust four strangers with
+    their wedding. Photos are still missing and still cost nothing, since a member
+    with no `photoUrl` renders brand initials.
+  - Adding two people made a piece of stale copy contradict itself: the couple's
+    Messages header still read "Your direct line to Jake and Nic. We both see
+    everything here." while `TEAM_NAMES` had offered all four as senders since the
+    identity slice, so a couple could receive a message signed Brayton on a thread
+    that had told them only two people were on it. It now names the team rather than
+    counting it, which stays true the next time the roster changes.
 - **Phase 1 (live 2026-08-26):** flat-rate site, city pages, booking flow writing `weddings`
   rows (legacy `leads` fallback), Resend emails from jake@, Stripe scaffolded and gated,
   schema self-applying at build.

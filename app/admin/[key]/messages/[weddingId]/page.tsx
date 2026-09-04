@@ -5,8 +5,9 @@ import { adminKeyMatches, getAdminWedding } from "@/lib/admin";
 import { formatEventDate } from "@/lib/hub-constants";
 import { getThread, markThreadRead } from "@/lib/messages";
 
-// The team's side of the one-master-thread conversation: Jake and Nic both
-// read and reply here, and the couple sees one fluid Crossroads thread.
+// The team's side of the one-master-thread conversation: everyone in
+// TEAM_NAMES reads and replies here, and the couple sees one fluid
+// Crossroads thread.
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
