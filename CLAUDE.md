@@ -505,9 +505,10 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   Market, GearAvail, Stompbox World). Output per person: front and back PNG at 300 DPI
   with the 0.125 in bleed included (1125 x 675), plus a two-page vector PDF, plus
   `all-cards.pdf`; the README there carries the upload settings. Justice Ely joined the
-  roster the same day: Crossroads title "Tactical Execution Specialist", roles "DJ, MC,
-  Percussion, Crew & Gear" (he is training as a drummer and percussionist for gigs;
-  crew and gear is his lane alongside Ashton); Mosaic Green title rendered as "Chief
+  roster the same day: Crossroads title "Tactical Execution Specialist", roles
+  "Percussion, Crew & Gear" (he is training as a drummer and percussionist for gigs;
+  crew and gear is his lane alongside Ashton; DJ and MC stay off his card for now, per
+  Jacob, until he has run weddings solo); Mosaic Green title rendered as "Chief
   Logistics Officer" pending Jacob's pick. Phone (812) 657-1879 (Jacob, 2026-09-04); the
   justice@ mailbox is still unconfirmed. Finish is matte (Jacob, 2026-09-04). The
   original card artwork from the earlier session was not reachable from this repo, so
