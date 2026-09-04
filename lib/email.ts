@@ -283,9 +283,17 @@ export async function sendIntroCallEmails(input: {
     ].join("\n"),
   });
 
+  // THE OWNER IS ALWAYS COPIED, and it is not redundancy for its own sake.
+  // Each person's alert goes to their own crossroadsweddingco.com address, and
+  // if one of those mailboxes is ever misconfigured or forwarded into a filter,
+  // the failure is a booked call that nobody knows about until the phone does
+  // not ring. A second copy to the owner means a lead cannot be lost that way.
+  // Deduped, so Jake does not get two of his own.
+  const teamTo = [...new Set([person.notifyEmail, NOTIFY_TO])];
+
   const toTeam = resend.emails.send({
     from: FROM,
-    to: person.notifyEmail,
+    to: teamTo,
     subject: `Call booked with ${input.name}: ${when}`,
     text: [
       `${input.name} booked ${input.durationMinutes} minutes with you.`,

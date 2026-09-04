@@ -578,9 +578,15 @@ decisions absorbed from it:
   brayton, ashton (`lib/schedulers.ts`; **those slugs are printed, so add, never
   rename**). Two tables (`office_hours`, `appointments`), a public
   `/api/bookings/call` (GET the calendar, POST one booking), an owner editor at
-  `/admin/[key]/hours`, and a Resend pair on success. Notification addresses come
-  from `SCHEDULER_EMAIL_{JAKE,NIC,BRAYTON,ASHTON}` and fall back to `OWNER_EMAIL`,
-  because a card in someone's wallet must not lead to a booking that reaches nobody.
+  `/admin/[key]/hours`, and a Resend pair on success. **Each person's alert defaults
+  to the address printed on their own business card** (`<slug>@crossroadsweddingco.com`,
+  confirmed to exist per CARD_PRINT_SPEC.md), not to an env var and not to the owner:
+  a feature that only behaves correctly once somebody remembers a dashboard setting is
+  a feature that ships subtly wrong, and this one would have put every call for all
+  four people in Jake's inbox. `SCHEDULER_EMAIL_{JAKE,NIC,BRAYTON,ASHTON}` remain as
+  overrides for anyone who wants a personal address instead. `OWNER_EMAIL` is always
+  copied and deduped, so a misconfigured mailbox cannot turn a booked call into one
+  nobody knows about until the phone fails to ring.
   The load-bearing outcomes, all measured against a real Postgres and headless
   Chromium rather than reasoned about:
   - **Office hours are wall clock, appointments are instants**, and the conversion is

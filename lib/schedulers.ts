@@ -11,8 +11,6 @@
  * what lets a card go live before a headshot exists.
  */
 
-import { OWNER_EMAIL } from "@/lib/site";
-
 export type Scheduler = {
   /** The slug in the printed QR code. Never change one that has shipped. */
   slug: string;
@@ -21,17 +19,25 @@ export type Scheduler = {
   /** Shown under the name so a stranger knows who they are about to talk to. */
   title: string;
   /**
-   * Where the booking alert goes. Env-driven so a person's address can land
-   * without a deploy, and falling back to the owner rather than to nothing:
-   * a card is in someone's wallet, and an appointment that reaches nobody is
-   * worse than one that reaches Jacob.
+   * Where this person's booking alert goes.
+   *
+   * THE DEFAULT IS THE ADDRESS ON THEIR OWN BUSINESS CARD, not an env var and
+   * not the owner. All four `@crossroadsweddingco.com` addresses are printed
+   * on the cards and confirmed to exist (CARD_PRINT_SPEC.md), so the correct
+   * value is already a settled public fact and there is nothing to remember in
+   * a dashboard. An env var that has to be set before a feature works right is
+   * a feature that ships subtly wrong, and this one would have shipped with
+   * every call for all four people landing in Jake's inbox.
+   *
+   * The env var stays as an override, for anyone who would rather these went
+   * to a personal address than to their crossroads one.
    */
   notifyEmail: string;
 };
 
-function notify(varName: string): string {
+function notify(varName: string, cardAddress: string): string {
   const own = process.env[varName]?.trim();
-  return own && own.includes("@") ? own : OWNER_EMAIL;
+  return own && own.includes("@") ? own : cardAddress;
 }
 
 export const SCHEDULERS: Scheduler[] = [
@@ -39,25 +45,25 @@ export const SCHEDULERS: Scheduler[] = [
     slug: "jake",
     name: "Jake",
     title: "Co-founder & Event Producer",
-    notifyEmail: notify("SCHEDULER_EMAIL_JAKE"),
+    notifyEmail: notify("SCHEDULER_EMAIL_JAKE", "jake@crossroadsweddingco.com"),
   },
   {
     slug: "nic",
     name: "Nic",
     title: "Co-founder & Event Manager",
-    notifyEmail: notify("SCHEDULER_EMAIL_NIC"),
+    notifyEmail: notify("SCHEDULER_EMAIL_NIC", "nic@crossroadsweddingco.com"),
   },
   {
     slug: "brayton",
     name: "Brayton",
     title: "Co-founder & Director of Talent & Training",
-    notifyEmail: notify("SCHEDULER_EMAIL_BRAYTON"),
+    notifyEmail: notify("SCHEDULER_EMAIL_BRAYTON", "brayton@crossroadsweddingco.com"),
   },
   {
     slug: "ashton",
     name: "Ashton",
     title: "Production Manager",
-    notifyEmail: notify("SCHEDULER_EMAIL_ASHTON"),
+    notifyEmail: notify("SCHEDULER_EMAIL_ASHTON", "ashton@crossroadsweddingco.com"),
   },
 ];
 
