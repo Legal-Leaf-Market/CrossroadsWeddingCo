@@ -110,14 +110,13 @@ const PEOPLE = [
     mosaicTitle: "Chief Product Officer",
   },
   {
-    // Added 2026-09-04. Phone and the justice@ mailbox are unconfirmed:
-    // fill the phone in here before ordering.
+    // Added 2026-09-04. The justice@ mailbox is still unconfirmed.
     slug: "justice",
     name: "Justice Ely",
     title: "Tactical Execution Specialist",
     roles: "DJ · MC · Percussion · Crew & Gear",
     email: "justice@crossroadsweddingco.com",
-    phone: "",
+    phone: "(812) 657-1879",
     mosaicTitle: "Chief Logistics Officer",
   },
 ];

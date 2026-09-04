@@ -508,8 +508,8 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   roster the same day: Crossroads title "Tactical Execution Specialist", roles "DJ, MC,
   Percussion, Crew & Gear" (he is training as a drummer and percussionist for gigs;
   crew and gear is his lane alongside Ashton); Mosaic Green title rendered as "Chief
-  Logistics Officer" pending Jacob's pick. His phone and the justice@ mailbox are
-  unconfirmed, so his card prints without a phone line until the roster has one. The
+  Logistics Officer" pending Jacob's pick. Phone (812) 657-1879 (Jacob, 2026-09-04); the
+  justice@ mailbox is still unconfirmed. Finish is matte (Jacob, 2026-09-04). The
   original card artwork from the earlier session was not reachable from this repo, so
   the compass rose and mosaic globe are redrawn in SVG; drop the originals in
   `content/business-cards/logos/` and the script uses them instead. The QR on each front

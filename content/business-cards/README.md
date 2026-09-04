@@ -25,7 +25,7 @@ output.
 | Colour | RGB. The site converts to CMYK; expect the green to print a shade duller than the screen |
 | Sides | Two, different design on each |
 | Orientation | Landscape |
-| Finish | Matte or uncoated. Gloss fights the cream paper look and makes the QR code harder to scan under lights |
+| Finish | Matte (owner's pick). Gloss fights the cream paper look and makes the QR code harder to scan under lights |
 
 ## Uploading
 
@@ -49,8 +49,6 @@ proof shows it lopsided, that is the cutter, not the file.
 
 ## Before ordering
 
-- Justice Ely's phone number is not in the roster yet, so his card prints
-  without a phone line. Add it to `PEOPLE` in the script and rerun `pnpm cards`.
 - Confirm `justice@crossroadsweddingco.com` exists as a Google Workspace user
   or alias before it goes on paper.
 - Scan every QR code with a phone. Each one opens
