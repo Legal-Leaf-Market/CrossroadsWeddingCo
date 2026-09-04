@@ -114,7 +114,7 @@ const PEOPLE = [
     // stay off his roles line until he has run weddings solo (Jacob).
     slug: "justice",
     name: "Justice Ely",
-    title: "Tactical Execution Specialist",
+    title: "Strategic Execution Specialist",
     roles: "Percussion · Crew & Gear",
     email: "justice@crossroadsweddingco.com",
     phone: "(812) 657-1879",
