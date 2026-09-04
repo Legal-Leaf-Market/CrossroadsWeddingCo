@@ -405,3 +405,29 @@ CREATE INDEX IF NOT EXISTS idx_appointments_person ON appointments (person_slug,
 -- it would need an EXCLUDE USING gist over a tstzrange instead.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_slot
     ON appointments (person_slug, starts_at) WHERE cancelled_at IS NULL;
+
+-- One-time seed of everyone's call times (owner directive 2026-09-04, asked
+-- and answered: "Mon-Thu, 6pm to 8pm" for all four).
+--
+-- Saturdays are deliberately empty and so are Fridays and Sundays: Saturday is
+-- a wedding, Friday is setup and travel, Sunday is the day after. Four 30
+-- minute slots a night, sixteen a week each.
+--
+-- SEEDS ARE RECORDED, NOT RE-DERIVED. The obvious guard is "insert only if
+-- office_hours is empty", and it is wrong in one specific way that would look
+-- like a haunting: somebody deliberately clears all four calendars for a
+-- fortnight in August, and the next deploy quietly reopens every one of them.
+-- A row in schema_seeds says this ran once and it never runs again, whatever
+-- the table happens to hold afterwards.
+CREATE TABLE IF NOT EXISTS schema_seeds (
+    name VARCHAR(100) PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO office_hours (person_slug, weekday, start_minute, end_minute)
+SELECT p.slug, d.weekday, 1080, 1200   -- 18:00 to 20:00, venue wall clock
+FROM (VALUES ('jake'), ('nic'), ('brayton'), ('ashton')) AS p(slug)
+CROSS JOIN (VALUES (1), (2), (3), (4)) AS d(weekday)  -- Monday through Thursday
+WHERE NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'office_hours_v1');
+
+INSERT INTO schema_seeds (name) VALUES ('office_hours_v1') ON CONFLICT (name) DO NOTHING;

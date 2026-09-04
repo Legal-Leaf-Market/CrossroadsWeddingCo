@@ -606,6 +606,14 @@ decisions absorbed from it:
     form; it does not seed a plausible week. Server-side every POST re-derives the
     grid from that person's own hours, so an off-grid instant, a wrong weekday and a
     past time are all refused whatever the client posts.
+  - **Everyone's hours are seeded once, and recorded as seeded.** Mon to Thu, 6 to
+    8pm for all four (owner directive 2026-09-04, asked and answered): Saturday is a
+    wedding, Friday is setup, Sunday is the day after. The guard is a row in
+    `schema_seeds`, not "insert if office_hours is empty", and the difference is one
+    scenario that would look like a haunting: somebody clears all four calendars for
+    a fortnight in August and the next deploy quietly reopens every one of them.
+    Verified across four deploys on a real Postgres: seeds 16 rows, a second deploy
+    is a no-op, a hand edit survives, and deliberately cleared calendars stay cleared.
   - `lib/team.ts` is deliberately still the two-person public "who you get" section
     and is NOT this list. Adding Brayton and Ashton there needs bios and photos from
     Jacob; keeping the lists apart is what let the cards ship before those exist.
