@@ -592,6 +592,74 @@ decisions absorbed from it:
   dev-only sample-data twins of the portal pages that 404 in production builds.
 
 ### 9.6 Phase log
+- **Phase 3, sixth slice (2026-09-04): native intro-call booking with office hours.**
+  Replaces the unset `NEXT_PUBLIC_BOOKING_URL` Calendly hole, and it is what the QR
+  code on every printed business card resolves to: `/book?with=<slug>` for jake, nic,
+  brayton, ashton (`lib/schedulers.ts`; **those slugs are printed, so add, never
+  rename**). Two tables (`office_hours`, `appointments`), a public
+  `/api/bookings/call` (GET the calendar, POST one booking), an owner editor at
+  `/admin/[key]/hours`, and a Resend pair on success. **Each person's alert defaults
+  to the address printed on their own business card** (`<slug>@crossroadsweddingco.com`,
+  confirmed to exist per CARD_PRINT_SPEC.md), not to an env var and not to the owner:
+  a feature that only behaves correctly once somebody remembers a dashboard setting is
+  a feature that ships subtly wrong, and this one would have put every call for all
+  four people in Jake's inbox. `SCHEDULER_EMAIL_{JAKE,NIC,BRAYTON,ASHTON}` remain as
+  overrides for anyone who wants a personal address instead. `OWNER_EMAIL` is always
+  copied and deduped, so a misconfigured mailbox cannot turn a booked call into one
+  nobody knows about until the phone fails to ring.
+  The load-bearing outcomes, all measured against a real Postgres and headless
+  Chromium rather than reasoned about:
+  - **Office hours are wall clock, appointments are instants**, and the conversion is
+    the whole feature. `lib/scheduling.ts` is pure and takes `now`, so
+    `node --experimental-strip-types scripts/verify-scheduling.mjs` checks it across
+    both Indiana DST transitions in both directions. Run that script when you touch
+    this arithmetic. Its three load-bearing cases are mutation-tested: dropping the
+    second offset pass, dropping the touching-block dedupe, and letting a slot
+    straddle two blocks each fail it, and the single-pass mutation is off by exactly
+    the hour the clock moved.
+  - **The double-booking guard is a partial unique index, not a check before the
+    insert.** Two people at one bridal expo tap the same 6:00 within a second; a
+    read-then-write cannot see the request racing it. Verified with three
+    simultaneous POSTs: one 200, two 409, exactly one row. It is partial on
+    `cancelled_at` so cancelling reopens the slot, also verified.
+  - **Drizzle wraps the driver error**, so the `23505` SQLSTATE is on `.cause` and
+    reading `err.code` directly is silently always undefined. The first race put a
+    500 and "Internal Server Error" in front of the losing couple instead of "someone
+    just took that time". `isUniqueViolation` walks the cause chain. This path only
+    exists under real concurrency, so it cannot be found by reading the code.
+  - **Nothing is ever offered that its owner did not agree to.** A person with no
+    office hours has no slots, and the page says so and hands the visitor to the date
+    form; it does not seed a plausible week. Server-side every POST re-derives the
+    grid from that person's own hours, so an off-grid instant, a wrong weekday and a
+    past time are all refused whatever the client posts.
+  - **Everyone's hours are seeded once, and recorded as seeded.** Mon to Thu, 6 to
+    8pm for all four (owner directive 2026-09-04, asked and answered): Saturday is a
+    wedding, Friday is setup, Sunday is the day after. The guard is a row in
+    `schema_seeds`, not "insert if office_hours is empty", and the difference is one
+    scenario that would look like a haunting: somebody clears all four calendars for
+    a fortnight in August and the next deploy quietly reopens every one of them.
+    Verified across four deploys on a real Postgres: seeds 16 rows, a second deploy
+    is a no-op, a hand edit survives, and deliberately cleared calendars stay cleared.
+  - **`lib/team.ts` is now the single source for who these four are** (owner
+    directive 2026-09-04, "add brayton and ashton to the team page"). It holds name,
+    title, roles and bio; `lib/schedulers.ts` reads it and adds only a notify address,
+    so a title cannot say one thing in "who you get" and another on the page a QR code
+    opens. Titles are the ones on the printed cards, which corrected two existing
+    entries: Jake and Nic were showing CEO and COO, their holding-company titles
+    rather than their jobs at a wedding, and Nic's roles line omitted DJ and MC while
+    the card in a couple's hand says he does both. All four DJ and MC.
+  - **Bios are role, not biography.** Nic's is the only one carrying a hard claim
+    (about twenty years, a current Indiana ATC permit) because it is the only one
+    anybody has stated. Do not invent an experience, a credential or a number here:
+    this is the section couples read to decide whether to trust four strangers with
+    their wedding. Photos are still missing and still cost nothing, since a member
+    with no `photoUrl` renders brand initials.
+  - Adding two people made a piece of stale copy contradict itself: the couple's
+    Messages header still read "Your direct line to Jake and Nic. We both see
+    everything here." while `TEAM_NAMES` had offered all four as senders since the
+    identity slice, so a couple could receive a message signed Brayton on a thread
+    that had told them only two people were on it. It now names the team rather than
+    counting it, which stays true the next time the roster changes.
 - **Phase 1 (live 2026-08-26):** flat-rate site, city pages, booking flow writing `weddings`
   rows (legacy `leads` fallback), Resend emails from jake@, Stripe scaffolded and gated,
   schema self-applying at build.

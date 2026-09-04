@@ -6,6 +6,7 @@ import {
   OWNER_EMAIL,
   SITE_NAME,
   SITE_URL,
+  VENUE_TIME_ZONE,
 } from "@/lib/site";
 
 // Booking emails activate the moment RESEND_API_KEY lands in Vercel; until
@@ -221,4 +222,94 @@ export async function sendHubMessagePointer(input: {
       `</div>`,
   });
   if (error) console.error("[email] hub pointer failed:", error);
+}
+
+// --- Intro-call booking (2026-09-04) --------------------------------------
+// Two emails per booking: the visitor gets the confirmation they are waiting
+// on with the button still under their thumb, and the person being booked gets
+// told. Both fail silently without RESEND_API_KEY, and the route awaits this
+// before responding for the same serverless-freeze reason as everything else.
+
+/**
+ * The one formatting decision worth stating: the time is rendered in the VENUE
+ * zone and labelled with it. Rendering an instant in the visitor's own zone is
+ * friendlier right up until they are in Chicago and write "6:00" on a sticky
+ * note that Indiana will read as 7:00.
+ */
+function venueTimeLabel(at: Date): string {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: VENUE_TIME_ZONE,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+  return fmt.format(at);
+}
+
+export async function sendIntroCallEmails(input: {
+  person: { slug: string; name: string; title: string; notifyEmail: string };
+  startsAt: Date;
+  durationMinutes: number;
+  name: string;
+  email: string;
+  phone?: string;
+  eventDate?: string;
+  notes?: string;
+}): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  const resend = new Resend(key);
+  const when = venueTimeLabel(input.startsAt);
+  const { person } = input;
+
+  const toGuest = resend.emails.send({
+    from: FROM,
+    to: input.email,
+    subject: `Your call with ${person.name}: ${when}`,
+    text: [
+      `You're booked. ${person.name} will call you.`,
+      ``,
+      `When: ${when} (${input.durationMinutes} minutes)`,
+      `Who: ${person.name}, ${person.title}`,
+      input.phone ? `We'll ring: ${input.phone}` : `We'll reach you at: ${input.email}`,
+      ``,
+      `Need to move it? Just reply to this email and we'll sort it out.`,
+      ``,
+      SITE_NAME,
+      SITE_URL,
+    ].join("\n"),
+  });
+
+  // THE OWNER IS ALWAYS COPIED, and it is not redundancy for its own sake.
+  // Each person's alert goes to their own crossroadsweddingco.com address, and
+  // if one of those mailboxes is ever misconfigured or forwarded into a filter,
+  // the failure is a booked call that nobody knows about until the phone does
+  // not ring. A second copy to the owner means a lead cannot be lost that way.
+  // Deduped, so Jake does not get two of his own.
+  const teamTo = [...new Set([person.notifyEmail, NOTIFY_TO])];
+
+  const toTeam = resend.emails.send({
+    from: FROM,
+    to: teamTo,
+    subject: `Call booked with ${input.name}: ${when}`,
+    text: [
+      `${input.name} booked ${input.durationMinutes} minutes with you.`,
+      ``,
+      `When: ${when}`,
+      `Email: ${input.email}`,
+      input.phone ? `Phone: ${input.phone}` : `Phone: not given`,
+      input.eventDate ? `Their date: ${input.eventDate}` : `Their date: not given yet`,
+      ``,
+      input.notes ? `What they said:\n${input.notes}` : `They didn't leave a note.`,
+    ].join("\n"),
+  });
+
+  const results = await Promise.allSettled([toGuest, toTeam]);
+  for (const r of results) {
+    if (r.status === "rejected") console.error("[email] intro call failed:", r.reason);
+    else if (r.value.error) console.error("[email] intro call failed:", r.value.error);
+  }
 }

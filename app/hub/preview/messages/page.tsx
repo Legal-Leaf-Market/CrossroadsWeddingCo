@@ -20,7 +20,7 @@ export default function HubMessagesPreviewPage() {
             <p className="text-sm font-semibold text-terracotta">{SITE_NAME}</p>
             <h1 className="text-xl text-charcoal">Messages</h1>
             <p className="text-sm text-ink/60">
-              Your direct line to Jake and Nic. We both see everything here.
+              Your direct line to the Crossroads team. We all see everything here.
             </p>
           </div>
           <a
