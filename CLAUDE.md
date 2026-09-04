@@ -515,7 +515,9 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   original card artwork from the earlier session was not reachable from this repo, so
   the compass rose and mosaic globe are redrawn in SVG; drop the originals in
   `content/business-cards/logos/` and the script uses them instead. The QR on each front
-  encodes `/book?ref=<slug>` so card-sourced bookings are attributable in analytics.
+  encodes `/book?with=<slug>`, the person's own call-booking page (Phase 3 sixth slice,
+  `lib/schedulers.ts`); Justice is not in that list yet, so his code lands on the plain
+  booking page until he is added to `lib/team.ts` and the schedulers.
 
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New

@@ -10,7 +10,8 @@ output.
 | File | What it is |
 | --- | --- |
 | `<name>-front.png`, `<name>-back.png` | 1125 x 675 px at 300 DPI. That is the 3.5 x 2 in card plus the standard 0.125 in bleed on every side, so the image is 3.75 x 2.25 in. |
-| `<name>.pdf` | The same two faces as a two-page PDF at 3.75 x 2.25 in, with vector text and the fonts embedded. Prefer this wherever a site accepts PDF. |
+| `<name>-front.pdf`, `<name>-back.pdf` | One face per file at 3.75 x 2.25 in, vector text, fonts embedded. Use these when the site asks for a separate file per side, which most do. |
+| `<name>.pdf` | Both faces in one two-page PDF, for a site that takes one file per card. |
 | `all-cards.pdf` | Every card, front then back, in one file (ten pages). |
 
 ## Print specs to enter on the ordering site
@@ -31,8 +32,8 @@ output.
 
 1. Pick the "upload your own design" or "complete design" path, standard
    3.5 x 2 in, two sided.
-2. Upload the front file as the front and the back file as the back. Use the
-   PDF pages where the site takes PDF, the PNGs otherwise.
+2. Upload `<name>-front.pdf` as the front and `<name>-back.pdf` as the back.
+   Use the PNGs only where a site refuses PDF.
 3. When the site asks whether the file already includes bleed, say yes. If it
    shows a trim guide, line it up so an even 0.125 in of colour sits outside
    the guide on every side.
@@ -52,8 +53,11 @@ proof shows it lopsided, that is the cutter, not the file.
 - Confirm `justice@crossroadsweddingco.com` exists as a Google Workspace user
   or alias before it goes on paper.
 - Scan every QR code with a phone. Each one opens
-  `crossroadsweddingco.com/book?ref=<name>`, so bookings that start from a
-  card show up in analytics with the name attached.
+  `crossroadsweddingco.com/book?with=<name>`, that person's own call-booking
+  page (`lib/schedulers.ts`). The link is on our domain, so what it shows can
+  change any time without reprinting; the slug itself must never change.
+  Justice is not in the schedulers list yet, so his code lands on the plain
+  booking page until he is added there and to `lib/team.ts`.
 
 ## Logos
 

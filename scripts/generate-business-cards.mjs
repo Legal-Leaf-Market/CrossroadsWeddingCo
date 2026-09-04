@@ -7,7 +7,9 @@
 //                                       3.5 x 2 in card plus the 0.125 in bleed
 //                                       on every side (3.75 x 2.25 in), which is
 //                                       what print sites ask for.
-//   <slug>.pdf                          two pages, same size, vector text.
+//   <slug>-front.pdf, <slug>-back.pdf   one page each, same size, vector text,
+//                                       for sites that take a file per side.
+//   <slug>.pdf                          both faces in one two-page PDF.
 //   all-cards.pdf                       everyone, front then back, for sites
 //                                       that take one file per order.
 // See content/business-cards/README.md for the upload settings.
@@ -88,7 +90,8 @@ const PEOPLE = [
     title: "Co-founder & Event Manager",
     roles: "DJ · MC · Acoustic · Bar",
     email: "nic@crossroadsweddingco.com",
-    phone: "(812) 447-3878",
+    // Work number (Jacob, 2026-09-04); the earlier card carried his personal one.
+    phone: "(812) 343-6961",
     mosaicTitle: "Chief Operating Officer",
   },
   {
@@ -498,7 +501,11 @@ const allSheets = [];
 for (const p of PEOPLE) {
   if (!p.phone) console.warn(`! ${p.name}: no phone number yet, the phone line is left off both faces`);
 
-  const qrTarget = `${SITE_URL}/book?ref=${p.slug}`;
+  // /book?with=<slug> opens this person's own call-booking calendar
+  // (lib/schedulers.ts). The link lives on our domain, so what it shows can
+  // change any time without reprinting; the slug itself is printed and must
+  // never be renamed. An unknown slug lands on the plain booking page.
+  const qrTarget = `${SITE_URL}/book?with=${p.slug}`;
   const qrSvg = (
     await QRCode.toString(qrTarget, {
       type: "svg",
@@ -528,6 +535,10 @@ for (const p of PEOPLE) {
     const out = path.join(OUT_DIR, `${p.slug}-${side}.png`);
     await fs.writeFile(out, withDpi(await fs.readFile(raw), DPI));
     console.log(`${rel(out)}  ${await sizeKb(out)}`);
+
+    const sidePdf = path.join(OUT_DIR, `${p.slug}-${side}.pdf`);
+    printPdf(htmlFile, sidePdf);
+    console.log(`${rel(sidePdf)}  ${await sizeKb(sidePdf)}`);
   }
 
   const pdf = path.join(OUT_DIR, `${p.slug}.pdf`);
@@ -555,7 +566,7 @@ body{background:#7a756f;padding:.3in}
   let instance = 100;
   for (const p of PEOPLE) {
     const qrSvg = (
-      await QRCode.toString(`${SITE_URL}/book?ref=${p.slug}`, {
+      await QRCode.toString(`${SITE_URL}/book?with=${p.slug}`, {
         type: "svg",
         errorCorrectionLevel: "M",
         margin: 0,
