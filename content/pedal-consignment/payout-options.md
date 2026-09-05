@@ -1,6 +1,9 @@
 # Pedal consignment: the three payout options
 
-Rough draft, 2026-09-05. Numbers are 60 / 80 / 90 per Jacob. Beat it up.
+Numbers are 60 / 80 / 90 per Jacob, 2026-09-05. The "even tighter" version below is
+the one Jacob chose, and it now drives the outreach tool in the Claude_Edit repo
+(app/admin/outreach/document.ts, the three offer blocks and the store-opening setup
+message). This file is the human-readable record; the tool is what sends it.
 
 ## Short message (send this one)
 
