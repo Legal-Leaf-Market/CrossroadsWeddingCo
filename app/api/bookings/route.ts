@@ -8,7 +8,12 @@ import { weddings } from "@/lib/db/schema";
 import { sendBookingEmails } from "@/lib/email";
 import { sendBookingTexts } from "@/lib/sms";
 import { parsePlaylistId } from "@/lib/spotify";
-import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD, DEPOSIT_USD, DJ_DAY_RATE_USD } from "@/lib/site";
+import {
+  ACOUSTIC_ADDON_USD,
+  bartenderFeeUsd,
+  DEPOSIT_USD,
+  DJ_DAY_RATE_USD,
+} from "@/lib/site";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,6 +84,9 @@ const bookingSchema = z.object({
   // with the DJ implied like it always was.
   services: z.array(z.enum(["dj", "acoustic", "bartender"])).max(3).optional(),
   addons: z.array(z.enum(["acoustic", "bartender"])).max(2).optional().default([]),
+  // Crew size for the bar. Clamped to the two published tiers; an older
+  // cached form that omits it books one bartender, which is the common case.
+  bartenderCount: z.coerce.number().int().min(1).max(2).optional().default(1),
   spotifyPlaylistUrl: z.string().trim().max(500, "That link is too long").optional().default(""),
   notes: z.string().trim().max(5000, "Please keep notes under 5,000 characters").optional().default(""),
   // Honeypot: hidden from humans, filled by bots.
@@ -137,18 +145,19 @@ export async function POST(req: NextRequest) {
   const hasDj = services.includes("dj");
   const hasAcoustic = services.includes("acoustic");
   const hasBartender = services.includes("bartender");
-  // Acoustic is a published flat rate. The bar minimum is owed before any
-  // quote happens, so it counts in the total, which everything downstream
-  // labels "before bar quote"; the final bar number comes from the intro
-  // call (CLAUDE.md §9.2, owner directive 2026-08-27). A-la-carte bookings
-  // simply have no DJ line (owner directive 2026-08-28).
+  // Every line is a published flat rate now, the bar included: it is priced by
+  // crew size rather than quoted off a floor (CLAUDE.md §9.2, owner directive
+  // 2026-10-03), so the total is final rather than "before bar quote".
+  // A-la-carte bookings simply have no DJ line (owner directive 2026-08-28).
+  const barStaff = data.bartenderCount;
+  const barFeeUsd = bartenderFeeUsd(barStaff);
   const totalUsd =
     (hasDj ? DJ_DAY_RATE_USD : 0) +
     (hasAcoustic ? ACOUSTIC_ADDON_USD : 0) +
-    (hasBartender ? BARTENDER_MIN_USD : 0);
+    (hasBartender ? barFeeUsd : 0);
   const addonsJson = [
     ...(hasAcoustic ? [{ type: "acoustic_set", fee: ACOUSTIC_ADDON_USD }] : []),
-    ...(hasBartender ? [{ type: "bar_service", fee: null, minFee: BARTENDER_MIN_USD }] : []),
+    ...(hasBartender ? [{ type: "bar_service", fee: barFeeUsd, staff: barStaff }] : []),
   ];
 
   // "Jane & Sam" for the hub heading. The four-field form builds it from first

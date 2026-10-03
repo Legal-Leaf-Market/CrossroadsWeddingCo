@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ACOUSTIC_ADDON_USD,
-  BARTENDER_MIN_USD,
+  BARTENDER_ONE_USD,
+  BARTENDER_TWO_USD,
+  bartenderFeeUsd,
   CONTACT_EMAIL,
   DEPOSIT_USD,
   DJ_DAY_RATE_USD,
@@ -25,6 +27,10 @@ export default function BookingForm({
   const [reference, setReference] = useState("");
   const [hubPath, setHubPath] = useState<string | null>(null);
   const [services, setServices] = useState<string[]>(initialServices);
+  // How many bartenders the night needs. One is the common case, so it is the
+  // default; the couple can say two here rather than discovering the number
+  // changed after they booked.
+  const [bartenderCount, setBartenderCount] = useState(1);
   const [noPlaylist, setNoPlaylist] = useState(false);
   // Extra people the couple wants in their hub. Starts as one empty row so the
   // field is visible and self-explanatory; the plus button adds more.
@@ -40,14 +46,15 @@ export default function BookingForm({
   const hasDj = services.includes("dj");
   const hasAcoustic = services.includes("acoustic");
   const hasBartender = services.includes("bartender");
-  // The bar minimum is owed before any quote happens, so it belongs in the
-  // total; the label marks the total as "before bar quote" (owner directive
-  // 2026-08-27). A-la-carte bookings (owner directive 2026-08-28) simply
-  // leave the DJ line out.
+  // Every line here is a real price now, including the bar (owner directive
+  // 2026-10-03): the total the couple sees at booking is the total they pay.
+  // A-la-carte bookings (owner directive 2026-08-28) simply leave the DJ line
+  // out.
+  const barFeeUsd = bartenderFeeUsd(bartenderCount);
   const totalUsd =
     (hasDj ? DJ_DAY_RATE_USD : 0) +
     (hasAcoustic ? ACOUSTIC_ADDON_USD : 0) +
-    (hasBartender ? BARTENDER_MIN_USD : 0);
+    (hasBartender ? barFeeUsd : 0);
 
   function toggleService(service: string) {
     setServices((prev) =>
@@ -77,6 +84,8 @@ export default function BookingForm({
           venueName: data.get("venueName"),
           venueAddress: data.get("venueAddress"),
           services,
+          // Only meaningful with the bar picked; the API ignores it otherwise.
+          bartenderCount,
           // A disabled input is absent from FormData; send an explicit empty
           // string so the API's string schema never sees null.
           spotifyPlaylistUrl: noPlaylist ? "" : (data.get("spotifyPlaylistUrl") ?? ""),
@@ -298,11 +307,37 @@ export default function BookingForm({
             />
             <span className="font-semibold text-cream">Bar service</span>
             <span className="mt-1 block text-sm text-cream/60">
-              Licensed bartenders. ${BARTENDER_MIN_USD} minimum; the real number depends on
-              your bar and gets quoted on your intro call.
+              Licensed bartenders. ${BARTENDER_ONE_USD} for one, ${BARTENDER_TWO_USD} for two.
             </span>
           </label>
         </div>
+        {hasBartender && (
+          <div className="mt-3 rounded-lg border border-cream/20 bg-cream/5 p-4">
+            <span className="block text-sm font-semibold text-cream/80">
+              How many bartenders?
+            </span>
+            <span className="mt-1 block text-xs text-cream/50">
+              Not sure? Leave it at one and we will size it with you on the call.
+            </span>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[1, 2].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setBartenderCount(n)}
+                  aria-pressed={bartenderCount === n}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                    bartenderCount === n
+                      ? "bg-terracotta text-cream"
+                      : "border border-cream/25 text-cream/70 hover:border-cream/50"
+                  }`}
+                >
+                  {n === 1 ? "One" : "Two"} · ${bartenderFeeUsd(n)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {services.length === 0 && (
           <p className="mt-3 text-sm text-terracotta">
             Pick at least one so we know what to check the calendar for.
@@ -364,12 +399,12 @@ export default function BookingForm({
         )}
         {hasBartender && (
           <div className="mt-1 flex items-center justify-between">
-            <span>Bar service (fully quoted on your call)</span>
-            <span>from ${BARTENDER_MIN_USD}</span>
+            <span>Bar service ({bartenderCount === 1 ? "one bartender" : "two bartenders"})</span>
+            <span>${barFeeUsd}</span>
           </div>
         )}
         <div className="mt-2 flex items-center justify-between border-t border-cream/20 pt-2 font-semibold text-cream">
-          <span>Total{hasBartender ? " (before bar quote)" : ""}</span>
+          <span>Total</span>
           <span>${totalUsd.toLocaleString("en-US")}</span>
         </div>
         <p className="mt-2 text-xs text-cream/50">

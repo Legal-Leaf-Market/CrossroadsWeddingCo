@@ -6,7 +6,8 @@ import BookCallCard from "@/components/BookCallCard";
 import { CITIES, cityPath, getCity } from "@/lib/cities";
 import {
   ACOUSTIC_ADDON_USD,
-  BARTENDER_MIN_USD,
+  BARTENDER_ONE_USD,
+  BARTENDER_TWO_USD,
   DEPOSIT_USD,
   DJ_DAY_RATE_USD,
   SITE_NAME,
@@ -131,7 +132,7 @@ export default async function CityPage({ params }: { params: Promise<Params> }) 
                   &bull; Live acoustic set: flat ${ACOUSTIC_ADDON_USD}
                 </li>
                 <li>
-                  &bull; Bar service: from ${BARTENDER_MIN_USD}, fully quoted on your intro call
+                  &bull; Bar service: ${BARTENDER_ONE_USD} for one bartender, ${BARTENDER_TWO_USD} for two
                 </li>
                 {data.hasTravelSurcharge && (
                   <li className="sm:col-span-2">

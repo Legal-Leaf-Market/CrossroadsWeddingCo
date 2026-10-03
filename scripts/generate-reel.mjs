@@ -139,7 +139,7 @@ const SLIDES = [
         node: bodyText(
           44,
           COLORS.ink,
-          "$500 is the minimum, not the price. Your guest count and your shelf set the real number, and we quote it on your intro call.",
+          "$250 for one bartender, $400 for two. Your guest count tells us how many you need, and we settle that on your intro call.",
           { marginTop: 52, maxWidth: 880 },
         ),
       },

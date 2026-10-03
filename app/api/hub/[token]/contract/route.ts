@@ -3,7 +3,12 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
-import { buildContract, CONTRACT_VERSION, servicesFromAddons } from "@/lib/contract";
+import {
+  bartenderStaffFromAddons,
+  buildContract,
+  CONTRACT_VERSION,
+  servicesFromAddons,
+} from "@/lib/contract";
 import { getWeddingByToken } from "@/lib/hub";
 import { formatEventDate } from "@/lib/hub-constants";
 
@@ -67,6 +72,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ token: str
       totalUsd: Number(wedding.totalAmount),
       depositUsd: Number(wedding.depositAmount),
       customTerms: wedding.customTerms,
+      bartenderStaff: bartenderStaffFromAddons(wedding.addons),
     }),
   };
 

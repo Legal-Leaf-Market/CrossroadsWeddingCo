@@ -1,6 +1,5 @@
 import { Resend } from "resend";
 import {
-  BARTENDER_MIN_USD,
   DEPOSIT_USD,
   EMAIL_FROM_ADDRESS,
   OWNER_EMAIL,
@@ -61,9 +60,7 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
         ]
       : []),
     ``,
-    booking.services.includes("bartender")
-      ? `Your quote: $${booking.totalUsd.toLocaleString("en-US")} before the bar quote. That includes the $${BARTENDER_MIN_USD} bar minimum; the final bar number depends on your guest count and shelf and gets set on your intro call (booked: ${bookedLine}).`
-      : `Your quote: $${booking.totalUsd.toLocaleString("en-US")} (booked: ${bookedLine}).`,
+    `Your quote: $${booking.totalUsd.toLocaleString("en-US")} (booked: ${bookedLine}).`,
     `Reference: ${booking.reference}`,
     ``,
     booking.hubPath

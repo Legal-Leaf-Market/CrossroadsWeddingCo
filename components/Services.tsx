@@ -1,6 +1,6 @@
 import SafeImage from "@/components/SafeImage";
 import { IMAGES } from "@/lib/images";
-import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD } from "@/lib/site";
+import { ACOUSTIC_ADDON_USD, BARTENDER_ONE_USD, BARTENDER_TWO_USD } from "@/lib/site";
 
 const SERVICES: {
   title: string;
@@ -33,8 +33,10 @@ const SERVICES: {
     href: "/bartending",
     linkLabel: "How wedding bars work in Indiana",
     body: "Licensed, experienced bartenders for backyard and DIY-venue weddings where the venue doesn't provide one. Bring your own bar; we'll staff and run it. $" +
-      BARTENDER_MIN_USD +
-      " is the minimum, not the price: guest count and shelf set the real number, quoted straight on your intro call.",
+      BARTENDER_ONE_USD +
+      " for one bartender, $" +
+      BARTENDER_TWO_USD +
+      " for two. Your guest count tells us how many you need, and we settle that on your intro call.",
   },
   {
     title: "Day-Of Coordination",
