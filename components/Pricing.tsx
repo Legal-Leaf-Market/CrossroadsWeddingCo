@@ -1,4 +1,10 @@
-import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD, DEPOSIT_USD, DJ_DAY_RATE_USD } from "@/lib/site";
+import {
+  ACOUSTIC_ADDON_USD,
+  BARTENDER_ONE_USD,
+  BARTENDER_TWO_USD,
+  DEPOSIT_USD,
+  DJ_DAY_RATE_USD,
+} from "@/lib/site";
 
 export default function Pricing() {
   return (
@@ -29,7 +35,7 @@ export default function Pricing() {
             </p>
             <p>
               <span className="font-semibold text-charcoal">Bar service</span>: $
-              {BARTENDER_MIN_USD} minimum, real number quoted on your intro call
+              {BARTENDER_ONE_USD} for one bartender, ${BARTENDER_TWO_USD} for two
             </p>
           </div>
           <a

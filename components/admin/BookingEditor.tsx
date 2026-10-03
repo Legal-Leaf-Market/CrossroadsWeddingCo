@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ACOUSTIC_ADDON_USD, BARTENDER_MIN_USD } from "@/lib/site";
+import { ACOUSTIC_ADDON_USD, BARTENDER_ONE_USD } from "@/lib/site";
 import { ART_THEMES } from "@/lib/wedding-art";
 import type { AdminWedding } from "@/lib/admin";
 
@@ -64,8 +64,8 @@ export default function BookingEditor({
               ? [
                   wedding.addons.find((a) => a.type === "bar_service") ?? {
                     type: "bar_service",
-                    fee: null,
-                    minFee: BARTENDER_MIN_USD,
+                    fee: BARTENDER_ONE_USD,
+                    staff: 1,
                   },
                 ]
               : []),

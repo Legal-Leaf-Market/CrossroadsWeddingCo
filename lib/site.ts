@@ -35,10 +35,21 @@ export const DJ_DAY_RATE_USD = 1000;
 export const DEPOSIT_USD = 500;
 
 // Add-on pricing (owner-confirmed 2026-08-27, raised from 400 the same day
-// after the WeddingPro meeting): acoustic is flat, bartending is a floor with
-// the real quote settled on the intro call.
+// after the WeddingPro meeting): acoustic is flat.
 export const ACOUSTIC_ADDON_USD = 500;
-export const BARTENDER_MIN_USD = 500;
+
+// Bar service is priced by how many bartenders the night needs, not as a floor
+// that climbs (owner directive 2026-10-03, replacing the $500 minimum set
+// 2026-08-27). Guest count decides the count; the number the couple is quoted
+// is the number they pay. Deliberately NOT a "minimum" any more: no copy,
+// quote, or structured data may reintroduce that framing.
+export const BARTENDER_ONE_USD = 250;
+export const BARTENDER_TWO_USD = 400;
+
+/** The bar fee for a given crew size. Anything above two is still two-plus. */
+export function bartenderFeeUsd(staff: number): number {
+  return staff >= 2 ? BARTENDER_TWO_USD : BARTENDER_ONE_USD;
+}
 
 // Venues past ~60 minutes of Columbus carry a travel surcharge, quoted up
 // front and paid directly to the talent driving (docs/MASTER_SPEC_AND_STRATEGY.md §1.1).
@@ -78,9 +89,9 @@ export const SERVICE_OFFERS = [
   {
     name: "Bar Service",
     description:
-      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. $500 is the minimum, not the price: your guest count and your shelf set the real number, and we quote it straight on your intro call.",
+      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. $250 for one bartender, $400 for two. Your guest count tells us how many you need, and we settle that on your intro call.",
     priceUsd: null,
-    minPriceUsd: BARTENDER_MIN_USD,
+    minPriceUsd: BARTENDER_ONE_USD,
   },
   {
     name: "Day-Of Coordination",

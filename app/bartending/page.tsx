@@ -3,7 +3,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BookCallCard from "@/components/BookCallCard";
 import {
-  BARTENDER_MIN_USD,
+  BARTENDER_ONE_USD,
+  BARTENDER_TWO_USD,
   CONTACT_EMAIL,
   SERVICE_RADIUS_BLURB,
   SITE_NAME,
@@ -14,8 +15,8 @@ import {
 // Shareable a-la-carte page (owner directive 2026-08-28). Copy must never
 // imply we supply or sell alcohol: serve-only, per the standing legal rule in
 // CLAUDE.md §9.2. The couple provides the bar; we staff and run it.
-const TITLE = `Wedding bartenders for backyard and DIY venues: from $${BARTENDER_MIN_USD}`;
-const DESCRIPTION = `Licensed, experienced bartenders for weddings without in-house bar staff. You provide the alcohol, we set up, pour, and take care of your guests. Starting at $${BARTENDER_MIN_USD}, quoted straight on a short call. Books with our DJ package or entirely on its own.`;
+const TITLE = `Wedding bartenders for backyard and DIY venues: $${BARTENDER_ONE_USD} for one, $${BARTENDER_TWO_USD} for two`;
+const DESCRIPTION = `Licensed, experienced bartenders for weddings without in-house bar staff. You provide the alcohol, we set up, pour, and take care of your guests. $${BARTENDER_ONE_USD} for one bartender, $${BARTENDER_TWO_USD} for two. Books with our DJ package or entirely on its own.`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -41,10 +42,11 @@ export default function BartendingPage() {
       "@type": "Offer",
       priceSpecification: {
         "@type": "PriceSpecification",
-        minPrice: String(BARTENDER_MIN_USD),
+        minPrice: String(BARTENDER_ONE_USD),
+        maxPrice: String(BARTENDER_TWO_USD),
         priceCurrency: "USD",
       },
-      description: "Serve-only wedding bartending: the host provides the alcohol, we staff and run the bar. Final quote depends on guest count and bar setup.",
+      description: "Serve-only wedding bartending: the host provides the alcohol, we staff and run the bar. $250 for one bartender, $400 for two, set by guest count.",
     },
   };
 
@@ -55,7 +57,7 @@ export default function BartendingPage() {
         <section className="bg-charcoal py-20 text-cream">
           <div className="mx-auto max-w-4xl px-6">
             <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold">
-              A la carte or with our DJ package · From ${BARTENDER_MIN_USD}
+              A la carte or with our DJ package · ${BARTENDER_ONE_USD} for one, ${BARTENDER_TWO_USD} for two
             </p>
             <h1 className="max-w-2xl text-4xl leading-tight sm:text-5xl">
               Your bar, run by pros who do this for a living.
@@ -109,14 +111,14 @@ export default function BartendingPage() {
           <div className="mx-auto max-w-4xl px-6">
             <div className="rounded-2xl border-2 border-terracotta bg-cream p-8">
               <h2 className="text-2xl text-charcoal">
-                ${BARTENDER_MIN_USD} is the minimum, not the price.
+                ${BARTENDER_ONE_USD} for one bartender. ${BARTENDER_TWO_USD} for two.
               </h2>
               <p className="mt-3 text-ink/70">
-                Your guest count and your shelf set the real number: a hundred guests with
-                beer and wine is a different night than two hundred guests with a full
-                cocktail list, and bigger guest lists need a second bartender. So we don&apos;t
-                quote vague ranges on a website; we ask about your bar on a short call and
-                give you one straight number that doesn&apos;t move.
+                That is the whole price list. The only question is how many people you need
+                behind the bar, and your guest count answers it: a hundred guests on beer
+                and wine is a different night than two hundred with a full cocktail list. We
+                ask about your bar on a short call, tell you which one you need, and that
+                number does not move afterward.
               </p>
               <p className="mt-3 text-ink/70">
                 And yes, it books entirely on its own. Already have your DJ? Our bartenders

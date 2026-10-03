@@ -1,6 +1,6 @@
 import {
   ACOUSTIC_ADDON_USD,
-  BARTENDER_MIN_USD,
+  bartenderFeeUsd,
   DEPOSIT_USD,
   DJ_DAY_RATE_USD,
   EMAIL_FROM_ADDRESS,
@@ -21,7 +21,7 @@ import {
 // before it carries real weight. Bump CONTRACT_VERSION on any wording change
 // so accepted snapshots stay traceable to the text that was accepted.
 
-export const CONTRACT_VERSION = "2026-08-30b";
+export const CONTRACT_VERSION = "2026-10-03";
 
 export type ContractInput = {
   coupleNames: string;
@@ -31,6 +31,8 @@ export type ContractInput = {
   services: string[];
   totalUsd: number;
   depositUsd: number;
+  /** How many bartenders the booking carries. Only read when bar is a service. */
+  bartenderStaff?: number;
   /** Replaces the standard cost section verbatim when the deal is bespoke. */
   customTerms?: string | null;
 };
@@ -52,6 +54,17 @@ export function servicesFromAddons(
   return out;
 }
 
+/**
+ * Crew size for the bar, from the stored addons JSON. Bookings taken before
+ * bar service was priced per bartender carry no staff field; they were all
+ * sold as a single-bartender night, so one is the honest default.
+ */
+export function bartenderStaffFromAddons(addons: unknown): number {
+  const rows = Array.isArray(addons) ? (addons as { type?: string; staff?: unknown }[]) : [];
+  const bar = rows.find((r) => r.type === "bar_service");
+  return typeof bar?.staff === "number" && bar.staff >= 2 ? 2 : 1;
+}
+
 export function buildContract(input: ContractInput): ContractSection[] {
   const hasDj = input.services.includes("dj");
   const hasAcoustic = input.services.includes("acoustic");
@@ -60,6 +73,8 @@ export function buildContract(input: ContractInput): ContractSection[] {
   // "$1,000 flat" beside a service the couple settled another way reads like a
   // bill, so those lines name the usual rate and point at the cost section.
   const bespoke = Boolean(input.customTerms?.trim());
+  const barStaff = input.bartenderStaff === 2 ? 2 : 1;
+  const barFee = bartenderFeeUsd(barStaff);
   const rate = (n: number) => (bespoke ? `normally ${money(n)}` : `${money(n)} flat`);
 
   const whatWeDo: string[] = [];
@@ -75,7 +90,7 @@ export function buildContract(input: ContractInput): ContractSection[] {
   }
   if (hasBar) {
     whatWeDo.push(
-      `Bar service, starting at ${money(BARTENDER_MIN_USD)}${bespoke ? " as a rule" : ""}. That minimum is not the final price: your guest count and what you are serving set the real number, and we quote it to you in writing before the wedding. We provide licensed, experienced bartenders who set up, serve all night, and break down the bar.`,
+      `Bar service with ${barStaff === 1 ? "one bartender" : "two bartenders"}, ${rate(barFee)}. We provide licensed, experienced bartenders who set up, serve all night, and break down the bar. If your guest count changes enough to need a different crew, we tell you before the wedding and the price moves to our published rate for that size: ${money(bartenderFeeUsd(1))} for one, ${money(bartenderFeeUsd(2))} for two. It never goes anywhere else.`,
     );
   }
 
@@ -96,9 +111,7 @@ export function buildContract(input: ContractInput): ContractSection[] {
             ...input.customTerms.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean),
           ]
         : [
-        hasBar && input.services.length === 1
-          ? `Your bar service starts at ${money(BARTENDER_MIN_USD)} and gets quoted in writing once we know your guest count and what you are pouring.`
-          : `Your total is ${money(input.totalUsd)}${hasBar ? `, plus whatever your bar quote comes to above the ${money(BARTENDER_MIN_USD)} minimum included here` : ""}.`,
+        `Your total is ${money(input.totalUsd)}. Every service above is a published flat rate, so this is the whole number, not a starting point.`,
         `A deposit of ${money(input.depositUsd)} is due when you accept this agreement. It locks your date, comes off your total, and is non-refundable, because once we hold your date we stop offering it to anyone else.`,
         `The balance is due 24 hours after your wedding start time. A 3 PM wedding means the balance is due by 3 PM the next day. We ask for the balance after the wedding, not before, because you should not pay in full for something that has not happened yet.`,
         `That same 24 hours is your window to tell us anything you were unhappy about. If we fell short, say so in that window and we will adjust the invoice. We would rather fix a number than have you tell your friends we were not worth it.`,

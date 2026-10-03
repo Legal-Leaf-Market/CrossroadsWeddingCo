@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ContractView from "@/components/hub/ContractView";
 import PrintButton from "@/components/hub/PrintButton";
-import { buildContract, servicesFromAddons, type ContractSection } from "@/lib/contract";
+import {
+  bartenderStaffFromAddons,
+  buildContract,
+  servicesFromAddons,
+  type ContractSection,
+} from "@/lib/contract";
 import { getWeddingByToken } from "@/lib/hub";
 import { formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME } from "@/lib/site";
@@ -39,6 +44,7 @@ export default async function ContractPage({
           totalUsd: Number(wedding.totalAmount),
           depositUsd: Number(wedding.depositAmount),
           customTerms: wedding.customTerms,
+          bartenderStaff: bartenderStaffFromAddons(wedding.addons),
         });
 
   return (

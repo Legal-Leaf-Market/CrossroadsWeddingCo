@@ -27,7 +27,7 @@ const SLIDES = [
       { layer: "rule", node: rule(COLORS.terracotta, { marginTop: 48 }) },
       {
         layer: "sub",
-        node: display(64, COLORS.cream, "Wedding bar service, starting at $500.", {
+        node: display(64, COLORS.cream, "Wedding bar service. $250 for one, $400 for two.", {
           marginTop: 48,
           maxWidth: 900,
         }),
@@ -129,14 +129,14 @@ const SLIDES = [
       { key: "body", anim: "rise", t: 0.8 },
     ],
     children: [
-      { layer: "headline", node: display(88, COLORS.cream, "$500 is the minimum, not the price.", { maxWidth: 910 }) },
+      { layer: "headline", node: display(88, COLORS.cream, "$250 for one bartender. $400 for two.", { maxWidth: 910 }) },
       { layer: "rule", node: rule(COLORS.terracotta, { marginTop: 52 }) },
       {
         layer: "body",
         node: bodyText(
           44,
           COLORS.muted,
-          "Guest count and shelf set the real number, and bigger guest lists take a second bartender. We ask about your bar on a short call and give you one straight quote.",
+          "That is the whole price list. Your guest count tells us how many you need, bigger lists take a second bartender, and we settle it on a short call.",
           { marginTop: 52, maxWidth: 880 },
         ),
       },

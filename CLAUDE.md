@@ -357,6 +357,22 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   guest count move the price. The booking flow adds $500 to the total for acoustic;
   bartending is stored as an interest flag with a $500 floor. Both were $400 until
   2026-08-27; the spec's §1.2 add-on table predates the change.
+- **Bar service is priced per bartender (2026-10-03, Jacob), replacing the $500
+  minimum:** $250 for one bartender, $400 for two. This is a model change, not a
+  number change: there is no "minimum" any more, so no copy, quote, or structured
+  data may reintroduce that framing. Guest count decides the crew size, the crew
+  size decides the price, and the number quoted at booking is the number paid.
+  `BARTENDER_MIN_USD` is gone; `BARTENDER_ONE_USD`, `BARTENDER_TWO_USD` and
+  `bartenderFeeUsd(staff)` replace it, and tsc catches any stale consumer. The
+  /book form carries a one-or-two picker (owner directive, same day) so the total
+  shown at booking is final; `addons` now stores `{type:"bar_service", fee, staff}`
+  where it used to store `{fee:null, minFee:500}`, and `bartenderStaffFromAddons`
+  reads older rows as one bartender, which is how they were all sold. The
+  agreement names the crew size and both published rates, and says the price moves
+  only between them if the guest count changes. CONTRACT_VERSION bumped to
+  2026-10-03. NOT YET REFLECTED: the published main reel's recorded voiceover still
+  says "five hundred is the minimum" at 0:14; the on-screen text is corrected in
+  `scripts/generate-reel.mjs` but the mp4 needs a re-record before it is re-rendered.
 - **Bar service is serve-only, never sell (standing until legal review says otherwise,
   2026-08-27):** the couple or venue provides the alcohol; we staff and pour. Selling or
   marking up alcohol in Indiana requires a quota-bound three-way retailer permit (secondary
