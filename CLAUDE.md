@@ -436,6 +436,20 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   with upside. When approved: add him to `lib/team.ts` (appears on the site instantly)
   and to the partner-economics records.
 
+- **Back to Jake and Nic only (2026-10-06, Jacob: "Brayton and Ashton need to be
+  scraped from the site and it's just Jake Nic for now").** Both came out of
+  `lib/team.ts`, which is the only edit the removal needed: `lib/schedulers.ts`
+  derives from TEAM and skips a slug with no entry, so `/book?with=brayton` and
+  `?with=ashton` fall through to the ordinary booking page rather than 404ing a
+  printed QR code. Their slugs STAY listed in `BOOKABLE` and must never be
+  reused for a different person, because the cards are printed. `TEAM_NAMES`
+  (hub-constants) drops to Jake and Nic, so the admin reply picker offers only
+  people who can actually reply; `isTeamName` already guards localStorage, so a
+  device holding "Brayton" falls back to Jake instead of breaking. Their seeded
+  `office_hours` rows are left in place, harmless: the booking API re-derives
+  every slot from `findScheduler`, which now returns null for them, so nothing
+  can be booked against those hours. Restoring either person is putting their
+  entry back in `lib/team.ts` and nothing else.
 - **Kat McKinney's wedding is the first live one: November 7 (2026-08-28, Jacob).**
   Partner is **Tanis** (confirmed 2026-08-30 from her own hub record; the earlier
   "tennis" was a voice-transcription artifact). Married name on her run sheet: **Copeland**.

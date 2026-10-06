@@ -43,7 +43,14 @@ export type Scheduler = {
   notifyEmail: string;
 };
 
-/** The slug on each printed card, and the env var that can override its address. */
+/**
+ * The slug on each printed card, and the env var that can override its address.
+ *
+ * brayton and ashton are RESERVED, not bookable: they came off the team
+ * 2026-10-06 and the flatMap below skips any slug with no lib/team.ts entry, so
+ * a scanned card lands on the ordinary booking page instead of a dead one.
+ * They stay listed so nobody reuses a printed slug for a different person.
+ */
 const BOOKABLE: { slug: string; envVar: string }[] = [
   { slug: "jake", envVar: "SCHEDULER_EMAIL_JAKE" },
   { slug: "nic", envVar: "SCHEDULER_EMAIL_NIC" },
