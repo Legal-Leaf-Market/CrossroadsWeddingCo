@@ -1,0 +1,21 @@
+# Netlify reads this file alongside the Next.js runtime. No [build] section on
+# purpose: build settings stay where they are in the Netlify UI.
+
+# Crossroads Private Line (the encrypted messaging tool) lives in its own repo,
+# Legal-Leaf-Market/messaging, deployed as messging.netlify.app. These rules
+# serve it here at /messaging/ without the wedding site touching the request.
+#
+# Order matters. Netlify normalizes trailing slashes before matching, so the
+# proxy rule has to come first: if the 301 came first it could also match
+# /messaging/ and redirect to itself forever.
+[[redirects]]
+  from = "/messaging/*"
+  to = "https://messging.netlify.app/messaging/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/messaging"
+  to = "/messaging/"
+  status = 301
+  force = true

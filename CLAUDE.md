@@ -527,6 +527,15 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   same rows. Same zero-auth read-only token as the vendor live view. It reads live data,
   so unlike an exported graphic it cannot drift from the run sheet.
 
+- **/messaging is a proxy, not part of this app (2026-10-13, Jacob).** Crossroads Private
+  Line, the encrypted 1-to-1 text, voice and video tool, lives in its own repo
+  (Legal-Leaf-Market/messaging), deployed on Netlify as messging.netlify.app, and is served
+  here at crossroadsweddingco.shop/messaging/. `netlify.toml` proxies it at Netlify's edge
+  (proxy rule first, then the /messaging 301, because Netlify normalizes trailing slashes),
+  and `next.config.mjs` `rewrites()` does the same on any other host. Do not add a route,
+  middleware or Permissions-Policy header that covers /messaging: the tool needs the camera
+  and microphone on this origin. Change the tool in its own repo, not here.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:
