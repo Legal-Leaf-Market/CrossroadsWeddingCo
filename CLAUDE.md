@@ -535,6 +535,12 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   and `next.config.mjs` `rewrites()` does the same on any other host. Do not add a route,
   middleware or Permissions-Policy header that covers /messaging: the tool needs the camera
   and microphone on this origin. Change the tool in its own repo, not here.
+- **The live site is on Netlify, not Vercel (owner-confirmed 2026-10-13).**
+  crossroadsweddingco.shop answers with `server: Netlify`; Netlify project
+  comforting-kataifi-0c8252 builds from `main`. References to Vercel elsewhere in this file
+  predate the move. Consequence still open: Netlify ignores `vercel.json`, so the daily
+  `/api/cron/checkins` job declared there does not run until it is recreated as a Netlify
+  scheduled function. Environment variables now live in Netlify's site settings.
 
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
