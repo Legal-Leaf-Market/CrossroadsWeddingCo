@@ -228,7 +228,7 @@ const SLIDES = [
       color: COLORS.cream,
       eyebrow: "Let's talk it through",
       eyebrowColor: COLORS.gold,
-      footer: "crossroadsweddingco.com",
+      footer: "crossroadsweddingco.shop",
       footerColor: COLORS.muted,
       children: [
         display(88, COLORS.cream, "A short call, and you'll know if we're your crew.", { maxWidth: 860 }),

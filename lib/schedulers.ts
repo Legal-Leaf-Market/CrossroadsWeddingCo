@@ -2,7 +2,7 @@
  * Who can be booked for an intro call, and where their alert goes.
  *
  * These slugs are PRINTED. Every business card carries a QR code resolving to
- * crossroadsweddingco.com/book?with=<slug>, so renaming one silently breaks a
+ * crossroadsweddingco.shop/book?with=<slug>, so renaming one silently breaks a
  * stack of cards already in people's hands. Add, never rename.
  *
  * NAME AND TITLE COME FROM lib/team.ts, they are not repeated here. This file
@@ -30,7 +30,7 @@ export type Scheduler = {
    * Where this person's booking alert goes.
    *
    * THE DEFAULT IS THE ADDRESS ON THEIR OWN BUSINESS CARD, not an env var and
-   * not the owner. All four `@crossroadsweddingco.com` addresses are printed
+   * not the owner. All four `@crossroadsweddingco.shop` addresses are printed
    * on the cards and confirmed to exist (CARD_PRINT_SPEC.md), so the correct
    * value is already a settled public fact and there is nothing to remember in
    * a dashboard. An env var that has to be set before a feature works right is
@@ -60,7 +60,7 @@ const BOOKABLE: { slug: string; envVar: string }[] = [
 
 function notifyEmailFor(slug: string, envVar: string): string {
   const own = process.env[envVar]?.trim();
-  return own && own.includes("@") ? own : `${slug}@crossroadsweddingco.com`;
+  return own && own.includes("@") ? own : `${slug}@crossroadsweddingco.shop`;
 }
 
 export const SCHEDULERS: Scheduler[] = BOOKABLE.flatMap(({ slug, envVar }) => {

@@ -146,7 +146,7 @@ const SLIDES = [
     color: COLORS.cream,
     eyebrow: "Let's find your sound",
     eyebrowColor: COLORS.gold,
-    footer: "crossroadsweddingco.com/acoustic",
+    footer: "crossroadsweddingco.shop/acoustic",
     footerColor: COLORS.muted,
     layers: [
       { key: "chrome", anim: "fade", t: 0.0 },

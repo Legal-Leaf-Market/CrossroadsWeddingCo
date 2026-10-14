@@ -176,7 +176,7 @@ const SLIDES = [
     color: COLORS.cream,
     eyebrow: "Let's talk your bar",
     eyebrowColor: COLORS.gold,
-    footer: "crossroadsweddingco.com/bartending",
+    footer: "crossroadsweddingco.shop/bartending",
     footerColor: COLORS.muted,
     layers: [
       { key: "chrome", anim: "fade", t: 0.0 },

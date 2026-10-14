@@ -17,10 +17,10 @@ pnpm ig:posts   # regenerate the Instagram images in content/instagram/
 | --- | --- | --- |
 | `DATABASE_URL` | Lead form, booking flow, schema migration | Postgres connection string. Name is matched case-insensitively (`POSTGRES_URL` and friends also work) and the value is sanitized, so quoted or prefixed pastes still resolve; the build log prints the host it dialed. `pnpm build` applies `scripts/phase1-schema.sql` (idempotent, additive) before compiling; run `pnpm db:migrate` to apply it manually. |
 | `NEXT_PUBLIC_BOOKING_URL` | The "Book a call" card | Public booking page for the intro call. See below. |
-| `NEXT_PUBLIC_SITE_URL` | Canonical URLs | Optional. Defaults to `https://crossroadsweddingco.com`; set it on staging aliases or forks so canonicals and the sitemap don't point at production. |
+| `NEXT_PUBLIC_SITE_URL` | Canonical URLs | Optional. Defaults to `https://crossroadsweddingco.shop`; set it on staging aliases or forks so canonicals and the sitemap don't point at production. |
 | `RESEND_API_KEY` | Booking emails | Confirmation to the couple + notification to you on each booking request. Silent no-op while unset. |
-| `RESEND_FROM` | Booking emails | Optional. Defaults to `Crossroads Wedding Co. <hello@crossroadsweddingco.com>`, must be a Resend-verified domain. |
-| `RESEND_NOTIFY_TO` | Booking emails | Optional. Defaults to `jake@crossroadsweddingco.com`. |
+| `RESEND_FROM` | Booking emails | Optional. Defaults to `Crossroads Wedding Co. <hello@crossroadsweddingco.shop>`, must be a Resend-verified domain. |
+| `RESEND_NOTIFY_TO` | Booking emails | Optional. Defaults to `jake@crossroadsweddingco.shop`. |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Booking texts | Confirmation text to the couple (+ optional owner text via `TWILIO_NOTIFY_TO`). Needs a sender: `TWILIO_MESSAGING_SERVICE_SID` (preferred) or `TWILIO_FROM_NUMBER`. Silent no-op while unset. |
 | `STRIPE_SECRET_KEY` | `/api/checkout` | Deposit payments. Fails closed (501) while unset. |
 | `STRIPE_WEBHOOK_SECRET` | `/api/webhooks/stripe` | Marks deposits paid. Fails closed (501) while unset. |

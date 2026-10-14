@@ -96,7 +96,7 @@ drifted somewhere else, tell me and I'll re-cut them.
 > on the call.
 >
 > Book a 30-minute call with us from the link in bio, or email
-> hello@crossroadsweddingco.com.
+> hello@crossroadsweddingco.shop.
 >
 > #weddingdj #weddingmc #weddingplanning #backyardwedding #diywedding
 > #engaged #weddingvendors #weddingmusic #justengaged #weddingseason
@@ -110,7 +110,7 @@ drifted somewhere else, tell me and I'll re-cut them.
   post for local ones: #indianapoliswedding #indywedding #bloomingtonindiana
   #columbusindiana #browncountyindiana #louisvillewedding #cincinnatiwedding
   #indianabride #kentuckybride. Those reach couples who can actually book.
-- **"Link in bio"** assumes the bio points at crossroadsweddingco.com. All four
+- **"Link in bio"** assumes the bio points at crossroadsweddingco.shop. All four
   captions now ask for the 30-minute call, so once the booking page is live,
   pointing the bio link straight at it will convert better than the homepage.
 - Every claim here comes off the website: the rate, what's included, the flat
