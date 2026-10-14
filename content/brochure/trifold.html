@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crossroads Trifold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=block" rel="stylesheet">
+<style>
+  /* Letter landscape, C-fold (letter fold). Print at 100%, two-sided, flip on SHORT edge.
+     The fold-in flap is 1/16" narrower so it tucks without buckling. */
+  @page { size: 11in 8.5in; margin: 0; }
+  :root {
+    --cream: #faf5ec; --parchment: #f1e6d3; --charcoal: #2b2622; --ink: #3d362f;
+    --terra: #c1633d; --terra-dark: #a34d2b; --sage: #616b52; --gold: #cf9d4c; --leaf: #f8f3ea;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body { font-family: Karla, system-ui, sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet { width: 11in; height: 8.5in; display: flex; page-break-after: always; overflow: hidden; }
+  .sheet:last-child { page-break-after: auto; }
+  .panel { height: 8.5in; padding: 0.45in 0.4in; position: relative; display: flex; flex-direction: column; }
+  .w { width: 3.6875in; }
+  .n { width: 3.625in; }
+  /* faint fold guides, outside the safe area */
+  .panel + .panel::before { content: ""; position: absolute; left: 0; top: 0.12in; height: 0.12in; border-left: 0.5pt solid #d9cbb3; }
+  .panel + .panel::after { content: ""; position: absolute; left: 0; bottom: 0.12in; height: 0.12in; border-left: 0.5pt solid #d9cbb3; }
+
+  h1, h2, h3, .serif { font-family: Spectral, Georgia, serif; font-weight: 500; color: var(--charcoal); }
+  .eyebrow { font-size: 8pt; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); }
+  h2 { font-size: 22pt; line-height: 1.1; margin-top: 6pt; }
+  .price { font-family: Spectral, Georgia, serif; font-size: 30pt; font-weight: 600; color: var(--terra); line-height: 1; margin-top: 12pt; }
+  .price small { font-family: Karla, sans-serif; font-size: 9pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); margin-left: 4pt; }
+  p { font-size: 9.6pt; line-height: 1.5; }
+  .lead { font-size: 10.2pt; margin-top: 12pt; }
+  ul.checks { list-style: none; margin-top: 12pt; }
+  ul.checks li { font-size: 9.4pt; line-height: 1.4; padding-left: 14pt; position: relative; margin-bottom: 5.5pt; }
+  ul.checks li::before { content: ""; position: absolute; left: -1pt; top: 2.5pt; width: 9pt; height: 9pt; background: linear-gradient(90deg, var(--gold) 50%, var(--terra) 50%); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+  .rule { height: 4pt; width: 0.7in; border-top: 1.5pt solid var(--gold); border-bottom: 1.5pt solid var(--gold); margin-top: 12pt; }
+  .divider { display: flex; align-items: center; gap: 6pt; margin-top: 14pt; }
+  .divider span { flex: 1; height: 3.5pt; border-top: 1pt solid var(--gold); border-bottom: 1pt solid var(--gold); }
+  .flower { width: 18pt; height: 18pt; flex: none; }
+  .fine { font-size: 8.2pt; line-height: 1.45; color: #6b6158; }
+  .foot { margin-top: auto; }
+  .icon { width: 0.5in; height: 0.5in; color: var(--sage); }
+  .box { border: 1.25pt solid var(--gold); background: var(--leaf); border-radius: 8pt; padding: 10pt 12pt; }
+  .tier { display: flex; justify-content: space-between; align-items: baseline; padding: 7pt 0; border-bottom: 0.75pt solid #e3cfa6; }
+  .tier:last-child { border-bottom: 0; }
+  .tier b { font-family: Spectral, Georgia, serif; font-weight: 600; font-size: 12pt; color: var(--charcoal); }
+  .tier span { font-size: 8.8pt; color: #6b6158; }
+  .tier .amt { font-family: Spectral, Georgia, serif; font-weight: 600; font-size: 15pt; color: var(--terra); }
+
+  /* ---------- front cover ---------- */
+  .cover { padding: 0.32in; }
+  .cover .frame { flex: 1; border: 4pt solid var(--gold); outline: 1.5pt solid var(--gold); outline-offset: -9pt; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0.42in 0.3in 0.32in; background: var(--leaf); }
+  .logo { width: 2.15in; height: 2.15in; }
+  .logo svg { width: 100%; height: 100%; display: block; }
+  .logo-sm { width: 0.75in; height: 0.75in; margin: 0 auto; }
+  .logo-sm svg { width: 100%; height: 100%; display: block; }
+  .mark { width: 0.8in; height: 0.8in; border-radius: 12pt; background: var(--terra); color: var(--cream); font-family: Spectral, serif; font-weight: 600; font-size: 40pt; line-height: 0.8in; }
+  .brand { margin-top: 16pt; font-family: Spectral, serif; font-size: 23pt; line-height: 1; color: var(--charcoal); letter-spacing: 0.02em; }
+  .brand2 { font-family: Spectral, serif; font-style: italic; font-size: 20pt; color: var(--terra); margin-top: 4pt; }
+  .tag { margin-top: 0; font-family: Spectral, serif; font-size: 19pt; line-height: 1.22; color: var(--charcoal); }
+  .tag em { color: var(--terra); font-style: italic; }
+  .diamonds { margin: 22pt 0 0; color: var(--gold); letter-spacing: 0.5em; font-size: 8pt; }
+  .svc { margin-top: 14pt; font-size: 8pt; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--sage); line-height: 1.9; }
+  .cover .foot { font-size: 8.4pt; letter-spacing: 0.08em; color: #6b6158; }
+
+  /* ---------- back ---------- */
+  .back { text-align: center; align-items: center; }
+  .qr { width: 1.55in; height: 1.55in; margin-top: 16pt; padding: 8pt; background: #fff; border: 1pt solid var(--parchment); border-radius: 6pt; }
+  .qr svg { width: 100%; height: 100%; display: block; }
+  .url { font-family: Spectral, serif; font-size: 13pt; color: var(--charcoal); margin-top: 10pt; }
+  .contact { margin-top: 18pt; font-size: 9.6pt; line-height: 1.7; }
+  .contact b { color: var(--charcoal); }
+  .area { margin-top: 18pt; text-align: center; }
+  .cities { font-family: Spectral, serif; font-size: 11pt; color: var(--charcoal); line-height: 1.5; margin-top: 6pt; }
+
+  /* ---------- flap: how it works ---------- */
+  ol.steps { list-style: none; margin-top: 14pt; counter-reset: s; }
+  ol.steps li { counter-increment: s; position: relative; padding-left: 30pt; margin-bottom: 13pt; }
+  ol.steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 20pt; height: 20pt; border-radius: 50%; border: 1.25pt solid var(--terra); color: var(--terra); font-family: Spectral, serif; font-weight: 600; font-size: 11pt; text-align: center; line-height: 18pt; }
+  ol.steps b { display: block; font-family: Spectral, serif; font-weight: 600; font-size: 11.5pt; color: var(--charcoal); margin-bottom: 1pt; }
+  ol.steps p { font-size: 9.2pt; }
+
+  /* inside panels get a soft head band */
+  .inside .panel { padding-top: 0.5in; }
+  .inside .lead { font-size: 11pt; }
+  .inside ul.checks li { font-size: 10.4pt; margin-bottom: 8pt; }
+  .inside .icon { width: 0.6in; height: 0.6in; }
+  .inside h2 { font-size: 25pt; }
+  .num { font-family: Spectral, serif; font-style: italic; color: var(--terra); font-size: 11pt; }
+</style>
+</head>
+<body>
+
+<!-- =================== PAGE 1: OUTSIDE =================== -->
+<section class="sheet">
+
+  <!-- fold-in flap -->
+  <div class="panel n">
+    <div class="eyebrow">How it works</div>
+    <h2>Flat prices.<br>No packages to decode.</h2>
+    <div class="divider"><span></span><svg class="flower" viewBox="0 0 40 40"><ellipse cx="20.0" cy="11.0" rx="9" ry="4.6" transform="rotate(-90.0 20.0 11.0)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="28.6" cy="17.2" rx="9" ry="4.6" transform="rotate(-18.0 28.6 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="25.3" cy="27.3" rx="9" ry="4.6" transform="rotate(54.0 25.3 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="14.7" cy="27.3" rx="9" ry="4.6" transform="rotate(126.0 14.7 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="11.4" cy="17.2" rx="9" ry="4.6" transform="rotate(198.0 11.4 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><circle cx="20" cy="20" r="4" fill="#c1633d"/></svg><span></span></div>
+    <ol class="steps">
+      <li><b>Check your date</b><p>Tell us your date and venue online, or book a free 30-minute intro call.</p></li>
+      <li><b>Lock it in</b><p>A deposit holds your date. For a DJ booking it's $500.</p></li>
+      <li><b>Plan from your phone</b><p>You get a private planning hub: your timeline, your music, every name we need to say right, and one message thread with our team.</p></li>
+      <li><b>Enjoy the day</b><p>We run it. Your balance isn't due until 24 hours after your wedding starts, and that same window is yours to tell us how we did.</p></li>
+    </ol>
+    <div class="foot box">
+      <p class="fine" style="color:var(--ink)">Book one service or stack all three. Most backyard and DIY-venue weddings end up wanting at least two.</p>
+    </div>
+  </div>
+
+  <!-- back -->
+  <div class="panel w back">
+    <div class="eyebrow">Check your date</div>
+    <h2 style="font-size:20pt">Scan to see if<br>we're free.</h2>
+    <div class="qr"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" shape-rendering="crispEdges"><path stroke="#2b2622" d="M0 0.5h7m1 0h2m3 0h1m2 0h5m1 0h7M0 1.5h1m5 0h1m1 0h1m2 0h1m1 0h2m1 0h2m2 0h1m1 0h1m5 0h1M0 2.5h1m1 0h3m1 0h1m2 0h2m2 0h3m2 0h3m1 0h1m1 0h3m1 0h1M0 3.5h1m1 0h3m1 0h1m1 0h2m7 0h1m4 0h1m1 0h3m1 0h1M0 4.5h1m1 0h3m1 0h1m5 0h5m2 0h1m2 0h1m1 0h3m1 0h1M0 5.5h1m5 0h1m2 0h1m1 0h1m2 0h1m2 0h3m2 0h1m5 0h1M0 6.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M8 7.5h1m4 0h5M0 8.5h1m1 0h2m1 0h3m1 0h3m1 0h7m2 0h1m2 0h1m1 0h2M0 9.5h2m1 0h1m1 0h1m1 0h1m2 0h1m1 0h1m3 0h1m1 0h3m1 0h3m3 0h1M3 10.5h2m1 0h5m3 0h1m3 0h1m5 0h1m1 0h2M0 11.5h1m2 0h1m4 0h4m1 0h4m1 0h4m6 0h1M0 12.5h1m2 0h2m1 0h1m4 0h1m3 0h1m1 0h1m5 0h1m1 0h2M0 13.5h1m8 0h1m3 0h1m1 0h3m1 0h1m1 0h2m3 0h3M4 14.5h1m1 0h1m2 0h2m3 0h1m2 0h1m1 0h2m1 0h3m1 0h3M1 15.5h4m2 0h3m1 0h1m1 0h1m2 0h1m2 0h5m3 0h1M0 16.5h1m1 0h2m2 0h4m1 0h1m3 0h1m2 0h1m2 0h1m1 0h3m1 0h1M2 17.5h2m1 0h1m1 0h2m1 0h4m1 0h3m2 0h1m2 0h1m1 0h3M0 18.5h1m2 0h5m2 0h2m3 0h1m1 0h1m2 0h1m1 0h1m3 0h1M2 19.5h1m1 0h1m2 0h1m1 0h1m7 0h7m2 0h1M1 20.5h1m1 0h1m2 0h1m2 0h2m1 0h2m3 0h1m1 0h8M8 21.5h1m2 0h4m1 0h5m3 0h5M0 22.5h7m1 0h1m4 0h1m2 0h1m1 0h3m1 0h1m1 0h2m1 0h1M0 23.5h1m5 0h1m1 0h1m1 0h2m3 0h1m4 0h1m3 0h2m1 0h2M0 24.5h1m1 0h3m1 0h1m2 0h4m1 0h1m2 0h1m2 0h5m1 0h1M0 25.5h1m1 0h3m1 0h1m1 0h3m3 0h5m1 0h2m2 0h2m2 0h1M0 26.5h1m1 0h3m1 0h1m1 0h3m1 0h1m1 0h1m1 0h2m5 0h1m2 0h1m1 0h1M0 27.5h1m5 0h1m4 0h2m1 0h2m4 0h2m1 0h1m1 0h1m1 0h1M0 28.5h7m1 0h1m2 0h3m1 0h1m2 0h4m1 0h1m3 0h1"/></svg>
+</div>
+    <div class="url">crossroadsweddingco.shop/book</div>
+    <div class="contact">
+      <b>hello@crossroadsweddingco.shop</b><br>
+      crossroadsweddingco.shop
+    </div>
+    <div class="divider" style="width:2.2in;margin:16pt auto 0"><span></span><svg class="flower" viewBox="0 0 40 40"><ellipse cx="20.0" cy="11.0" rx="9" ry="4.6" transform="rotate(-90.0 20.0 11.0)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="28.6" cy="17.2" rx="9" ry="4.6" transform="rotate(-18.0 28.6 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="25.3" cy="27.3" rx="9" ry="4.6" transform="rotate(54.0 25.3 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="14.7" cy="27.3" rx="9" ry="4.6" transform="rotate(126.0 14.7 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="11.4" cy="17.2" rx="9" ry="4.6" transform="rotate(198.0 11.4 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><circle cx="20" cy="20" r="4" fill="#c1633d"/></svg><span></span></div>
+    <div class="area">
+      <div class="eyebrow">Where we play</div>
+      <div class="cities">Based in Columbus, Indiana.<br>Indianapolis · Bloomington · Nashville<br>Louisville · Cincinnati</div>
+    </div>
+    <div class="foot"><div class="logo-sm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -5 975 975" role="img" aria-label="Crossroads Wedding Co. compass"><circle cx="487" cy="482" r="443" fill="#f8f3ea"/><circle cx="487" cy="482" r="432" fill="none" stroke="#cf9d4c" stroke-width="23"/><circle cx="487" cy="482" r="384" fill="none" stroke="#cf9d4c" stroke-width="23"/><circle cx="487" cy="482" r="322" fill="none" stroke="#c1633d" stroke-width="8"/><polygon fill="#616b52" points="621.4,616.4 436.1,532.9 487.0,482.0 537.9,431.1"/><polygon fill="#616b52" points="352.6,616.4 436.1,431.1 487.0,482.0 537.9,532.9"/><polygon fill="#616b52" points="352.6,347.6 537.9,431.1 487.0,482.0 436.1,532.9"/><polygon fill="#616b52" points="621.4,347.6 537.9,532.9 487.0,482.0 436.1,431.1"/><polygon fill="#cf9d4c" points="487.0,168.0 447.0,482.0 487.0,482.0"/><polygon fill="#c1633d" points="487.0,168.0 527.0,482.0 487.0,482.0"/><polygon fill="#cf9d4c" points="801.0,482.0 487.0,442.0 487.0,482.0"/><polygon fill="#c1633d" points="801.0,482.0 487.0,522.0 487.0,482.0"/><polygon fill="#cf9d4c" points="487.0,796.0 527.0,482.0 487.0,482.0"/><polygon fill="#c1633d" points="487.0,796.0 447.0,482.0 487.0,482.0"/><polygon fill="#cf9d4c" points="173.0,482.0 487.0,522.0 487.0,482.0"/><polygon fill="#c1633d" points="173.0,482.0 487.0,442.0 487.0,482.0"/><circle cx="511.0" cy="482.0" r="14" fill="#cf9d4c"/><circle cx="499.0" cy="502.8" r="14" fill="#cf9d4c"/><circle cx="475.0" cy="502.8" r="14" fill="#cf9d4c"/><circle cx="463.0" cy="482.0" r="14" fill="#cf9d4c"/><circle cx="475.0" cy="461.2" r="14" fill="#cf9d4c"/><circle cx="499.0" cy="461.2" r="14" fill="#cf9d4c"/><circle cx="487" cy="482" r="30" fill="#cf9d4c"/><ellipse cx="487.0" cy="457.8" rx="22.0" ry="9.0" transform="rotate(-90.0 487.0 457.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="508.0" cy="469.9" rx="22.0" ry="9.0" transform="rotate(-30.0 508.0 469.9)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="508.0" cy="494.1" rx="22.0" ry="9.0" transform="rotate(30.0 508.0 494.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="487.0" cy="506.2" rx="22.0" ry="9.0" transform="rotate(90.0 487.0 506.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="466.0" cy="494.1" rx="22.0" ry="9.0" transform="rotate(150.0 466.0 494.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="466.0" cy="469.9" rx="22.0" ry="9.0" transform="rotate(210.0 466.0 469.9)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="487.0" cy="482.0" r="11.0" fill="#c1633d"/><ellipse cx="487.0" cy="46.1" rx="29.0" ry="12.0" transform="rotate(-90.0 487.0 46.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="517.3" cy="68.1" rx="29.0" ry="12.0" transform="rotate(-18.0 517.3 68.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="505.8" cy="103.8" rx="29.0" ry="12.0" transform="rotate(54.0 505.8 103.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="468.2" cy="103.8" rx="29.0" ry="12.0" transform="rotate(126.0 468.2 103.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="456.7" cy="68.1" rx="29.0" ry="12.0" transform="rotate(198.0 456.7 68.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="487.0" cy="78.0" r="11.0" fill="#c1633d"/><ellipse cx="903.0" cy="450.1" rx="29.0" ry="12.0" transform="rotate(-90.0 903.0 450.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="933.3" cy="472.1" rx="29.0" ry="12.0" transform="rotate(-18.0 933.3 472.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="921.8" cy="507.8" rx="29.0" ry="12.0" transform="rotate(54.0 921.8 507.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="884.2" cy="507.8" rx="29.0" ry="12.0" transform="rotate(126.0 884.2 507.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="872.7" cy="472.1" rx="29.0" ry="12.0" transform="rotate(198.0 872.7 472.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="903.0" cy="482.0" r="11.0" fill="#c1633d"/><ellipse cx="487.0" cy="854.1" rx="29.0" ry="12.0" transform="rotate(-90.0 487.0 854.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="517.3" cy="876.1" rx="29.0" ry="12.0" transform="rotate(-18.0 517.3 876.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="505.8" cy="911.8" rx="29.0" ry="12.0" transform="rotate(54.0 505.8 911.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="468.2" cy="911.8" rx="29.0" ry="12.0" transform="rotate(126.0 468.2 911.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="456.7" cy="876.1" rx="29.0" ry="12.0" transform="rotate(198.0 456.7 876.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="487.0" cy="886.0" r="11.0" fill="#c1633d"/><ellipse cx="71.0" cy="450.1" rx="29.0" ry="12.0" transform="rotate(-90.0 71.0 450.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="101.3" cy="472.1" rx="29.0" ry="12.0" transform="rotate(-18.0 101.3 472.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="89.8" cy="507.8" rx="29.0" ry="12.0" transform="rotate(54.0 89.8 507.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="52.2" cy="507.8" rx="29.0" ry="12.0" transform="rotate(126.0 52.2 507.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="40.7" cy="472.1" rx="29.0" ry="12.0" transform="rotate(198.0 40.7 472.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="71.0" cy="482.0" r="11.0" fill="#c1633d"/></svg></div><p class="fine" style="margin-top:8pt">Venues more than about an hour from Columbus carry a $100–$150 travel surcharge, quoted up front.</p></div>
+  </div>
+
+  <!-- front cover -->
+  <div class="panel w cover">
+    <div class="frame">
+      <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -5 975 975" role="img" aria-label="Crossroads Wedding Co. compass"><circle cx="487" cy="482" r="443" fill="#f8f3ea"/><circle cx="487" cy="482" r="432" fill="none" stroke="#cf9d4c" stroke-width="23"/><circle cx="487" cy="482" r="384" fill="none" stroke="#cf9d4c" stroke-width="23"/><circle cx="487" cy="482" r="322" fill="none" stroke="#c1633d" stroke-width="8"/><polygon fill="#616b52" points="621.4,616.4 436.1,532.9 487.0,482.0 537.9,431.1"/><polygon fill="#616b52" points="352.6,616.4 436.1,431.1 487.0,482.0 537.9,532.9"/><polygon fill="#616b52" points="352.6,347.6 537.9,431.1 487.0,482.0 436.1,532.9"/><polygon fill="#616b52" points="621.4,347.6 537.9,532.9 487.0,482.0 436.1,431.1"/><polygon fill="#cf9d4c" points="487.0,168.0 447.0,482.0 487.0,482.0"/><polygon fill="#c1633d" points="487.0,168.0 527.0,482.0 487.0,482.0"/><polygon fill="#cf9d4c" points="801.0,482.0 487.0,442.0 487.0,482.0"/><polygon fill="#c1633d" points="801.0,482.0 487.0,522.0 487.0,482.0"/><polygon fill="#cf9d4c" points="487.0,796.0 527.0,482.0 487.0,482.0"/><polygon fill="#c1633d" points="487.0,796.0 447.0,482.0 487.0,482.0"/><polygon fill="#cf9d4c" points="173.0,482.0 487.0,522.0 487.0,482.0"/><polygon fill="#c1633d" points="173.0,482.0 487.0,442.0 487.0,482.0"/><circle cx="511.0" cy="482.0" r="14" fill="#cf9d4c"/><circle cx="499.0" cy="502.8" r="14" fill="#cf9d4c"/><circle cx="475.0" cy="502.8" r="14" fill="#cf9d4c"/><circle cx="463.0" cy="482.0" r="14" fill="#cf9d4c"/><circle cx="475.0" cy="461.2" r="14" fill="#cf9d4c"/><circle cx="499.0" cy="461.2" r="14" fill="#cf9d4c"/><circle cx="487" cy="482" r="30" fill="#cf9d4c"/><ellipse cx="487.0" cy="457.8" rx="22.0" ry="9.0" transform="rotate(-90.0 487.0 457.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="508.0" cy="469.9" rx="22.0" ry="9.0" transform="rotate(-30.0 508.0 469.9)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="508.0" cy="494.1" rx="22.0" ry="9.0" transform="rotate(30.0 508.0 494.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="487.0" cy="506.2" rx="22.0" ry="9.0" transform="rotate(90.0 487.0 506.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="466.0" cy="494.1" rx="22.0" ry="9.0" transform="rotate(150.0 466.0 494.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="466.0" cy="469.9" rx="22.0" ry="9.0" transform="rotate(210.0 466.0 469.9)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="487.0" cy="482.0" r="11.0" fill="#c1633d"/><ellipse cx="487.0" cy="46.1" rx="29.0" ry="12.0" transform="rotate(-90.0 487.0 46.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="517.3" cy="68.1" rx="29.0" ry="12.0" transform="rotate(-18.0 517.3 68.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="505.8" cy="103.8" rx="29.0" ry="12.0" transform="rotate(54.0 505.8 103.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="468.2" cy="103.8" rx="29.0" ry="12.0" transform="rotate(126.0 468.2 103.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="456.7" cy="68.1" rx="29.0" ry="12.0" transform="rotate(198.0 456.7 68.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="487.0" cy="78.0" r="11.0" fill="#c1633d"/><ellipse cx="903.0" cy="450.1" rx="29.0" ry="12.0" transform="rotate(-90.0 903.0 450.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="933.3" cy="472.1" rx="29.0" ry="12.0" transform="rotate(-18.0 933.3 472.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="921.8" cy="507.8" rx="29.0" ry="12.0" transform="rotate(54.0 921.8 507.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="884.2" cy="507.8" rx="29.0" ry="12.0" transform="rotate(126.0 884.2 507.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="872.7" cy="472.1" rx="29.0" ry="12.0" transform="rotate(198.0 872.7 472.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="903.0" cy="482.0" r="11.0" fill="#c1633d"/><ellipse cx="487.0" cy="854.1" rx="29.0" ry="12.0" transform="rotate(-90.0 487.0 854.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="517.3" cy="876.1" rx="29.0" ry="12.0" transform="rotate(-18.0 517.3 876.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="505.8" cy="911.8" rx="29.0" ry="12.0" transform="rotate(54.0 505.8 911.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="468.2" cy="911.8" rx="29.0" ry="12.0" transform="rotate(126.0 468.2 911.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="456.7" cy="876.1" rx="29.0" ry="12.0" transform="rotate(198.0 456.7 876.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="487.0" cy="886.0" r="11.0" fill="#c1633d"/><ellipse cx="71.0" cy="450.1" rx="29.0" ry="12.0" transform="rotate(-90.0 71.0 450.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="101.3" cy="472.1" rx="29.0" ry="12.0" transform="rotate(-18.0 101.3 472.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="89.8" cy="507.8" rx="29.0" ry="12.0" transform="rotate(54.0 89.8 507.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="52.2" cy="507.8" rx="29.0" ry="12.0" transform="rotate(126.0 52.2 507.8)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><ellipse cx="40.7" cy="472.1" rx="29.0" ry="12.0" transform="rotate(198.0 40.7 472.1)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="4"/><circle cx="71.0" cy="482.0" r="11.0" fill="#c1633d"/></svg></div>
+      <div class="brand">CROSSROADS</div>
+      <div class="brand2">Wedding Co.</div>
+      <div class="divider" style="width:1.9in;margin:12pt 0 14pt"><span></span><svg class="flower" viewBox="0 0 40 40"><ellipse cx="20.0" cy="11.0" rx="9" ry="4.6" transform="rotate(-90.0 20.0 11.0)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="28.6" cy="17.2" rx="9" ry="4.6" transform="rotate(-18.0 28.6 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="25.3" cy="27.3" rx="9" ry="4.6" transform="rotate(54.0 25.3 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="14.7" cy="27.3" rx="9" ry="4.6" transform="rotate(126.0 14.7 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="11.4" cy="17.2" rx="9" ry="4.6" transform="rotate(198.0 11.4 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><circle cx="20" cy="20" r="4" fill="#c1633d"/></svg><span></span></div>
+      <div class="tag">We run your day<br>so <em>you</em> don't<br>have to.</div>
+            <div class="svc">DJ &amp; MC &nbsp;·&nbsp; Live Music<br>Bar Service</div>
+      <div class="foot">COLUMBUS, INDIANA</div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== PAGE 2: INSIDE =================== -->
+<section class="sheet inside">
+
+  <!-- 1. DJ -->
+  <div class="panel w">
+    <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="17"/><circle cx="24" cy="24" r="6"/><circle cx="24" cy="24" r="1.2" fill="currentColor"/><path d="M24 7a17 17 0 0 1 17 17"/></svg>
+    <div class="eyebrow" style="margin-top:10pt"><span class="num">01</span>&nbsp; The DJ</div>
+    <h2>DJ &amp; MC</h2>
+    <div class="divider" style="margin-top:8pt"><span></span><svg class="flower" viewBox="0 0 40 40"><ellipse cx="20.0" cy="11.0" rx="9" ry="4.6" transform="rotate(-90.0 20.0 11.0)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="28.6" cy="17.2" rx="9" ry="4.6" transform="rotate(-18.0 28.6 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="25.3" cy="27.3" rx="9" ry="4.6" transform="rotate(54.0 25.3 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="14.7" cy="27.3" rx="9" ry="4.6" transform="rotate(126.0 14.7 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="11.4" cy="17.2" rx="9" ry="4.6" transform="rotate(198.0 11.4 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><circle cx="20" cy="20" r="4" fill="#c1633d"/></svg><span></span></div>
+    <div class="price">$1,000<small>flat</small></div>
+    <p class="lead">Ceremony sound, cocktail hour, reception, and every transition between them. We MC as much or as little as you want: a bold host, or invisible until it matters.</p>
+    <ul class="checks">
+      <li>Sound for ceremony, cocktail hour, and reception</li>
+      <li>MC duties, dialed up or down to taste</li>
+      <li>Day-of coordination built in: we call the cues and keep your timeline moving</li>
+      <li>Your private online planning hub</li>
+      <li>Bring your Spotify playlists; we build the night from them</li>
+      <li>A printed run sheet for your venue and vendors</li>
+    </ul>
+    <div class="foot box">
+      <p class="fine" style="color:var(--ink)"><b>$500 deposit</b> holds your date. The rest is due 24 hours after your wedding starts.</p>
+    </div>
+  </div>
+
+  <!-- 2. Live music -->
+  <div class="panel w">
+    <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 36V10l22-4v26"/><circle cx="13" cy="36" r="5"/><circle cx="35" cy="32" r="5"/><path d="M18 17l22-4"/></svg>
+    <div class="eyebrow" style="margin-top:10pt"><span class="num">02</span>&nbsp; The music</div>
+    <h2>Acoustic &amp; Piano</h2>
+    <div class="divider" style="margin-top:8pt"><span></span><svg class="flower" viewBox="0 0 40 40"><ellipse cx="20.0" cy="11.0" rx="9" ry="4.6" transform="rotate(-90.0 20.0 11.0)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="28.6" cy="17.2" rx="9" ry="4.6" transform="rotate(-18.0 28.6 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="25.3" cy="27.3" rx="9" ry="4.6" transform="rotate(54.0 25.3 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="14.7" cy="27.3" rx="9" ry="4.6" transform="rotate(126.0 14.7 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="11.4" cy="17.2" rx="9" ry="4.6" transform="rotate(198.0 11.4 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><circle cx="20" cy="20" r="4" fill="#c1633d"/></svg><span></span></div>
+    <p class="lead">Live guitar or piano for your ceremony or cocktail hour, played by real musicians in the room. Pair it with the DJ or book it on its own.</p>
+    <div class="box" style="margin-top:14pt">
+      <div class="tier"><div><b>Solo</b><br><span>one performer, guitar or piano</span></div><div class="amt">$500</div></div>
+      <div class="tier"><div><b>Duo</b><br><span>two musicians</span></div><div class="fine" style="text-align:right">priced on<br>your intro call</div></div>
+      <div class="tier"><div><b>Trio</b><br><span>three musicians</span></div><div class="fine" style="text-align:right">priced on<br>your intro call</div></div>
+    </div>
+    <ul class="checks">
+      <li>One hour is the sweet spot; two is the max</li>
+      <li>With 30 days' notice, we learn up to three songs just for you</li>
+      <li>The rest comes from our standing repertoire</li>
+    </ul>
+    <p class="fine foot">The solo set is a flat $500, on its own or alongside the DJ.</p>
+  </div>
+
+  <!-- 3. Bar -->
+  <div class="panel n">
+    <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 9h28L24 26z"/><path d="M24 26v13"/><path d="M16 39h16"/><path d="M15 14h18"/></svg>
+    <div class="eyebrow" style="margin-top:10pt"><span class="num">03</span>&nbsp; The bar</div>
+    <h2>Bar Service</h2>
+    <div class="divider" style="margin-top:8pt"><span></span><svg class="flower" viewBox="0 0 40 40"><ellipse cx="20.0" cy="11.0" rx="9" ry="4.6" transform="rotate(-90.0 20.0 11.0)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="28.6" cy="17.2" rx="9" ry="4.6" transform="rotate(-18.0 28.6 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="25.3" cy="27.3" rx="9" ry="4.6" transform="rotate(54.0 25.3 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="14.7" cy="27.3" rx="9" ry="4.6" transform="rotate(126.0 14.7 27.3)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><ellipse cx="11.4" cy="17.2" rx="9" ry="4.6" transform="rotate(198.0 11.4 17.2)" fill="#f8f3ea" stroke="#cf9d4c" stroke-width="1.6"/><circle cx="20" cy="20" r="4" fill="#c1633d"/></svg><span></span></div>
+    <p class="lead">Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff.</p>
+    <div class="box" style="margin-top:14pt">
+      <div class="tier"><div><b>One bartender</b></div><div class="amt">$250</div></div>
+      <div class="tier"><div><b>Two bartenders</b></div><div class="amt">$400</div></div>
+    </div>
+    <ul class="checks">
+      <li>Your guest count decides how many you need; we settle it on your intro call</li>
+      <li>The number we quote is the number you pay</li>
+      <li>You provide the drinks. We staff the bar and pour.</li>
+      <li>Book it on its own or add it to your DJ</li>
+    </ul>
+    <p class="fine foot">We never sell or supply alcohol. At licensed venues we work under the venue's permit.</p>
+  </div>
+</section>
+</body>
+</html>

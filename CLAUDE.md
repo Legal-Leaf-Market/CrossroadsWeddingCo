@@ -49,7 +49,7 @@ CREATE TABLE tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL, -- e.g., "Crossroads Columbus", "Crossroads Nashville"
     slug VARCHAR(100) UNIQUE NOT NULL, -- "columbus", "nashville"
-    domain VARCHAR(255), -- "crossroadsweddingco.com", "nashvilleweddingco.com"
+    domain VARCHAR(255), -- "crossroadsweddingco.shop", "nashvilleweddingco.com"
     stripe_account_id VARCHAR(255),
     royalty_rate NUMERIC(4, 3) DEFAULT 0.070, -- 7% platform fee
     is_active BOOLEAN DEFAULT true,
@@ -246,7 +246,7 @@ A synchronized, mobile-optimized live production clock for DJs, MCs, and Day-of 
 * **Estimated Timeline Calculation:** Each block computes dynamic start times based on preceding durations.
 * **Live-Drift Detection:** When an MC marks a timeline block as started (`actual_start_time`), the system calculates the delta against `scheduled_start_time`.
 * **Dynamic Cascade:** If speeches run 18 minutes over schedule, all downstream events (First Dance, Open Floor, Last Song) automatically shift +18 minutes in real time.
-* **Synchronized Web View:** Photographers and Venue staff access a zero-auth, read-only live URL (`crossroadsweddingco.com/live/[token]`) to stay aligned without verbal interruption.
+* **Synchronized Web View:** Photographers and Venue staff access a zero-auth, read-only live URL (`crossroadsweddingco.shop/live/[token]`) to stay aligned without verbal interruption.
 
 ### 4.3 The "Music Stand" & Acoustic Chord Transposer
 Directly inside the timeline run sheet, acoustic performers access chord sheets formatted in ChordPro:
@@ -285,7 +285,7 @@ To prevent cognitive overload, the portal reveals modules in chronological phase
 * **Email / Webhook Parser:** An edge route (`/api/webhooks/inbound-lead`) parses incoming lead notification emails from The Knot Worldwide.
 * **Instant Provisioning (Sub-60-Second SLA):**
   1. Creates an unconfirmed booking record in `weddings`.
-  2. Generates a personalized proposal URL (`crossroadsweddingco.com/quote/[slug]`).
+  2. Generates a personalized proposal URL (`crossroadsweddingco.shop/quote/[slug]`).
   3. Dispatches automated SMS & Email: *"Hey [Name]! Got your inquiry on The Knot. Your $1,000 flat-rate quote and custom planning portal are ready here: [Link]"*
 * **Competitive Bypass:** Pulls couples directly out of the congested multi-vendor lead inbox into a dedicated branded portal.
 
@@ -409,7 +409,7 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   Couple writes from the hub's Messages tab; Jake and Nic both read and reply from the
   admin dashboard, each reply labeled with the teammate's first name, and the couple sees
   one fluid Crossroads thread. Email's only job is getting the couple INTO the hub: all
-  transactional email sends from **booking@crossroadsweddingco.com** and says plainly
+  transactional email sends from **booking@crossroadsweddingco.shop** and says plainly
   "don't reply to this email, message us in your hub"; team replies trigger a pointer
   email only ("new message in your hub"), never the content. Couples can download their
   conversation any time. Jacob must keep booking@ alive as a Workspace alias/group
@@ -542,6 +542,18 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `/api/cron/checkins` job declared there does not run until it is recreated as a Netlify
   scheduled function. Environment variables now live in Netlify's site settings.
 
+- **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely
+  abandoned .com").** Web addresses AND email addresses moved to .shop; .com no longer
+  exists for us, so nothing may reintroduce it. `SITE_URL` falls back to the .shop host,
+  every address in `lib/site.ts`/`lib/schedulers.ts` is `@crossroadsweddingco.shop`, and
+  older .com mentions in this file were rewritten in place. Owner-side follow-ups: verify
+  crossroadsweddingco.shop as a sending domain in Resend (sends from booking@ fail until it
+  is), make sure Netlify's `NEXT_PUBLIC_SITE_URL`, `RESEND_FROM`, `RESEND_NOTIFY_TO` and any
+  `SCHEDULER_EMAIL_*` overrides do not still name .com, and register
+  https://crossroadsweddingco.shop/api/spotify/callback on the Spotify app. The main reel
+  mp4 still shows .com and waits on its voiceover re-record (see bar-pricing note);
+  printed business cards carrying a .com QR need reprinting.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:
@@ -592,9 +604,9 @@ decisions absorbed from it:
 | Dependency | Status |
 | --- | --- |
 | Neon Postgres | Wired 2026-08-26 after three rounds: the Vercel variable is named `Database_URL` (mixed case, resolver matches case-insensitively and sanitizes the value), and the first two pastes were not the connection string. The schema self-applies at build; the build log prints the host it dialed. Verify claims like this against build logs, not session lore |
-| Resend | **Live** (2026-08-26). `RESEND_API_KEY` in Vercel; sender is `jake@crossroadsweddingco.com`, confirmed received by owner. Booking confirmations + notifications flow |
+| Resend | **Live** (2026-08-26). `RESEND_API_KEY` in Vercel; sender is `jake@crossroadsweddingco.shop`, confirmed received by owner. Booking confirmations + notifications flow |
 | Stripe | Not yet created. Checkout + webhook routes fail closed (501) until `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` exist. Connect payouts need business verification |
-| Spotify | **Keys live** (2026-08-28) but playlist reads need one more step: the Feb 2026 API migration (enforced 2026-03-09) moved playlist reads to /playlists/{id}/items and made that endpoint reject client-credentials tokens (401, observed in prod logs). Owner authorizes once at /api/spotify/connect?key=<ADMIN_DASH_KEY> (redirect URI https://crossroadsweddingco.com/api/spotify/callback is registered on the app), pastes the shown refresh token into Vercel as SPOTIFY_REFRESH_TOKEN, redeploys. Client-credentials keys unlock playlist ingestion + track search (`lib/spotify.ts`, fails closed until then). The hub's playlist unfold + send-to-moment UI shipped 2026-08-28 (`/api/hub/[token]/playlist-tracks`, hub-token gated) and lights up the moment the keys land; note new Spotify dev apps can read user-created playlists but not Spotify-owned editorial ones (API change Nov 2024), which is fine since couples share their own |
+| Spotify | **Keys live** (2026-08-28) but playlist reads need one more step: the Feb 2026 API migration (enforced 2026-03-09) moved playlist reads to /playlists/{id}/items and made that endpoint reject client-credentials tokens (401, observed in prod logs). Owner authorizes once at /api/spotify/connect?key=<ADMIN_DASH_KEY> (redirect URI https://crossroadsweddingco.shop/api/spotify/callback is registered on the app), pastes the shown refresh token into Vercel as SPOTIFY_REFRESH_TOKEN, redeploys. Client-credentials keys unlock playlist ingestion + track search (`lib/spotify.ts`, fails closed until then). The hub's playlist unfold + send-to-moment UI shipped 2026-08-28 (`/api/hub/[token]/playlist-tracks`, hub-token gated) and lights up the moment the keys land; note new Spotify dev apps can read user-created playlists but not Spotify-owned editorial ones (API change Nov 2024), which is fine since couples share their own |
 | Twilio | Booking texts wired 2026-08-27, fails closed until keys exist. On the docket once keys exist (Jacob 2026-08-27): milestone check-in texts on a daily cron, e.g. 90 days out "Hey, checking in. Getting close. Let us know if you need anything.", plus similar touches at 30 and 14 days; needs a Vercel cron route guarded by CRON_SECRET. Jacob needs: twilio.com account (paid, not trial), a toll-free number with toll-free verification (simplest US A2P path) or a local number with 10DLC brand+campaign registration, then `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_MESSAGING_SERVICE_SID` (or `TWILIO_FROM_NUMBER`) in Vercel. Optional `TWILIO_NOTIFY_TO` texts the owner on each booking. The dispatch cascade (Phase 3) reuses this |
 | WeddingPro (The Knot / WeddingWire vendor advertising) | Signing 2026-08-27 (quote Q-472003, rep Adam Muir, owner decision): $4,994.40/12 months non-cancellable, ~$416/mo, 4 items (Knot Spotlight Banner Musicians, Knot DJs Platinum, WW DJs regional, WW DJs Indianapolis city). BEFORE CONFIRMING Jacob is fixing: 3 items quoted for the "Indianapolis, Lafayette, Terre Haute Region", the wrong half of the state. The three push markets are Indianapolis, Bloomington, and Louisville (KY, a separate Knot market), per Jacob 2026-08-27. Also the account email is nic@nicotiamarket.com (wrong brand; leads will land there). AUTO-RENEWS annually at up to +50% price; cancel at least 10 days before renewal (calendar reminder late July 2027); bundle discounts are all-or-nothing. Arbitration opt-out available within 30 days of acceptance (by ~2026-09-26) via arbitrationtop@theknotww.com, keeps the contract intact. Once live: build the inbound lead bridge against the first real lead notification email (Jacob forwards it), auto-provisioning a wedding + hub + instant quote email per §6.1 |
 | Realtime provider | Not yet created (Phase 3+) |
@@ -624,7 +636,7 @@ decisions absorbed from it:
   rename**). Two tables (`office_hours`, `appointments`), a public
   `/api/bookings/call` (GET the calendar, POST one booking), an owner editor at
   `/admin/[key]/hours`, and a Resend pair on success. **Each person's alert defaults
-  to the address printed on their own business card** (`<slug>@crossroadsweddingco.com`,
+  to the address printed on their own business card** (`<slug>@crossroadsweddingco.shop`,
   confirmed to exist per CARD_PRINT_SPEC.md), not to an env var and not to the owner:
   a feature that only behaves correctly once somebody remembers a dashboard setting is
   a feature that ships subtly wrong, and this one would have put every call for all

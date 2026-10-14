@@ -355,7 +355,7 @@ CREATE INDEX IF NOT EXISTS idx_weddings_archived ON weddings (archived_at);
 -- 2026-09-03: "we'll move forward with the calendar booking with office
 -- hours. It's built natively"). This replaces the unset NEXT_PUBLIC_BOOKING_URL
 -- Calendly-shaped hole, and it is what the QR code on every printed business
--- card resolves to: crossroadsweddingco.com/book?with=<slug>.
+-- card resolves to: crossroadsweddingco.shop/book?with=<slug>.
 --
 -- OFFICE HOURS ARE WALL CLOCK IN THE VENUE ZONE, because that is how a person
 -- thinks about their own evening: "Tuesdays, six to eight". Stored as minutes

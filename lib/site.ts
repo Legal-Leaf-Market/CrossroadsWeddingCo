@@ -1,7 +1,7 @@
 // Single source of truth for the canonical URL and the business facts that
 // show up in metadata, structured data, and the contact section.
 
-const FALLBACK_SITE_URL = "https://crossroadsweddingco.com";
+const FALLBACK_SITE_URL = "https://crossroadsweddingco.shop";
 
 // Override in an environment that isn't the production domain (a staging
 // alias, a fork) so canonicals and sitemap entries point at the right host.
@@ -14,18 +14,18 @@ export const SITE_TAGLINE = "Wedding DJ, Live Music & Bar Service";
 export const SITE_DESCRIPTION =
   "Backyard-to-ballroom wedding DJ services starting at $1,000, plus live solo acoustic sets and licensed bartenders. We run your day so you don't have to.";
 
-export const CONTACT_EMAIL = "hello@crossroadsweddingco.com";
+export const CONTACT_EMAIL = "hello@crossroadsweddingco.shop";
 
 // Transactional email identity (owner decision 2026-08-28): everything sends
 // as booking@, and the emails tell couples NOT to reply: the hub's Messages
 // thread is the conversation, email is only the door in. Jacob must keep
 // booking@ alive as a Google Workspace alias/group (delivering to him and
 // Nic) so strays never bounce. Overridable with RESEND_FROM in Vercel.
-export const EMAIL_FROM_ADDRESS = "booking@crossroadsweddingco.com";
+export const EMAIL_FROM_ADDRESS = "booking@crossroadsweddingco.shop";
 
 // Where internal notifications land (new bookings, new couple messages): a
 // real, read mailbox. Overridable with RESEND_NOTIFY_TO.
-export const OWNER_EMAIL = "jake@crossroadsweddingco.com";
+export const OWNER_EMAIL = "jake@crossroadsweddingco.shop";
 
 export const DJ_DAY_RATE_USD = 1000;
 
