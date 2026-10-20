@@ -478,6 +478,19 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   bumps on any wording change so snapshots stay traceable. **NOT lawyer-reviewed: Jacob should
   have an Indiana attorney read it before it carries real weight.**
 
+- **Countersignature and the printed copy (2026-10-20, Jacob):** a couple is handed a
+  hard copy, so the agreement must show both sides signed and dated on paper. The
+  couple's typed acceptance is their signature; the company now signs too, once, from
+  `/admin/[key]/contract/[weddingId]` (dashboard "Agreement" button), typed name + title +
+  explicit checkbox, writing `contract_countersigned_at/name/title`. Only after the couple
+  has accepted, never overwritten: the conditional UPDATE carries both rules, verified with
+  three simultaneous POSTs (one 200, two 409). Both the couple's hub copy and the owner's
+  copy end in one shared `SignatureBlock`: each party's typed name in a script face, the
+  printed name, title, and the date in bold, with the signing time and an electronic-
+  signature line (Indiana UETA, IC 26-2-8, and E-SIGN). An unsigned side prints blank ink
+  lines so paper can still be finished by pen. The owner page's print button masks the
+  admin key out of the browser's print header. Countersigning does not touch the frozen
+  snapshot or `CONTRACT_VERSION`.
 - **Custom arrangements + owner write access (2026-08-30, Jacob):** some weddings predate
   the pricing model or settle in trade (Kat & Tanis: equipment plus cash, deposit and
   balance already square). `weddings.custom_terms` holds free text that replaces the

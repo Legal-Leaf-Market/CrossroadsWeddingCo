@@ -21,6 +21,13 @@ body {
   font-family: var(--font-body);
 }
 
+/* Paper is white; a cream page background prints as a tinted band in the margins. */
+@media print {
+  body {
+    background-color: #fff;
+  }
+}
+
 h1,
 h2,
 h3,

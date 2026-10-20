@@ -252,6 +252,13 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_accepted_at TIMESTAMPTZ;
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_accepted_name VARCHAR(255);
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_snapshot JSONB;
 
+-- Countersignature (owner directive 2026-10-20): the printed copy a couple is
+-- handed must show both sides signed and dated. Written once, after the
+-- couple's acceptance, from /admin/[key]/contract/[weddingId].
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_countersigned_at TIMESTAMPTZ;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_countersigned_name VARCHAR(255);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS contract_countersigned_title VARCHAR(255);
+
 -- Custom arrangements (owner directive 2026-08-30): some weddings predate the
 -- pricing model or settle in trade. When set, this free text replaces the
 -- standard cost section of the service agreement verbatim, so the couple's

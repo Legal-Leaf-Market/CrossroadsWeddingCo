@@ -154,6 +154,11 @@ export const weddings = pgTable(
     contractAcceptedAt: timestamp("contract_accepted_at", { withTimezone: true }),
     contractAcceptedName: varchar("contract_accepted_name", { length: 255 }),
     contractSnapshot: jsonb("contract_snapshot"),
+    // Our countersignature: who signed for Crossroads, as what, and when. Set
+    // once, from the owner's agreement page, only after the couple accepted.
+    contractCountersignedAt: timestamp("contract_countersigned_at", { withTimezone: true }),
+    contractCountersignedName: varchar("contract_countersigned_name", { length: 255 }),
+    contractCountersignedTitle: varchar("contract_countersigned_title", { length: 255 }),
     // Free-text arrangement that replaces the agreement's standard cost
     // section: legacy deals, trades, comped weddings.
     customTerms: text("custom_terms"),

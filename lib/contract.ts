@@ -8,6 +8,7 @@ import {
   SITE_NAME,
   TRAVEL_SURCHARGE_RANGE,
 } from "@/lib/site";
+import { formatEventDate } from "@/lib/hub-constants";
 
 // The service agreement, generated from the same constants as the public site
 // so a price can never drift between what a couple reads and what they sign.
@@ -178,4 +179,46 @@ export function buildContract(input: ContractInput): ContractSection[] {
   });
 
   return sections;
+}
+
+/** The wedding-row fields the agreement is built from. */
+export type ContractWedding = {
+  coupleNames: string;
+  eventDate: string;
+  venueName: string;
+  venueAddress: string | null;
+  addons: unknown;
+  packageType: string | null;
+  totalAmount: string;
+  depositAmount: string;
+  customTerms: string | null;
+  contractAcceptedAt: Date | null;
+  contractSnapshot: unknown;
+};
+
+/**
+ * The agreement text to show for a wedding. Once accepted it comes from the
+ * frozen snapshot, never the live row: what they agreed to is what anyone
+ * sees forever, the couple's copy and ours alike.
+ */
+export function contractSectionsForWedding(w: ContractWedding): ContractSection[] {
+  const snapshot = w.contractSnapshot as { sections?: ContractSection[] } | null;
+  if (w.contractAcceptedAt && Array.isArray(snapshot?.sections)) return snapshot.sections;
+  return buildContract({
+    coupleNames: w.coupleNames,
+    eventDate: formatEventDate(w.eventDate),
+    venueName: w.venueName,
+    venueAddress: w.venueAddress,
+    services: servicesFromAddons(w.addons, w.packageType),
+    totalUsd: Number(w.totalAmount),
+    depositUsd: Number(w.depositAmount),
+    customTerms: w.customTerms,
+    bartenderStaff: bartenderStaffFromAddons(w.addons),
+  });
+}
+
+/** The version a wedding's agreement text carries: the accepted one, or the current. */
+export function contractVersionForWedding(w: { contractSnapshot: unknown; contractAcceptedAt: Date | null }): string {
+  const v = (w.contractSnapshot as { version?: unknown } | null)?.version;
+  return w.contractAcceptedAt && typeof v === "string" ? v : CONTRACT_VERSION;
 }

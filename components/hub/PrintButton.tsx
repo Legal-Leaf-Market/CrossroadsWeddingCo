@@ -2,7 +2,12 @@
 
 import { useRef } from "react";
 
-export default function PrintButton() {
+export default function PrintButton({
+  maskPath = "/hub/runsheet",
+}: {
+  /** Tokenless path shown in print headers instead of the real, secret URL. */
+  maskPath?: string;
+}) {
   // Captured on the first click, before any masking; later clicks reuse it,
   // so printing again while the URL is still masked can never capture the
   // masked path as the "real" URL and strand the page on it.
@@ -28,7 +33,7 @@ export default function PrintButton() {
         };
         window.addEventListener("afterprint", restore, { once: true });
         window.setTimeout(restore, 120_000);
-        window.history.replaceState(null, "", "/hub/runsheet");
+        window.history.replaceState(null, "", maskPath);
         window.print();
       }}
       className="rounded-full bg-terracotta px-4 py-1.5 text-sm font-semibold text-cream hover:bg-terracotta-dark"

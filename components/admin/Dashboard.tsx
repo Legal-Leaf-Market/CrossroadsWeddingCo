@@ -105,7 +105,12 @@ function WeddingCard({
               : "rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-ink"
           }
         >
-          agreement {wedding.contractAcceptedAt ? "signed" : "unsigned"}
+          agreement{" "}
+          {wedding.contractCountersignedAt
+            ? "signed by both"
+            : wedding.contractAcceptedAt
+              ? "needs your signature"
+              : "unsigned"}
         </span>
         {wedding.checkinsSent.length > 0 && (
           <span className="rounded-full bg-charcoal/5 px-2 py-0.5 text-ink/50">
@@ -152,6 +157,14 @@ function WeddingCard({
               Guest schedule
             </a>
           </>
+        )}
+        {basePath !== "/admin/preview" && (
+          <a
+            href={`${basePath}/contract/${wedding.id}`}
+            className="rounded-full border border-terracotta px-4 py-1.5 font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
+          >
+            Agreement
+          </a>
         )}
         <BookingEditor
           wedding={wedding}

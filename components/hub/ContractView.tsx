@@ -1,23 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import SignatureBlock, { type Signer } from "@/components/contract/SignatureBlock";
 import type { ContractSection } from "@/lib/contract";
 import { VENUE_TIME_ZONE } from "@/lib/site";
 
 // The agreement, plus the accept box. Once accepted it becomes a read-only
 // record with the acceptance stamped at the bottom, printable from either
-// state (couples ask for a copy, and venues sometimes do too).
+// state (couples ask for a copy, and venues sometimes do too). The signature
+// block at the end shows both sides, signed and dated, so the printed page is
+// a complete record on its own.
 export default function ContractView({
   sections,
   endpoint,
   acceptedAt,
   acceptedName,
+  coupleNames,
+  countersigned = null,
+  countersignedTitle = null,
+  version,
   demo = false,
 }: {
   sections: ContractSection[];
   endpoint: string;
   acceptedAt: string | null;
   acceptedName: string | null;
+  coupleNames: string;
+  /** Our signature, when someone has signed for the company. */
+  countersigned?: Signer | null;
+  countersignedTitle?: string | null;
+  version: string;
   demo?: boolean;
 }) {
   const [accepted, setAccepted] = useState<{ at: string; name: string } | null>(
@@ -73,8 +85,11 @@ export default function ContractView({
         <div className="mb-6 rounded-2xl border-2 border-sage bg-sage/10 p-5 print:border print:border-charcoal">
           <p className="font-semibold text-charcoal">Accepted</p>
           <p className="mt-1 text-sm text-ink/70">
-            Agreed to by {accepted.name} on {stamp(accepted.at)}. This page is your copy; print
-            or save it any time.
+            Agreed to by {accepted.name} on {stamp(accepted.at)}.
+            {countersigned
+              ? ` Signed for Crossroads by ${countersigned.name} on ${stamp(countersigned.at)}.`
+              : " Our signature follows shortly."}{" "}
+            This page is your copy; print or save it any time.
           </p>
         </div>
       )}
@@ -93,6 +108,14 @@ export default function ContractView({
           </section>
         ))}
       </article>
+
+      <SignatureBlock
+        coupleNames={coupleNames}
+        client={accepted}
+        company={countersigned}
+        companyTitle={countersignedTitle}
+        version={version}
+      />
 
       {!accepted && (
         <div className="mt-8 rounded-2xl border-2 border-terracotta bg-white p-6 print:hidden">
