@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { leads, weddingMessages, weddings } from "@/lib/db/schema";
 
@@ -41,6 +41,8 @@ export type AdminWedding = {
   unreadMessages: number;
   /** ISO timestamp the couple accepted the service agreement, null if not yet. */
   contractAcceptedAt: string | null;
+  /** ISO timestamp we countersigned the agreement, null if not yet. */
+  contractCountersignedAt: string | null;
   /** Bespoke arrangement that replaces the agreement's cost section. */
   customTerms: string | null;
   /** Folder slug under public/wedding-art/, or null for the plain look. */
@@ -92,6 +94,9 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     createdAt: w.createdAt.toISOString(),
     unreadMessages,
     contractAcceptedAt: w.contractAcceptedAt ? w.contractAcceptedAt.toISOString() : null,
+    contractCountersignedAt: w.contractCountersignedAt
+      ? w.contractCountersignedAt.toISOString()
+      : null,
     customTerms: w.customTerms,
     artTheme: w.artTheme,
   };
@@ -102,6 +107,49 @@ export async function getAdminWedding(weddingId: string): Promise<AdminWedding |
   if (!/^[0-9a-f-]{36}$/.test(weddingId)) return null;
   const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId)).limit(1);
   return w ? toAdminWedding(w) : null;
+}
+
+/** The full wedding row, for pages that render the agreement itself. */
+export async function getAdminWeddingRow(
+  weddingId: string,
+): Promise<typeof weddings.$inferSelect | null> {
+  if (!/^[0-9a-f-]{36}$/.test(weddingId)) return null;
+  const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId)).limit(1);
+  return w ?? null;
+}
+
+/**
+ * Sign the agreement for the company. Only after the couple has accepted,
+ * and only once: the WHERE carries both conditions, so two taps from two
+ * devices cannot both write, and the second one learns it lost.
+ */
+export async function countersignContract(
+  weddingId: string,
+  name: string,
+  title: string,
+): Promise<"ok" | "not_accepted" | "already_signed" | "not_found"> {
+  const at = new Date();
+  const updated = await db
+    .update(weddings)
+    .set({
+      contractCountersignedAt: at,
+      contractCountersignedName: name,
+      contractCountersignedTitle: title,
+      updatedAt: at,
+    })
+    .where(
+      and(
+        eq(weddings.id, weddingId),
+        isNotNull(weddings.contractAcceptedAt),
+        isNull(weddings.contractCountersignedAt),
+      ),
+    )
+    .returning({ id: weddings.id });
+  if (updated.length > 0) return "ok";
+  const w = await getAdminWeddingRow(weddingId);
+  if (!w) return "not_found";
+  if (!w.contractAcceptedAt) return "not_accepted";
+  return "already_signed";
 }
 
 export async function getAdminData(): Promise<AdminData> {

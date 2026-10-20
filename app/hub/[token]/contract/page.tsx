@@ -2,12 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ContractView from "@/components/hub/ContractView";
 import PrintButton from "@/components/hub/PrintButton";
-import {
-  bartenderStaffFromAddons,
-  buildContract,
-  servicesFromAddons,
-  type ContractSection,
-} from "@/lib/contract";
+import { contractSectionsForWedding, contractVersionForWedding } from "@/lib/contract";
 import { getWeddingByToken } from "@/lib/hub";
 import { formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME } from "@/lib/site";
@@ -28,24 +23,7 @@ export default async function ContractPage({
   const wedding = await getWeddingByToken(token);
   if (!wedding) notFound();
 
-  const services = servicesFromAddons(wedding.addons, wedding.packageType);
-  // An accepted agreement renders from its frozen snapshot, never from the
-  // live row: what they agreed to is what they see forever.
-  const snapshot = wedding.contractSnapshot as { sections?: ContractSection[] } | null;
-  const sections =
-    wedding.contractAcceptedAt && Array.isArray(snapshot?.sections)
-      ? snapshot.sections
-      : buildContract({
-          coupleNames: wedding.coupleNames,
-          eventDate: formatEventDate(wedding.eventDate),
-          venueName: wedding.venueName,
-          venueAddress: wedding.venueAddress,
-          services,
-          totalUsd: Number(wedding.totalAmount),
-          depositUsd: Number(wedding.depositAmount),
-          customTerms: wedding.customTerms,
-          bartenderStaff: bartenderStaffFromAddons(wedding.addons),
-        });
+  const sections = contractSectionsForWedding(wedding);
 
   return (
     <div className="min-h-screen bg-cream p-6 text-charcoal print:bg-white print:p-0">
@@ -72,6 +50,17 @@ export default async function ContractPage({
             endpoint={`/api/hub/${token}/contract`}
             acceptedAt={wedding.contractAcceptedAt ? wedding.contractAcceptedAt.toISOString() : null}
             acceptedName={wedding.contractAcceptedName}
+            coupleNames={wedding.coupleNames}
+            countersigned={
+              wedding.contractCountersignedAt && wedding.contractCountersignedName
+                ? {
+                    name: wedding.contractCountersignedName,
+                    at: wedding.contractCountersignedAt.toISOString(),
+                  }
+                : null
+            }
+            countersignedTitle={wedding.contractCountersignedTitle}
+            version={contractVersionForWedding(wedding)}
           />
         </div>
       </div>
