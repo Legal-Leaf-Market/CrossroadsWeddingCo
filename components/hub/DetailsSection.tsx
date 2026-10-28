@@ -5,6 +5,7 @@ import { hubInput, hubSave, SaveBadge, SectionCard, useAutosave, type SaveFn } f
 
 type Details = {
   contactEmail: string;
+  venueName: string;
   venueAddress: string;
   venueContactEmail: string;
   contactPhone: string;
@@ -18,11 +19,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function DetailsSection({
   token,
   initial,
-  venueName,
 }: {
   token: string;
   initial: Details;
-  venueName: string;
 }) {
   const [details, setDetails] = useState(initial);
   // Only fields the couple actually edited (and not yet saved) are sent, so a
@@ -32,6 +31,9 @@ export default function DetailsSection({
 
   const emailInvalid =
     details.venueContactEmail.trim() !== "" && !EMAIL_RE.test(details.venueContactEmail.trim());
+  // The venue name is required on the booking record, so a cleared box is held
+  // back like a half-typed email rather than wiping the venue off the run sheet.
+  const venueBlank = details.venueName.trim() === "";
   const ownEmailInvalid =
     details.contactEmail.trim() !== "" && !EMAIL_RE.test(details.contactEmail.trim());
 
@@ -39,13 +41,16 @@ export default function DetailsSection({
     [
       ownEmailInvalid && dirty.current.has("contactEmail") ? "your email" : null,
       emailInvalid && dirty.current.has("venueContactEmail") ? "the venue email" : null,
+      venueBlank && dirty.current.has("venueName") ? "the venue" : null,
     ].filter((n): n is string => n !== null);
 
   const save: SaveFn = async ({ keepalive }) => {
     // Hold back a half-typed email; the field is marked and the rest saves.
     const keys = [...dirty.current].filter(
       (k) =>
-        !(k === "venueContactEmail" && emailInvalid) && !(k === "contactEmail" && ownEmailInvalid),
+        !(k === "venueContactEmail" && emailInvalid) &&
+        !(k === "contactEmail" && ownEmailInvalid) &&
+        !(k === "venueName" && venueBlank),
     );
     const held = heldNames();
     if (keys.length === 0) {
@@ -86,7 +91,7 @@ export default function DetailsSection({
   return (
     <SectionCard
       title="The basics"
-      subtitle={`Where we load in and who we call. Venue on file: ${venueName}.`}
+      subtitle="Where we load in and who we call."
       badge={<SaveBadge state={state} message={message} />}
     >
       <div className="grid gap-4 sm:grid-cols-2">
@@ -117,6 +122,22 @@ export default function DetailsSection({
             onChange={(e) => set("contactPhone", e.target.value)}
             placeholder="Who we text when we arrive"
           />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="mb-1 block text-sm font-semibold text-charcoal">Venue</span>
+          <input
+            className={hubInput}
+            aria-invalid={venueBlank || undefined}
+            value={details.venueName}
+            maxLength={255}
+            onChange={(e) => set("venueName", e.target.value)}
+            placeholder="Venue name, or ceremony / reception if they're in two places"
+          />
+          {venueBlank && (
+            <span className="mt-1 block text-xs text-terracotta-dark">
+              Every booking needs a venue, so we save this once it has one
+            </span>
+          )}
         </label>
         <label className="block sm:col-span-2">
           <span className="mb-1 block text-sm font-semibold text-charcoal">Venue address</span>

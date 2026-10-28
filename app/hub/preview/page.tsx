@@ -70,8 +70,8 @@ export default function HubPreviewPage() {
         </p>
         <DetailsSection
           token={SAMPLE_TOKEN}
-          venueName="The Sycamore Barn"
           initial={{
+            venueName: "The Sycamore Barn",
             contactEmail: "jordan@example.com",
             venueAddress: "4280 County Road 325 N, Columbus, IN 47203",
             venueContactEmail: "events@sycamorebarn.com",
