@@ -34,6 +34,10 @@ export const DJ_DAY_RATE_USD = 1000;
 // and used by the lead playbook and outreach scripts.
 export const CORPORATE_DJ_SOUND_USD = 1500;
 
+// Corporate deposit (owner directive 2026-11-01): $1,000 locks an event date,
+// against the $500 wedding deposit.
+export const CORPORATE_DEPOSIT_USD = 1000;
+
 // $500 locks the date; the balance is due 24 hours after the wedding's start
 // time (owner decision 2026-08-27), a window that doubles as the couple's
 // comments-and-concerns period. See CLAUDE.md 9.2.

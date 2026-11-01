@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import {
   CONTACT_EMAIL,
+  CORPORATE_DEPOSIT_USD,
   CORPORATE_DJ_SOUND_USD,
   SERVICE_RADIUS_BLURB,
   SITE_NAME,
@@ -16,6 +17,7 @@ import {
 // price here. Acoustic and bar staff are quoted per event, so this page names
 // them without a number.
 const PRICE = `$${CORPORATE_DJ_SOUND_USD.toLocaleString("en-US")}`;
+const DEPOSIT = `$${CORPORATE_DEPOSIT_USD.toLocaleString("en-US")}`;
 const TITLE = `Corporate event and holiday party DJ: ${PRICE} flat for DJ and sound`;
 const DESCRIPTION = `DJ, sound and MC for corporate events, holiday parties, galas and company celebrations across Columbus, Indianapolis, Greenwood, Franklin and Bloomington. ${PRICE} flat, MC included.`;
 const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Event inquiry")}`;
@@ -92,6 +94,7 @@ export default function EventsPage() {
                 "An MC who keeps the agenda moving and hands the floor back to the party.",
                 "Background music through dinner, then a dance floor if you want one. You set the line on what plays and what doesn't.",
                 "Your timeline and your venue's rules: load-in windows, sound limits and hard stops.",
+                `A ${DEPOSIT} deposit locks your date.`,
               ].map((line) => (
                 <li key={line} className="flex gap-3">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-terracotta" aria-hidden />

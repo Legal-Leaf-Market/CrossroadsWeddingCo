@@ -573,7 +573,8 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   prospecting from registries (Target, Amazon, Zola): no bulk access, against their
   terms, and spam-law exposure.
 - **Corporate and event rate: $1,500 flat for DJ and sound (2026-11-01, Jacob).**
-  `CORPORATE_DJ_SOUND_USD` in `lib/site.ts`. The $1,000 wedding rate is never quoted for
+  `CORPORATE_DJ_SOUND_USD` in `lib/site.ts`. A **$1,000 deposit** locks a corporate
+  date (`CORPORATE_DEPOSIT_USD`), against $500 for weddings. The $1,000 wedding rate is never quoted for
   a corporate event; acoustic and bar staff are quoted per event. The business is
   expected to formalize as Crossroads Wedding and Event Co.; the site still says Wedding
   Co. until Jacob confirms. `/events` (footer-linked, in the sitemap) is the corporate
