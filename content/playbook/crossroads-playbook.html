@@ -66,6 +66,11 @@ input[type=search]{width:14rem;max-width:100%}
 .empty{color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:10px}
 .callout{background:var(--warn-soft);border-radius:10px;padding:12px 14px;max-width:80ch}
 a{color:var(--accent)}
+.prep{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
+.prep summary{cursor:pointer;font-weight:600}
+.prep h4{margin:10px 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.prep ul{margin:0;padding-left:18px}
+.prep li{margin:2px 0}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
@@ -93,6 +98,7 @@ a{color:var(--accent)}
     <label class="f" for="fList">List<select id="fList">
       <option value="all">All leads</option>
       <option value="best">Best 10 for today</option>
+      <option value="partner">Partners: walk in first</option>
       <option value="venue">Venues and planners</option>
       <option value="event">Nov to Dec events</option>
       <option value="chamber">Chamber members</option>
@@ -129,6 +135,21 @@ const SCRIPTS=[
 ];
 // Scripts written for one lead, shown on that lead's card next to its phone number.
 const LEAD_SCRIPTS={
+ "ryan-furr-creative": [
+  ["Text Jordan Vickers first","Hey Jordan! It's Jake. Is Ryan usually in the office Monday mornings? I want to stop by and pitch him on Crossroads doing sound and DJ for his corporate jobs and the Sentinels. Would love to see the studio too."],
+  ["Walk-in opener","Ryan! Been way too long. I was two blocks away and had to see the building. Got five minutes? Crossroads is turning into a wedding and event company, and I want to be your crew for sound, DJ and MC: your corporate jobs, and the Sentinels if you ever need game-day sound. $1,500 flat for DJ and sound, so you always know your margin. Can we start with one gig?"],
+  ["Walk-in opener (second version)","Hey man, I had to come see this place in person. Quick pitch, then I'll get out of your hair: when your clients or the Sentinels need sound, a DJ or an MC, I want to be the guy you call. I spent ten years in the corporate world, I know how those rooms run, and I'm right down the street. What's coming up?"],
+  ["Text Ryan (if he's not in)","Hey Ryan, it's Jake. Stopped by the building, sorry I missed you. Crossroads is growing into events and I'd love to be your crew for sound, DJ and MC on corporate jobs and Sentinels nights. Coffee this week?"],
+  ["Call opener","Hey man, thanks for picking up. Quick one: Crossroads is turning into a wedding and event company, and I know you do a ton of corporate work. When your clients need sound, a DJ or an MC, I'd love to be your crew. We'd work under your brand at $1,500 flat for DJ and sound, so you always know your margin, and I'm two blocks away. Can we start with one gig and you judge us on it?"],
+  ["Email after the meeting","Ryan,\n\nThanks for the time today. Here's what we can cover on your jobs and Sentinels nights:\n- Sound for speeches, panels, award dinners and game-day promos\n- DJ and MC to keep the agenda moving\n- Live solo acoustic set for receptions and dinners\n- Bartenders (serve only; the client or venue provides the alcohol)\n\nDJ and sound is $1,500 flat ($1,000 deposit locks a date), and we work under your brand. Send me the first date.\n\nJake\n[your number]\n"+SITE+"/events"]
+ ],
+ "matty-o-entertainment": [
+  ["Text to set a coffee","Hi Matty, it's Jake with Crossroads Wedding Co. Could I buy you a coffee this week? I've got an idea for helping each other with overflow dates and corporate gigs this December."],
+  ["In-person opener","Matty! Thanks for making time. I'll keep it quick. I run Crossroads out of Columbus, and we're growing into corporate events: $1,500 flat for DJ and sound. Every entertainment company turns down dates, especially in December. When you're booked or short on crew, we'd work your gig as your team, under your name. When we're booked, you get our call. And if your clients ever ask for live acoustic or bartenders, we can staff it so you can add it to your quote. What does your December look like?"],
+  ["In-person opener (second version)","Hey Matty, great to finally sit down. Here's my idea in one line: let's be each other's overflow. You've got clients, I've got crew, and neither of us likes saying no to a date. On your jobs we show up as MOE. We also bring acoustic sets and bar staff you can sell without hiring anyone. How do you like to handle subs, a referral fee or you bill and pay us?"],
+  ["Call opener","Hi Matty, thanks for taking the call. I run Crossroads Wedding Co. out of Columbus; we're growing into events. Every entertainment company turns down dates, and I'd love it if those went to people we trust. When you're booked or short on crew, we'd work your gig as your team. When we're booked, you get our call. What does a typical month look like for you?"],
+  ["Email after the meeting","Matty,\n\nGreat talking today. Here's what we said:\n- When you're booked or short on crew, Crossroads works your event as your team\n- When we're booked, we send the client to you\n- You can add live acoustic or bar service to your quotes, and we staff it\n\nLet's settle how referrals get paid and trade calendars for the next few months.\n\nJake\n[your number]"]
+ ],
  "valle-vista": [
   [
    "Opener",
@@ -206,8 +227,25 @@ const LEAD_SCRIPTS={
   ]
  ]
 };
+// Pitch prep for the partner cards: the ask, what we bring, questions, pushback.
+const PREP={
+ "ryan-furr-creative":{ask:"Put Crossroads on your list for sound, DJ and MC on your corporate jobs and Sentinels game nights, starting with one test gig.",
+  know:["Good friend of Jake's. Jake makes this one","Owns the Indiana Sentinels (Jake's word): FPHL pro hockey, year two, 28 home games at The Ham (Hamilton Community Center and Ice Arena, 1,150 seats)","Office: the black and yellow former cleaners building, two blocks from Jake, with in-house video and music production","Main recording engineer Jordan Allen Vickers was a groomsman in Jake's wedding (married to Jordan Ashley Vickers). The inside person","Lots of corporate work; worship background, so he knows live sound","Used to own Rockstock Pedals (Jake's words; check the spelling)"],
+  bring:["Jake's 10+ years in the corporate world: run of show, hard stops, a client in the room","Sound for speeches, panels, award dinners and game-day promos","DJ and MC who keeps the agenda moving","Live solo acoustic set; bartenders (serve only)","$1,500 flat for DJ and sound, so Ryan always knows his margin","We send our wedding couples to him for video and creative work"],
+  questions:["What kinds of events do your clients run?","Who handles sound and music at those, and at Sentinels games, today?","Any dates coming up where you're short on crew or gear?","How do you like to work with subs: you bill the client, or we do?"],
+  pushback:[["We already have a sound guy","Keep him. Use us for overflow, double-booked dates, or when you need music and an MC on top of sound."],["Our clients are particular","That's the corporate world Jake came from. Give us one event and judge us on it."],["What do you charge?","$1,500 flat for DJ and sound, $1,000 deposit to lock a date. Acoustic or bar staff quoted per event."]],
+  watch:"Don't call on a Sunday; he has a big family. Text Jordan, then walk in Monday morning. No public listing turned up for Ryan Furr Creative, so check his site and Instagram first."},
+ "matty-o-entertainment":{ask:"Become each other's overflow: when one of us is booked or short on crew, the other gets the call.",
+  know:["Matty Ortega runs Matty O Entertainment (MOE)","On Jake's list for sound gigs and overflow"],
+  bring:["DJ and MC, sound for events","Live solo acoustic set she can add to her quotes","Bartenders (serve only)","Flat, published pricing, so a referral never turns into a haggle","Columbus base, about two hours of coverage"],
+  questions:["What does MOE book most: weddings, corporate, private parties?","Do you ever turn down dates because you're booked or short on crew?","Do clients ask for things you don't do, like live acoustic or bartending?","How do you like to handle subs and referrals?","Which markets do you cover?"],
+  pushback:[["You're a competitor","Only on paper. Every DJ turns down dates; this keeps those dates with people we trust."],["How do referrals get paid?","However you like: a referral fee, or you bill the client and pay us as a sub. Pick one and write it down."]],
+  watch:"No public listing turned up in a search. Check MOE's site and Instagram first so the pitch matches what she books. If she runs DJs herself, pitch overflow and add-ons, not competition."}
+};
 // sec: venue | event | chamber. best: rank on today's list. warn: something to know before calling.
 const LEADS=[
+{id:"ryan-furr-creative",sec:"partner",name:"Ryan Furr, Ryan Furr Creative",type:"Partner (creative company, Indiana Sentinels)",city:"Columbus, two blocks from Jake",contact:"Ryan Furr; text Jordan Vickers first",phone:"",email:"",why:"A good friend with a full staff, steady corporate clients and a pro hockey team. One yes could mean recurring sound gigs.",src:"",flag:"Warm"},
+{id:"matty-o-entertainment",sec:"partner",name:"Matty Ortega, Matty O Entertainment (MOE)",type:"Partner (entertainment company)",city:"Indiana",contact:"Matty Ortega",phone:"",email:"",why:"Already booking events. Overflow partner both ways, and a place to sell our acoustic and bar add-ons.",src:"",flag:"Warm"},
 {id:"valle-vista",sec:"venue",best:0,name:"Valle Vista Golf Club & Conference Center",type:"Venue",city:"Greenwood",contact:"Event Sales & Main Office",phone:"(317) 882-2955",email:"",why:"Our first wedding, October 17, was here and went very well. Call first: recommended list, holiday parties, short-notice dates. The research list ranked it low only because the website shows no holiday page.",src:"https://www.vallevista.com/",flag:"Warm"},
 {id:"dyes-walk",sec:"venue",best:1,name:"Dye's Walk Country Club",type:"Venue",city:"Greenwood",contact:"Kirby Sutton, Director of Private Events",phone:"(317) 535-8635",email:"membership@dyeswalkcc.com (general)",why:"Special Events page lists corporate dinners and holiday events, and there's a named decision-maker.",src:"https://dyeswalkcc.com/special-events/"},
 {id:"24-shelby",sec:"venue",best:2,name:"24 Shelby",type:"Venue",city:"Indianapolis",contact:"Sarah (owner/coordinator)",phone:"(317) 410-1552",email:"Sarah@24shelby.com",why:"Pushing holiday parties, no in-house DJ, and the FAQ says they coordinate with the client's DJ. Elevated stage add-on; up to 250 seated.",src:"https://24shelby.com/holiday-parties/"},
@@ -296,7 +334,7 @@ const LEADS=[
 {id:"ray-skillman",sec:"chamber",name:"Ray Skillman Auto Center",type:"Dealership group",city:"Indianapolis (south)",contact:"Lana Leary",phone:"(317) 888-9500",email:"",why:"Aspire member.",src:"https://web.aspirejohnsoncounty.com/Automobile-Dealers"},
 {id:"van-valer",sec:"chamber",name:"Van Valer Law Firm, LLP",type:"Law firm",city:"Greenwood",contact:"Eric Prime",phone:"(317) 881-7575",email:"",why:"Aspire member.",src:"https://web.aspirejohnsoncounty.com/Law-Firms"}
 ];
-const SECS=[["venue","Venues and planners","Warmest first. The ask: put us on your list."],["event","Nov to Dec events","Dated events: who books sound, and 2027."],["chamber","Chamber members, 25+ employees","Ask who plans the holiday party."]];
+const SECS=[["partner","Partners: walk in first","Friends with clients. The ask: be their crew."],["venue","Venues and planners","Warmest first. The ask: put us on your list."],["event","Nov to Dec events","Dated events: who books sound, and 2027."],["chamber","Chamber members, 25+ employees","Ask who plans the holiday party."]];
 
 const $=(s)=>document.querySelector(s);
 const log={}; let db=null, canWrite=false;
@@ -314,6 +352,16 @@ $("#meNum").addEventListener("input",()=>{saveMe();renderScripts();render()});
 renderScripts();
 $("#scripts").addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if(b)copy(voice(SCRIPTS[+b.dataset.copy][1]),b)});
 
+function prepHtml(p){
+  const ul=(a)=>`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+  return `<details class="prep"><summary>Pitch prep</summary>
+   <h4>The ask</h4><p>${esc(p.ask)}</p>
+   <h4>What we know</h4>${ul(p.know)}
+   <h4>What we bring</h4>${ul(p.bring)}
+   <h4>Ask them</h4>${ul(p.questions)}
+   <h4>If they say...</h4><ul>${p.pushback.map(([q,a])=>`<li><b>${esc(q)}:</b> ${esc(a)}</li>`).join("")}</ul>
+   <h4>Before you go</h4><p>${esc(p.watch)}</p></details>`;
+}
 function statusOf(id){return log[id]?.status||"todo"}
 function card(l){
   const s=statusOf(l.id), e=log[l.id]||{};
@@ -329,6 +377,7 @@ function card(l){
      ${l.email?`<dt>Email</dt><dd>${esc(l.email)}</dd>`:""}
     </dl>
     <p class="why">${esc(l.why)}</p>
+    ${PREP[l.id]?prepHtml(PREP[l.id]):""}
     ${(LEAD_SCRIPTS[l.id]||[]).map(([h,t],i)=>`<div class="lscript"><h3>${esc(h)}</h3><p>${esc(voice(t))}</p><button class="btn" data-lcopy="${l.id}:${i}">Copy</button></div>`).join("")}
     ${l.src?`<a href="${esc(l.src)}" target="_blank" rel="noopener">Source</a>`:""}
    </div>
