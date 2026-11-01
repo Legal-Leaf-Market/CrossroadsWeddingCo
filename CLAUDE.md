@@ -576,12 +576,14 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `CORPORATE_DJ_SOUND_USD` in `lib/site.ts`. A **$1,000 deposit** locks a corporate
   date (`CORPORATE_DEPOSIT_USD`), against $500 for weddings. The $1,000 wedding rate is never quoted for
   a corporate event; acoustic and bar staff are quoted per event. The business is
-  expected to formalize as Crossroads Wedding and Event Co. **The front page already
-  leads with that name (2026-11-01, Jacob)**: `EVENT_BRAND_NAME` in `lib/site.ts`, the
-  homepage title, header wordmark (`<Header brand="events" />`) and hero, plus
-  `alternateName` in the structured data. `SITE_NAME` ("Crossroads Wedding Co.") stays on
-  every other page, emails, the agreement and the JSON-LD `name` until the business formally
-  renames. The homepage leads with corporate for the holiday season: a `HolidayBanner` strip
+  **renamed Crossroads Wedding and Event Co. everywhere (2026-11-01, Jacob: "change the
+  name everywhere")**: `SITE_NAME` in `lib/site.ts` drives the header, titles, emails, the
+  agreement and the JSON-LD `name` (`alternateName` keeps the old "Crossroads Wedding Co."
+  so search engines connect the two). `EVENT_BRAND_NAME` is now an alias of `SITE_NAME`.
+  `CONTRACT_VERSION` bumped to 2026-11-01 because the agreement names the company;
+  accepted snapshots keep the old name. The domain stays crossroadsweddingco.shop. Not yet
+  changed: the printed trifold and business cards, rendered images and reels (their
+  generator scripts now say the new name), and any `RESEND_FROM` override in Netlify. The homepage leads with corporate for the holiday season: a `HolidayBanner` strip
   above the header ($1,500 flat, "December dates are still open", no invented scarcity),
   "Book your holiday party" as the primary hero button, and a corporate card beside the
   wedding card. The header nav gained "Corporate events" (/events) on every page. `/events` (footer-linked, in the sitemap) is the corporate

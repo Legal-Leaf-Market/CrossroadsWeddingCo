@@ -5,7 +5,7 @@ import { SITE_NAME } from "@/lib/site";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt =
-  "Crossroads Wedding Co., the DJ and music crew that also quietly runs your day";
+  "Crossroads Wedding and Event Co., the DJ and music crew that also quietly runs your day";
 
 export default async function OpengraphImage() {
   const [spectral, karla] = await Promise.all([

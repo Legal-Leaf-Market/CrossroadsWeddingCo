@@ -71,7 +71,7 @@ function slide({ background, color, eyebrow, eyebrowColor, children, footer, foo
     h(
       "div",
       { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
-      h("div", { style: { fontFamily: "Spectral", fontSize: S * 30, color } }, "Crossroads Wedding Co."),
+      h("div", { style: { fontFamily: "Spectral", fontSize: S * 30, color } }, "Crossroads Wedding and Event Co."),
       h("div", { style: { fontSize: S * 26, color: footerColor } }, footer),
     ),
   );

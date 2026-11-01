@@ -17,7 +17,7 @@ const STRUCTURED_DATA = {
   "@type": "LocalBusiness",
   "@id": `${SITE_URL}/#business`,
   name: SITE_NAME,
-  alternateName: EVENT_BRAND_NAME,
+  alternateName: "Crossroads Wedding Co.",
   description: SITE_DESCRIPTION,
   url: SITE_URL,
   email: CONTACT_EMAIL,
