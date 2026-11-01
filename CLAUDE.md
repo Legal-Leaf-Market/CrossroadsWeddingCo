@@ -593,6 +593,14 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   playbook's "Partners: walk in first" section (PR #83), and the playbook carries a
   weekly goal tracker ($5,000 in deposits: 2 weddings at $500, 4 corporate at $1,000)
   that saves to the artifact's `booked` collection; on the site copy it is local only.
+- **Three paths: weddings, corporate events, private parties (2026-11-01, Jacob).** Weddings
+  are the specialty and lead the hero and nav; corporate stays $1,500 flat; private parties
+  (birthdays, Halloween, graduations, anniversaries) live at `/parties` and both the DJ and
+  the bar are **quoted on the call** (owner's answer), so that page carries no price and no
+  JSON-LD Offer. The bar rules are written once in `components/BarRules.tsx` with a per-path
+  tail and shown on `/bartending`, `/events` and `/parties`: serve-only, ATC permits, venue
+  permit at licensed venues, 21+ and ID checks, no service to the visibly intoxicated, and for
+  private parties no cash bar, no drink tickets for sale, no cover that includes drinks.
 - **Holiday party call list and venue referrals (2026-11-01, Jacob).** The Nov 1 call
   list (venues, planners, Nov to Dec events, chamber members) is built into the
   "Crossroads Lead Playbook" artifact (claude.ai/artifact/C2wNZGNDXoDWv7YK5dfkz1) with a

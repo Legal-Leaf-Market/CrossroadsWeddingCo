@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BookCallCard from "@/components/BookCallCard";
+import BarRules from "@/components/BarRules";
 import {
   BARTENDER_ONE_USD,
   BARTENDER_TWO_USD,
@@ -90,20 +91,9 @@ export default function BartendingPage() {
             <p className="mt-4 max-w-2xl text-ink/70">
               This part trips a lot of couples up, so here it is straight:
             </p>
-            <ul className="mt-6 space-y-4 text-ink/80">
-              {[
-                "You (or your caterer or venue) provide the alcohol. We never sell it or supply it; that keeps your backyard or DIY-venue bar on the right side of Indiana law, and it means you pay store prices for your shelf instead of markup.",
-                "On private property, a host serving their own guests is exactly how the rules are designed to work. We staff and pour on your behalf.",
-                "At a licensed venue, we work under the venue's permit and their rules, alongside their team.",
-                "Our bartenders hold current Indiana ATC permits and bring about twenty years of behind-the-bar experience.",
-                "We serve like professionals: checking IDs, pacing the pours, and handling the one guest who's had enough with a smile instead of a scene.",
-              ].map((line) => (
-                <li key={line} className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-terracotta" aria-hidden />
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="mt-6">
+              <BarRules path="wedding" />
+            </div>
           </div>
         </section>
 
@@ -135,6 +125,23 @@ export default function BartendingPage() {
                 Get your straight quote
               </a>
             </div>
+          </div>
+        </section>
+
+        <section className="bg-cream py-16">
+          <div className="mx-auto max-w-4xl px-6">
+            <h2 className="text-2xl text-charcoal">Not a wedding?</h2>
+            <p className="mt-3 max-w-2xl text-ink/70">
+              We run bars for{" "}
+              <a href="/events" className="font-semibold text-terracotta underline-offset-2 hover:underline">
+                company events
+              </a>{" "}
+              and{" "}
+              <a href="/parties" className="font-semibold text-terracotta underline-offset-2 hover:underline">
+                private parties
+              </a>{" "}
+              too, quoted per event, under the same rules: you provide the alcohol, we serve it.
+            </p>
           </div>
         </section>
 

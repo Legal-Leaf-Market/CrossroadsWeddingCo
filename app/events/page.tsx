@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import BarRules from "@/components/BarRules";
 import {
   CONTACT_EMAIL,
   CORPORATE_DEPOSIT_USD,
@@ -137,6 +138,18 @@ export default function EventsPage() {
 
         <section className="bg-cream py-16">
           <div className="mx-auto max-w-4xl px-6">
+            <h2 className="text-3xl text-charcoal">How the bar works at a company event</h2>
+            <p className="mt-4 max-w-2xl text-ink/70">
+              Bar staff are quoted per event. The rules are the same every time:
+            </p>
+            <div className="mt-6">
+              <BarRules path="corporate" />
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-parchment/40 py-16">
+          <div className="mx-auto max-w-4xl px-6">
             <h2 className="text-3xl text-charcoal">For venues and event planners</h2>
             <p className="mt-4 max-w-2xl text-ink/80">
               When a client asks you who to call for a DJ, this is what you&apos;re handing them: one
@@ -190,7 +203,11 @@ export default function EventsPage() {
               <a href="/" className="underline decoration-cream/30 underline-offset-2 hover:text-cream/80">
                 flat-rate wedding DJ and MC package
               </a>{" "}
-              is the other half of what we do.
+              is what we do best, and{" "}
+              <a href="/parties" className="underline decoration-cream/30 underline-offset-2 hover:text-cream/80">
+                private parties
+              </a>{" "}
+              are quoted on a short call.
             </p>
           </div>
         </section>
