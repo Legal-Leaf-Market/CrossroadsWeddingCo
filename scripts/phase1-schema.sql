@@ -446,3 +446,9 @@ INSERT INTO schema_seeds (name) VALUES ('office_hours_v1') ON CONFLICT (name) DO
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_source VARCHAR(40);
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_source_detail VARCHAR(200);
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_src_tag VARCHAR(40);
+
+-- Intro-call attribution (2026-11-01, corporate holiday party calls): the
+-- ?src= tag a visitor carried when they booked a call. Corporate inquiries
+-- come in as calls, not weddings rows, so without this a venue referral from
+-- /events?src=venue would never be counted. Additive and nullable.
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS src_tag VARCHAR(40);

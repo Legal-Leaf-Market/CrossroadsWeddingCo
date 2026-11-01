@@ -13,7 +13,9 @@ export default function SourceCapture() {
       const params = new URLSearchParams(window.location.search);
       let tag = cleanSrcTag(params.get("src"));
       // Printed business cards resolve to /book?with=<slug> and predate ?src=.
-      if (!tag && params.get("with")) tag = "card";
+      // A scanned QR code arrives with no referrer from our own site; a tap on
+      // /events' "Book a call with Jake" does, and is not a card.
+      if (!tag && params.get("with") && !cameFromOurSite()) tag = "card";
       const now = Date.now();
       const raw = window.localStorage.getItem(SRC_STORAGE_KEY);
       const held = raw ? (JSON.parse(raw) as { tag?: string; at?: number }) : null;
@@ -28,6 +30,14 @@ export default function SourceCapture() {
     }
   }, []);
   return null;
+}
+
+function cameFromOurSite(): boolean {
+  try {
+    return !!document.referrer && new URL(document.referrer).origin === window.location.origin;
+  } catch {
+    return false;
+  }
 }
 
 /** The stored first-touch tag, or null. */

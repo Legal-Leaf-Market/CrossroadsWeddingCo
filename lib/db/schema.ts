@@ -369,6 +369,8 @@ export const appointments = pgTable(
     phone: varchar("phone", { length: 50 }),
     eventDate: date("event_date"),
     notes: text("notes").notNull().default(""),
+    /** First-touch ?src= tag, cleaned by cleanSrcTag. See lib/lead-sources.ts. */
+    srcTag: varchar("src_tag", { length: 40 }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
