@@ -4,6 +4,7 @@ import {
   SERVICE_OFFERS,
   SITE_DESCRIPTION,
   SITE_NAME,
+  EVENT_BRAND_NAME,
   SITE_URL,
 } from "@/lib/site";
 
@@ -16,6 +17,7 @@ const STRUCTURED_DATA = {
   "@type": "LocalBusiness",
   "@id": `${SITE_URL}/#business`,
   name: SITE_NAME,
+  alternateName: EVENT_BRAND_NAME,
   description: SITE_DESCRIPTION,
   url: SITE_URL,
   email: CONTACT_EMAIL,
