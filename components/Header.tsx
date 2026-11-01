@@ -1,8 +1,8 @@
 const NAV_LINKS = [
-  { href: "/events", label: "Corporate events" },
   { href: "/#services", label: "Weddings" },
+  { href: "/events", label: "Corporate events" },
+  { href: "/parties", label: "Private parties" },
   { href: "/#pricing", label: "Pricing" },
-  { href: "/#about", label: "About" },
   { href: "/#contact", label: "Contact" },
 ];
 
@@ -16,7 +16,7 @@ export default function Header(_props: { brand?: "events" } = {}) {
           Crossroads{" "}
           <span className="text-terracotta">Wedding and Event Co.</span>
         </a>
-        <nav className="hidden gap-8 text-sm font-medium text-ink md:flex">
+        <nav className="hidden gap-6 text-sm font-medium text-ink lg:flex">
           {NAV_LINKS.map((link) => (
             <a key={link.href} href={link.href} className="hover:text-terracotta">
               {link.label}
