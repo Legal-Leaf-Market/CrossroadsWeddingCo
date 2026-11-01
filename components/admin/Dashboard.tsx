@@ -262,6 +262,12 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
             >
               Reviews to approve
             </a>
+            <a
+              href={`${basePath}/playbook`}
+              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
+            >
+              Lead playbook
+            </a>
           </div>
         </div>
       </header>
