@@ -256,6 +256,24 @@ export const weddingMessages = pgTable(
   (t) => [index("idx_wedding_messages_thread").on(t.weddingId, t.createdAt)],
 );
 
+// 7a. Public guestbook on /reviews (2026-11-01, Jacob): anyone can sign it with
+// just a name, nothing is shown until the owner approves it, and the owner can
+// feature one entry (the couple's own review) at the top of the page.
+export const guestbookEntries = pgTable(
+  "guestbook_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 80 }).notNull(),
+    relation: varchar("relation", { length: 40 }),
+    message: text("message").notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("pending"),
+    featured: boolean("featured").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    moderatedAt: timestamp("moderated_at", { withTimezone: true }),
+  },
+  (t) => [index("idx_guestbook_status").on(t.status, t.createdAt)],
+);
+
 // 7b. The couple's own documents: their order-of-events graphic, wedding-party
 // card, printed timeline. These are the official communication; our run sheet
 // shadows them, so they sit beside our schedule in the hub for auditing.

@@ -446,3 +446,18 @@ INSERT INTO schema_seeds (name) VALUES ('office_hours_v1') ON CONFLICT (name) DO
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_source VARCHAR(40);
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_source_detail VARCHAR(200);
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_src_tag VARCHAR(40);
+
+-- Public guestbook on /reviews (2026-11-01, Jacob). Anyone signs it with a name;
+-- every entry starts 'pending' and shows only after the owner approves it from
+-- /admin/[key]/guestbook. One approved entry can be featured at the top.
+CREATE TABLE IF NOT EXISTS guestbook_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(80) NOT NULL,
+    relation VARCHAR(40),
+    message TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    featured BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    moderated_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_guestbook_status ON guestbook_entries (status, created_at);

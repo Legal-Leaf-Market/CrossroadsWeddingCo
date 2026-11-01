@@ -19,6 +19,9 @@ export default function Footer() {
           <a href="/events" className="font-semibold text-cream/70 hover:text-cream">
             Corporate Events &amp; Holiday Parties
           </a>
+          <a href="/reviews" className="font-semibold text-cream/70 hover:text-cream">
+            Reviews &amp; Guestbook
+          </a>
           <a href="/book" className="font-semibold text-cream/70 hover:text-cream">
             Check Your Date
           </a>

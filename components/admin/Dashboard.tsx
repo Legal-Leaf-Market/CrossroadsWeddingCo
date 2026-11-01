@@ -251,6 +251,12 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
               Call times
             </a>
             <a
+              href={`${basePath}/guestbook`}
+              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
+            >
+              Guestbook
+            </a>
+            <a
               href={`${basePath}/archived`}
               className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
             >
