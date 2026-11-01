@@ -49,6 +49,10 @@ export type AdminWedding = {
   artTheme: string | null;
   /** ISO timestamp this was hidden from the dashboard, null while visible. */
   archivedAt: string | null;
+  /** Where they found us (lib/lead-sources.ts), what they said, and the link tag. */
+  leadSource: string | null;
+  leadSourceDetail: string | null;
+  leadSrcTag: string | null;
 };
 
 export type AdminLead = {
@@ -99,6 +103,9 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
       : null,
     customTerms: w.customTerms,
     artTheme: w.artTheme,
+    leadSource: w.leadSource,
+    leadSourceDetail: w.leadSourceDetail,
+    leadSrcTag: w.leadSrcTag,
   };
 }
 

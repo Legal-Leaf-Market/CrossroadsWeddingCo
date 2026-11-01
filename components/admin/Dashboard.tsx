@@ -3,6 +3,7 @@ import BookingEditor from "@/components/admin/BookingEditor";
 import type { AdminData, AdminWedding } from "@/lib/admin";
 import { daysOut, formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME } from "@/lib/site";
+import { leadSourceLabel, sourceForTag } from "@/lib/lead-sources";
 
 // Presentational owner dashboard, rendered by /admin/[key] with live data and
 // by /admin/preview (dev only) with samples so layout QA needs no database.
@@ -126,6 +127,14 @@ function WeddingCard({
         </p>
       )}
       {wedding.notes && <p className="mt-3 text-sm text-ink/60">{wedding.notes}</p>}
+      {(wedding.leadSource || wedding.leadSrcTag) && (
+        <p className="mt-2 text-xs text-ink/50">
+          Found us via:{" "}
+          {leadSourceLabel(wedding.leadSource) ?? "not answered"}
+          {wedding.leadSourceDetail && ` (${wedding.leadSourceDetail})`}
+          {wedding.leadSrcTag && ` \u00b7 link tag: ${wedding.leadSrcTag}`}
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <a
@@ -176,6 +185,53 @@ function WeddingCard({
   );
 }
 
+// One row per channel: what couples said, falling back to what the link said.
+// This is the number that decides which replacement for WeddingPro keeps its
+// budget, so it counts every booking that is not archived, past ones included.
+function SourceTally({ weddings }: { weddings: AdminWedding[] }) {
+  const counts = new Map<string, { total: number; booked: number }>();
+  for (const w of weddings) {
+    const key =
+      leadSourceLabel(w.leadSource) ??
+      leadSourceLabel(sourceForTag(w.leadSrcTag)) ??
+      "Not answered";
+    const row = counts.get(key) ?? { total: 0, booked: 0 };
+    row.total += 1;
+    if (w.isDepositPaid) row.booked += 1;
+    counts.set(key, row);
+  }
+  const rows = [...counts.entries()].sort((a, b) => b[1].total - a[1].total);
+  if (rows.length === 0) return null;
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-semibold text-charcoal">Where couples found us</h2>
+      <div className="rounded-2xl border border-parchment bg-white p-5">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-ink/50">
+              <th className="pb-2 font-medium">Channel</th>
+              <th className="pb-2 text-right font-medium">Requests</th>
+              <th className="pb-2 text-right font-medium">Deposit paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([label, r]) => (
+              <tr key={label} className="border-t border-parchment">
+                <td className="py-1.5 text-charcoal">{label}</td>
+                <td className="py-1.5 text-right">{r.total}</td>
+                <td className="py-1.5 text-right">{r.booked}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-3 text-xs text-ink/50">
+          Bookings made before November 2026 never got the question, so they show as not answered.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export default function Dashboard({ data, basePath }: { data: AdminData; basePath: string }) {
   return (
     <div className="min-h-screen bg-cream">
@@ -205,6 +261,7 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
       </header>
 
       <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <SourceTally weddings={[...data.upcoming, ...data.past]} />
         <section>
           <h2 className="mb-3 text-lg font-semibold text-charcoal">Upcoming</h2>
           {data.upcoming.length === 0 ? (

@@ -180,6 +180,13 @@ export const weddings = pgTable(
       onDelete: "set null",
     }),
     notes: text("notes"),
+    // Where the couple found us (lib/lead-sources.ts). lead_source is what they
+    // told us, lead_source_detail who (the friend, the venue), lead_src_tag what
+    // the link told us (?src= on a QR code or TV vanity URL). Nullable: every
+    // booking before 2026-11-01 predates the question.
+    leadSource: varchar("lead_source", { length: 40 }),
+    leadSourceDetail: varchar("lead_source_detail", { length: 200 }),
+    leadSrcTag: varchar("lead_src_tag", { length: 40 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

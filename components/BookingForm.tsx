@@ -10,6 +10,8 @@ import {
   DEPOSIT_USD,
   DJ_DAY_RATE_USD,
 } from "@/lib/site";
+import { DETAIL_PROMPT, LEAD_SOURCES, sourceForTag, type LeadSource } from "@/lib/lead-sources";
+import { readStoredSrc } from "@/components/SourceCapture";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -36,6 +38,17 @@ export default function BookingForm({
   // field is visible and self-explanatory; the plus button adds more.
   const [inviteEmails, setInviteEmails] = useState<string[]>([""]);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
+  // Where they found us. Prefilled from a tagged link (?src= on a QR code or a
+  // TV vanity URL) once mounted, because localStorage does not exist during
+  // the prerender; the couple can still change it.
+  const [srcTag, setSrcTag] = useState<string | null>(null);
+  const [leadSource, setLeadSource] = useState<LeadSource | "">("");
+  useEffect(() => {
+    const tag = readStoredSrc();
+    setSrcTag(tag);
+    const implied = sourceForTag(tag);
+    if (implied) setLeadSource((cur) => cur || implied);
+  }, []);
 
   // Screen readers lose their place when the form unmounts, so land focus on
   // the confirmation heading so the outcome is announced.
@@ -90,6 +103,9 @@ export default function BookingForm({
           // string so the API's string schema never sees null.
           spotifyPlaylistUrl: noPlaylist ? "" : (data.get("spotifyPlaylistUrl") ?? ""),
           notes: data.get("notes"),
+          leadSource,
+          leadSourceDetail: data.get("leadSourceDetail") ?? "",
+          srcTag: srcTag ?? "",
           website: data.get("website"),
         }),
       });
@@ -372,6 +388,35 @@ export default function BookingForm({
             ? "No problem. Your planning hub has an Add a playlist button waiting whenever you make one."
             : "Already collecting must-plays? Share the playlist and it follows your booking all the way to the DJ booth."}
         </span>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-cream/80">
+            How did you find us? <span className="font-normal text-cream/50">(optional)</span>
+          </span>
+          <select
+            name="leadSource"
+            value={leadSource}
+            onChange={(e) => setLeadSource(e.target.value as LeadSource | "")}
+            className={inputClass}
+          >
+            <option value="">Pick one</option>
+            {LEAD_SOURCES.map((s) => (
+              <option key={s.value} value={s.value} className="text-charcoal">
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {leadSource && DETAIL_PROMPT[leadSource] && (
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-cream/80">
+              {DETAIL_PROMPT[leadSource]}
+            </span>
+            <input name="leadSourceDetail" maxLength={200} className={inputClass} />
+          </label>
+        )}
       </div>
 
       <label className="mt-4 block">
