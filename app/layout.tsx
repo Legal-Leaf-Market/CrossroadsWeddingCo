@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Spectral, Karla } from "next/font/google";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
+import SourceCapture from "@/components/SourceCapture";
 import "./globals.css";
 
 const spectral = Spectral({
@@ -78,6 +79,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${spectral.variable} ${karla.variable} antialiased`}>
         {children}
+        <SourceCapture />
         <Analytics />
       </body>
     </html>

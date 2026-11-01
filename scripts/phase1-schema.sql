@@ -438,3 +438,11 @@ CROSS JOIN (VALUES (1), (2), (3), (4)) AS d(weekday)  -- Monday through Thursday
 WHERE NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'office_hours_v1');
 
 INSERT INTO schema_seeds (name) VALUES ('office_hours_v1') ON CONFLICT (name) DO NOTHING;
+
+-- Lead attribution (2026-11-01, getting off WeddingPro): where each couple
+-- found us, so every replacement channel can be judged on bookings rather than
+-- on hope. See lib/lead-sources.ts. Additive and nullable: older rows simply
+-- predate the question.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_source VARCHAR(40);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_source_detail VARCHAR(200);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_src_tag VARCHAR(40);

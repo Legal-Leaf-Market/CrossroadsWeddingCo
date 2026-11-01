@@ -8,6 +8,7 @@ import { weddings } from "@/lib/db/schema";
 import { sendBookingEmails } from "@/lib/email";
 import { sendBookingTexts } from "@/lib/sms";
 import { parsePlaylistId } from "@/lib/spotify";
+import { cleanSrcTag, LEAD_SOURCE_VALUES, leadSourceLabel, type LeadSource } from "@/lib/lead-sources";
 import {
   ACOUSTIC_ADDON_USD,
   bartenderFeeUsd,
@@ -89,6 +90,12 @@ const bookingSchema = z.object({
   bartenderCount: z.coerce.number().int().min(1).max(2).optional().default(1),
   spotifyPlaylistUrl: z.string().trim().max(500, "That link is too long").optional().default(""),
   notes: z.string().trim().max(5000, "Please keep notes under 5,000 characters").optional().default(""),
+  // Lead attribution (lib/lead-sources.ts). Read loosely on purpose: a stale
+  // cached form or an unknown value must never cost us the booking, so these
+  // are validated below and dropped rather than refused.
+  leadSource: z.string().max(40).optional().default(""),
+  leadSourceDetail: z.string().trim().max(200).optional().default(""),
+  srcTag: z.string().max(60).optional().default(""),
   // Honeypot: hidden from humans, filled by bots.
   website: z.string().max(200).optional().default(""),
 });
@@ -117,6 +124,12 @@ export async function POST(req: NextRequest) {
   if (data.website) {
     return noStore({ ok: true, reference: "OK" });
   }
+
+  const leadSource = (LEAD_SOURCE_VALUES as readonly string[]).includes(data.leadSource)
+    ? (data.leadSource as LeadSource)
+    : null;
+  const leadSourceDetail = data.leadSourceDetail || null;
+  const leadSrcTag = cleanSrcTag(data.srcTag);
 
   // Round-trip the date so Feb 31 can't roll over into March.
   const eventDate = new Date(`${data.eventDate}T12:00:00Z`);
@@ -219,6 +232,9 @@ export async function POST(req: NextRequest) {
       // open owner decision; nothing customer-facing promises a number.
       depositAmount: Math.min(DEPOSIT_USD, totalUsd).toFixed(2),
       notes: data.notes || null,
+      leadSource,
+      leadSourceDetail,
+      leadSrcTag,
     });
     stored = "weddings";
   } catch (err) {
@@ -237,6 +253,9 @@ export async function POST(req: NextRequest) {
           data.phone && `Phone: ${data.phone}`,
           data.venueAddress && `Address: ${data.venueAddress}`,
           data.spotifyPlaylistUrl && `Spotify: ${data.spotifyPlaylistUrl}`,
+          leadSource &&
+            `Found us via: ${leadSourceLabel(leadSource)}${leadSourceDetail ? ` (${leadSourceDetail})` : ""}`,
+          leadSrcTag && `Link tag: ${leadSrcTag}`,
           `Booking reference: ${reference}`,
         ]
           .filter(Boolean)
@@ -283,6 +302,14 @@ export async function POST(req: NextRequest) {
       totalUsd,
       reference,
       hubPath: stored === "weddings" ? `/hub/${accessToken}` : undefined,
+      foundVia:
+        [
+          leadSource && leadSourceLabel(leadSource),
+          leadSourceDetail && `(${leadSourceDetail})`,
+          leadSrcTag && `[link tag: ${leadSrcTag}]`,
+        ]
+          .filter(Boolean)
+          .join(" ") || undefined,
     }),
   ];
   if (data.phone) {

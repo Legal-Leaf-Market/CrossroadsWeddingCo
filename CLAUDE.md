@@ -555,6 +555,19 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `/api/cron/checkins` job declared there does not run until it is recreated as a Netlify
   scheduled function. Environment variables now live in Netlify's site settings.
 
+- **Getting off WeddingPro, and lead attribution (2026-11-01, Jacob).** WeddingPro is
+  the only lead source and it is going away; the plan is `docs/GET_OFF_WEDDINGPRO.md`
+  (venues and vendors first, Zola, Google Business Profile, referrals, print, the Feb
+  bridal expo, and a small Roku/Hulu test in January). Every booking now records where
+  the couple found us: `weddings.lead_source` (the "How did you find us?" answer),
+  `lead_source_detail` (who: the friend, the venue) and `lead_src_tag` (the `?src=` tag
+  the visitor first arrived with, remembered 120 days by `SourceCapture`). The list of
+  sources and tags is `lib/lead-sources.ts` and nothing else; tags go on paper and in
+  ads, so ADD, NEVER RENAME. `/tv` is the TV vanity URL (307 to `/?src=tv`). The
+  dashboard opens with a per-channel tally, and an unknown source value is dropped,
+  never refused, so attribution can never cost a booking. Do not build couple
+  prospecting from registries (Target, Amazon, Zola): no bulk access, against their
+  terms, and spam-law exposure.
 - **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely
   abandoned .com").** Web addresses AND email addresses moved to .shop; .com no longer
   exists for us, so nothing may reintroduce it. `SITE_URL` falls back to the .shop host,

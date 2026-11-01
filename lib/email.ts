@@ -26,6 +26,8 @@ type BookingEmail = {
   totalUsd: number;
   reference: string;
   hubPath?: string;
+  /** Owner notification only: where they found us, e.g. "Zola (tag: zola)". */
+  foundVia?: string;
 };
 
 export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
@@ -129,6 +131,7 @@ export async function sendBookingEmails(booking: BookingEmail): Promise<void> {
     `Spotify playlist: ${booking.spotifyPlaylistUrl || "not provided"}`,
     `Quoted total: $${booking.totalUsd.toLocaleString("en-US")}`,
     `Reference: ${booking.reference}`,
+    `Found us via: ${booking.foundVia || "not answered"}`,
     booking.hubPath ? `Hub: ${SITE_URL}${booking.hubPath}` : `Hub: not created (leads fallback)`,
     ``,
     `Notes:`,
