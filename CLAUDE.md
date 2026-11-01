@@ -584,8 +584,14 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   this repo.
 - **Holiday party call list and venue referrals (2026-11-01, Jacob).** The Nov 1 call
   list (venues, planners, Nov to Dec events, chamber members) is built into the
-  "Crossroads Lead Playbook" artifact with a shared call log; contact data stays there,
-  not in git. Valle Vista leads that list, since the October 17 wedding outranks
+  "Crossroads Lead Playbook" artifact (claude.ai/artifact/C2wNZGNDXoDWv7YK5dfkz1) with a
+  shared call log. Jake, Nic and Terry are partners and all call from it; a "Calling as"
+  picker fills each person's name and number into the scripts. So partners on another
+  claude.ai account can reach it, a copy is served at `/admin/<ADMIN_DASH_KEY>/playbook`
+  (Jacob, 2026-11-01): source `content/playbook/crossroads-playbook.html`, rebuilt into
+  `lib/playbook-html.ts` by `node scripts/build-playbook.mjs`. The call log only works
+  on the claude.ai copy. The repo is public and Jacob chose to commit the call list
+  anyway (all from public listings), so it is readable on GitHub. Valle Vista leads that list, since the October 17 wedding outranks
   anything a web search found. On the site: `/events` has a "For venues and event
   planners" section handing out `crossroadsweddingco.shop/events?src=venue` (`planner`
   is also a tag, mapping to "vendor"). Corporate inquiries arrive as intro calls, not
