@@ -579,9 +579,11 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   expected to formalize as Crossroads Wedding and Event Co.; the site still says Wedding
   Co. until Jacob confirms. `/events` (footer-linked, in the sitemap) is the corporate
   page: $1,500 for DJ and sound, acoustic and bar quoted per event, calls go to
-  `/book?with=jake`. Corporate leads and partner pitches (Ryan Furr Creative;
-  Matty Ortega, Matty O Entertainment / MOE) live only in the lead playbook artifact;
-  the committed copy of the playbook does not carry them.
+  `/book?with=jake`. Partner pitches for Ryan Furr (Ryan Furr Creative, Indiana
+  Sentinels) and Matty Ortega (Matty O Entertainment / MOE) are cards in the committed
+  playbook's "Partners: walk in first" section (PR #83), and the playbook carries a
+  weekly goal tracker ($5,000 in deposits: 2 weddings at $500, 4 corporate at $1,000)
+  that saves to the artifact's `booked` collection; on the site copy it is local only.
 - **Holiday party call list and venue referrals (2026-11-01, Jacob).** The Nov 1 call
   list (venues, planners, Nov to Dec events, chamber members) is built into the
   "Crossroads Lead Playbook" artifact (claude.ai/artifact/C2wNZGNDXoDWv7YK5dfkz1) with a
