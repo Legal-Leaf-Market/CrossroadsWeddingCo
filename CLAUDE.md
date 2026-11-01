@@ -603,9 +603,10 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   ratings, or Review/AggregateRating JSON-LD (§9.1). Bots get a honeypot field and a
   per-instance rate limit. Photos and video from real events go in
   `REVIEW_EVENTS` (`lib/review-constants.ts`, files in `public/reviews/<event>/`,
-  web-sized); an empty list renders no gallery. **Waiting on the October 17 Valle
-  Vista photo and video zip:** an earlier session processed it but never pushed, so it
-  needs re-uploading. Light edits only (orientation, web size, gentle warmth), per Jacob.
+  web-sized); an empty list renders no gallery. The October 17 Valle Vista set is up
+  (five photos and a 5-second clip): orientation fixed, long edge 1600, a very light
+  contrast and warmth lift, EXIF and GPS stripped, video re-encoded to H.264 720x1280
+  with a poster. Light edits only, per Jacob; keep it that way for future sets.
 - **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely
   abandoned .com").** Web addresses AND email addresses moved to .shop; .com no longer
   exists for us, so nothing may reintroduce it. `SITE_URL` falls back to the .shop host,
