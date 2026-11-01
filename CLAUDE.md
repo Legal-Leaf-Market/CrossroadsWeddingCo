@@ -593,6 +593,19 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   team's call-booked email says where the caller came from. `SourceCapture` no longer
   tags an internal click on "Book a call with Jake" as a printed card: "card" is
   inferred only when `/book?with=` arrives without a same-origin referrer.
+- **Reviews page and moderated notes board (2026-11-01, Jacob).** `/reviews` (footer,
+  sitemap) is a public board anyone can sign with a name, a "writing about" choice and
+  a note, no email or login, so Jacob can send the link to someone like Adam and they
+  sign it as themselves. Rows land in `guestbook_entries` as waiting; nothing is public
+  until Jake or Nic approves it at `/admin/[key]/reviews` (dashboard link "Reviews to
+  approve"), and each new note emails the owner. Moderation is approve, hide or pin to
+  top: never edit or delete words, never write, seed or invent an entry, and no stars,
+  ratings, or Review/AggregateRating JSON-LD (§9.1). Bots get a honeypot field and a
+  per-instance rate limit. Photos and video from real events go in
+  `REVIEW_EVENTS` (`lib/review-constants.ts`, files in `public/reviews/<event>/`,
+  web-sized); an empty list renders no gallery. **Waiting on the October 17 Valle
+  Vista photo and video zip:** an earlier session processed it but never pushed, so it
+  needs re-uploading. Light edits only (orientation, web size, gentle warmth), per Jacob.
 - **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely
   abandoned .com").** Web addresses AND email addresses moved to .shop; .com no longer
   exists for us, so nothing may reintroduce it. `SITE_URL` falls back to the .shop host,
