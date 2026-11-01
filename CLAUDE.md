@@ -568,6 +568,13 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   never refused, so attribution can never cost a booking. Do not build couple
   prospecting from registries (Target, Amazon, Zola): no bulk access, against their
   terms, and spam-law exposure.
+- **Corporate and event rate: $1,500 flat for DJ and sound (2026-11-01, Jacob).**
+  `CORPORATE_DJ_SOUND_USD` in `lib/site.ts`. The $1,000 wedding rate is never quoted for
+  a corporate event; acoustic and bar staff are quoted per event. The business is
+  expected to formalize as Crossroads Wedding and Event Co.; the site still says Wedding
+  Co. until Jacob confirms. Corporate leads and partner pitches (Ryan Furr Creative;
+  Matty Ortega, Matty O Entertainment / MOE) live in the lead playbook artifact, not in
+  this repo.
 - **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely
   abandoned .com").** Web addresses AND email addresses moved to .shop; .com no longer
   exists for us, so nothing may reintroduce it. `SITE_URL` falls back to the .shop host,

@@ -222,7 +222,23 @@ when engagement is at its peak, if the channels above are already running.
   spend. If $1,000 across both platforms produces zero requests by March, stop. If it produces one
   booked wedding, it paid for itself.
 
-### 3.10 Engagement announcements (optional, light touch)
+### 3.10 Corporate and event work ($1,500 flat for DJ and sound)
+
+Crossroads is growing into Crossroads Wedding and Event Co. Corporate rate: **$1,500 flat for
+DJ and sound**; acoustic and bar staff quoted per event. Never quote the $1,000 wedding rate for a
+corporate event.
+
+- **Partners first**, because they already have the clients: Ryan Furr (Ryan Furr Creative,
+  heavy corporate work, two blocks away) and Matty Ortega (Matty O Entertainment, MOE). Pitch
+  prep, talking points and scripts are in the lead playbook.
+- **Organizations with annual events**: the Su Casa Diversity Gala, the Columbus EDC annual
+  meeting, the Columbus Area Chamber (BizBash, Discover Columbus), Ethnic Expo, the Columbus
+  Scottish Festival, The Commons, and Cummins.
+- **Seasonal**: company holiday parties (now) and spring proms (book December and January).
+- **Lead sites**: GigSalad and The Bash send private and corporate party requests; judge them on
+  bookings like any paid channel.
+
+### 3.11 Engagement announcements (optional, light touch)
 
 Local papers (The Republic in Columbus, the Herald-Times in Bloomington) still run engagement
 announcements, which couples submit themselves to be public. A one-time handwritten congratulations
