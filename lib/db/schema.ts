@@ -369,6 +369,8 @@ export const appointments = pgTable(
     phone: varchar("phone", { length: 50 }),
     eventDate: date("event_date"),
     notes: text("notes").notNull().default(""),
+    /** First-touch ?src= tag, cleaned by cleanSrcTag. See lib/lead-sources.ts. */
+    srcTag: varchar("src_tag", { length: 40 }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -381,3 +383,20 @@ export type Appointment = typeof appointments.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type Wedding = typeof weddings.$inferSelect;
 export type NewWedding = typeof weddings.$inferInsert;
+
+// 13. Public notes board (/reviews). Moderated: a row is public only once
+// approvedAt is set and hiddenAt is not. See scripts/phase1-schema.sql.
+export const guestbookEntries = pgTable(
+  "guestbook_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 80 }).notNull(),
+    relation: varchar("relation", { length: 60 }).notNull().default(""),
+    message: text("message").notNull(),
+    featured: boolean("featured").notNull().default(false),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_guestbook_created").on(t.createdAt)],
+);

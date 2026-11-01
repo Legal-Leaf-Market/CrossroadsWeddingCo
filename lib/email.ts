@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { leadSourceLabel, sourceForTag } from "@/lib/lead-sources";
 import {
   DEPOSIT_USD,
   EMAIL_FROM_ADDRESS,
@@ -249,6 +250,13 @@ function venueTimeLabel(at: Date): string {
   return fmt.format(at);
 }
 
+/** "Our venue recommended you (link tag: venue)", or a plain "no tagged link". */
+function sourceLine(tag: string | null | undefined): string {
+  if (!tag) return "no tagged link";
+  const label = leadSourceLabel(sourceForTag(tag));
+  return label ? `${label} (link tag: ${tag})` : `link tag: ${tag}`;
+}
+
 export async function sendIntroCallEmails(input: {
   person: { slug: string; name: string; title: string; notifyEmail: string };
   startsAt: Date;
@@ -258,6 +266,7 @@ export async function sendIntroCallEmails(input: {
   phone?: string;
   eventDate?: string;
   notes?: string;
+  srcTag?: string | null;
 }): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return;
@@ -302,6 +311,7 @@ export async function sendIntroCallEmails(input: {
       `Email: ${input.email}`,
       input.phone ? `Phone: ${input.phone}` : `Phone: not given`,
       input.eventDate ? `Their date: ${input.eventDate}` : `Their date: not given yet`,
+      `Came in through: ${sourceLine(input.srcTag)}`,
       ``,
       input.notes ? `What they said:\n${input.notes}` : `They didn't leave a note.`,
     ].join("\n"),

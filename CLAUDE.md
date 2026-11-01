@@ -582,6 +582,37 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `/book?with=jake`. Corporate leads and partner pitches (Ryan Furr Creative;
   Matty Ortega, Matty O Entertainment / MOE) live in the lead playbook artifact, not in
   this repo.
+- **Holiday party call list and venue referrals (2026-11-01, Jacob).** The Nov 1 call
+  list (venues, planners, Nov to Dec events, chamber members) is built into the
+  "Crossroads Lead Playbook" artifact (claude.ai/artifact/C2wNZGNDXoDWv7YK5dfkz1) with a
+  shared call log. Jake, Nic and Terry are partners and all call from it; a "Calling as"
+  picker fills each person's name and number into the scripts. So partners on another
+  claude.ai account can reach it, a copy is served at `/admin/<ADMIN_DASH_KEY>/playbook`
+  (Jacob, 2026-11-01): source `content/playbook/crossroads-playbook.html`, rebuilt into
+  `lib/playbook-html.ts` by `node scripts/build-playbook.mjs`. The call log only works
+  on the claude.ai copy. The repo is public and Jacob chose to commit the call list
+  anyway (all from public listings), so it is readable on GitHub. Valle Vista leads that list, since the October 17 wedding outranks
+  anything a web search found. On the site: `/events` has a "For venues and event
+  planners" section handing out `crossroadsweddingco.shop/events?src=venue` (`planner`
+  is also a tag, mapping to "vendor"). Corporate inquiries arrive as intro calls, not
+  weddings rows, so `appointments.src_tag` now stores the first-touch tag and the
+  team's call-booked email says where the caller came from. `SourceCapture` no longer
+  tags an internal click on "Book a call with Jake" as a printed card: "card" is
+  inferred only when `/book?with=` arrives without a same-origin referrer.
+- **Reviews page and moderated notes board (2026-11-01, Jacob).** `/reviews` (footer,
+  sitemap) is a public board anyone can sign with a name, a "writing about" choice and
+  a note, no email or login, so Jacob can send the link to someone like Adam and they
+  sign it as themselves. Rows land in `guestbook_entries` as waiting; nothing is public
+  until Jake or Nic approves it at `/admin/[key]/reviews` (dashboard link "Reviews to
+  approve"), and each new note emails the owner. Moderation is approve, hide or pin to
+  top: never edit or delete words, never write, seed or invent an entry, and no stars,
+  ratings, or Review/AggregateRating JSON-LD (§9.1). Bots get a honeypot field and a
+  per-instance rate limit. Photos and video from real events go in
+  `REVIEW_EVENTS` (`lib/review-constants.ts`, files in `public/reviews/<event>/`,
+  web-sized); an empty list renders no gallery. The October 17 Valle Vista set is up
+  (five photos and a 5-second clip): orientation fixed, long edge 1600, a very light
+  contrast and warmth lift, EXIF and GPS stripped, video re-encoded to H.264 720x1280
+  with a poster. Light edits only, per Jacob; keep it that way for future sets.
 - **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely
   abandoned .com").** Web addresses AND email addresses moved to .shop; .com no longer
   exists for us, so nothing may reintroduce it. `SITE_URL` falls back to the .shop host,

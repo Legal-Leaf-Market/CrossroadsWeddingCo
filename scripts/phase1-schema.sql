@@ -446,3 +446,26 @@ INSERT INTO schema_seeds (name) VALUES ('office_hours_v1') ON CONFLICT (name) DO
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_source VARCHAR(40);
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_source_detail VARCHAR(200);
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS lead_src_tag VARCHAR(40);
+
+-- Intro-call attribution (2026-11-01, corporate holiday party calls): the
+-- ?src= tag a visitor carried when they booked a call. Corporate inquiries
+-- come in as calls, not weddings rows, so without this a venue referral from
+-- /events?src=venue would never be counted. Additive and nullable.
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS src_tag VARCHAR(40);
+
+-- Public notes board at /reviews (2026-11-01, Jacob). Anyone can sign it with
+-- just a name, no email or login, so nothing shows until a person approves it:
+-- approved_at NULL means waiting, hidden_at set means turned down. Nothing is
+-- deleted, so a wrong click is one more click to undo. No rating column on
+-- purpose: there are no stars, and no Review/AggregateRating markup.
+CREATE TABLE IF NOT EXISTS guestbook_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(80) NOT NULL,
+    relation VARCHAR(60) NOT NULL DEFAULT '',
+    message TEXT NOT NULL,
+    featured BOOLEAN NOT NULL DEFAULT false,
+    approved_at TIMESTAMPTZ,
+    hidden_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_guestbook_created ON guestbook_entries (created_at DESC);
