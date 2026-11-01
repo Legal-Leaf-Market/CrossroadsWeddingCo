@@ -1,16 +1,19 @@
 const NAV_LINKS = [
-  { href: "/#services", label: "Services" },
+  { href: "/events", label: "Corporate events" },
+  { href: "/#services", label: "Weddings" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/#about", label: "About" },
   { href: "/#contact", label: "Contact" },
 ];
 
-export default function Header() {
+/** `brand="events"` is the front page's name, Crossroads Wedding and Event Co. */
+export default function Header({ brand }: { brand?: "events" } = {}) {
   return (
     <header className="sticky top-0 z-50 border-b border-parchment bg-cream/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="/" className="text-lg font-semibold tracking-tight text-charcoal">
-          Crossroads <span className="text-terracotta">Wedding Co.</span>
+        <a href="/" className="text-base font-semibold tracking-tight text-charcoal sm:text-lg">
+          Crossroads{" "}
+          <span className="text-terracotta">{brand === "events" ? "Wedding and Event Co." : "Wedding Co."}</span>
         </a>
         <nav className="hidden gap-8 text-sm font-medium text-ink md:flex">
           {NAV_LINKS.map((link) => (
@@ -21,7 +24,7 @@ export default function Header() {
         </nav>
         <a
           href="/book"
-          className="rounded-full bg-terracotta px-5 py-2 text-sm font-semibold text-cream hover:bg-terracotta-dark"
+          className="ml-3 shrink-0 whitespace-nowrap rounded-full bg-terracotta px-4 py-2 text-sm font-semibold text-cream hover:bg-terracotta-dark sm:px-5"
         >
           Check your date
         </a>

@@ -576,8 +576,15 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `CORPORATE_DJ_SOUND_USD` in `lib/site.ts`. A **$1,000 deposit** locks a corporate
   date (`CORPORATE_DEPOSIT_USD`), against $500 for weddings. The $1,000 wedding rate is never quoted for
   a corporate event; acoustic and bar staff are quoted per event. The business is
-  expected to formalize as Crossroads Wedding and Event Co.; the site still says Wedding
-  Co. until Jacob confirms. `/events` (footer-linked, in the sitemap) is the corporate
+  expected to formalize as Crossroads Wedding and Event Co. **The front page already
+  leads with that name (2026-11-01, Jacob)**: `EVENT_BRAND_NAME` in `lib/site.ts`, the
+  homepage title, header wordmark (`<Header brand="events" />`) and hero, plus
+  `alternateName` in the structured data. `SITE_NAME` ("Crossroads Wedding Co.") stays on
+  every other page, emails, the agreement and the JSON-LD `name` until the business formally
+  renames. The homepage leads with corporate for the holiday season: a `HolidayBanner` strip
+  above the header ($1,500 flat, "December dates are still open", no invented scarcity),
+  "Book your holiday party" as the primary hero button, and a corporate card beside the
+  wedding card. The header nav gained "Corporate events" (/events) on every page. `/events` (footer-linked, in the sitemap) is the corporate
   page: $1,500 for DJ and sound, acoustic and bar quoted per event, calls go to
   `/book?with=jake`. Partner pitches for Ryan Furr (Ryan Furr Creative, Indiana
   Sentinels) and Matty Ortega (Matty O Entertainment / MOE) are cards in the committed
