@@ -450,6 +450,10 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   every slot from `findScheduler`, which now returns null for them, so nothing
   can be booked against those hours. Restoring either person is putting their
   entry back in `lib/team.ts` and nothing else.
+- **Correction (2026-11-01, Jacob): the first wedding was October 17 at Valle Vista Golf
+  Club & Conference Center, Greenwood.** It went very well with strong reviews; the venue
+  coordinator was on her third wedding. Valle Vista is now the warmest venue lead. Kat's
+  November 7 wedding below is the second, not the first.
 - **Kat McKinney's wedding is the first live one: November 7 (2026-08-28, Jacob).**
   Partner is **Tanis** (confirmed 2026-08-30 from her own hub record; the earlier
   "tennis" was a voice-transcription artifact). Married name on her run sheet: **Copeland**.
@@ -572,7 +576,9 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `CORPORATE_DJ_SOUND_USD` in `lib/site.ts`. The $1,000 wedding rate is never quoted for
   a corporate event; acoustic and bar staff are quoted per event. The business is
   expected to formalize as Crossroads Wedding and Event Co.; the site still says Wedding
-  Co. until Jacob confirms. Corporate leads and partner pitches (Ryan Furr Creative;
+  Co. until Jacob confirms. `/events` (footer-linked, in the sitemap) is the corporate
+  page: $1,500 for DJ and sound, acoustic and bar quoted per event, calls go to
+  `/book?with=jake`. Corporate leads and partner pitches (Ryan Furr Creative;
   Matty Ortega, Matty O Entertainment / MOE) live in the lead playbook artifact, not in
   this repo.
 - **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely

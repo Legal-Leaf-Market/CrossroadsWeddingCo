@@ -79,7 +79,8 @@ before we even leave that night.
 
 | Venue | Area | Why | Source |
 |---|---|---|---|
-| Forge on 4th | Columbus | Our first live wedding (Nov 7). Ask for the referral | owner records |
+| Valle Vista Golf Club & Conference Center | Greenwood | **Warm.** Our first wedding, October 17, went great. Call first: recommended list, cancellations, holiday parties | owner records |
+| Forge on 4th | Columbus | Kat and Tanis's wedding (Nov 7). Ask for the referral | owner records |
 | Factory 12 | Columbus | Historic farm barn, up to 200, outside caterers allowed, so outside vendors are normal | [columbus.in.us](https://columbus.in.us/wedding-venues/) |
 | The Inn at Irwin Gardens | Columbus | Historic mansion and garden | [columbus.in.us](https://columbus.in.us/wedding-venues/) |
 | Harrison Lake Country Club | Columbus | Club weddings | [Zola listing](https://zola.com/wedding-vendors/search/columbus-in--wedding-venues--golf-country-clubs?page=16) |

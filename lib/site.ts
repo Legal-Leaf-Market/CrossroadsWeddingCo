@@ -30,8 +30,8 @@ export const OWNER_EMAIL = "jake@crossroadsweddingco.shop";
 export const DJ_DAY_RATE_USD = 1000;
 
 // Corporate and event rate (owner directive 2026-11-01): DJ and sound, flat.
-// The wedding day rate above is never quoted for a corporate event. Not on the
-// public site yet; the lead playbook and outreach scripts use it.
+// The wedding day rate above is never quoted for a corporate event. Shown on /events
+// and used by the lead playbook and outreach scripts.
 export const CORPORATE_DJ_SOUND_USD = 1500;
 
 // $500 locks the date; the balance is due 24 hours after the wedding's start
