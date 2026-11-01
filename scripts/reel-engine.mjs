@@ -87,7 +87,7 @@ function frame(slide, showKey) {
     h(
       "div",
       { style: { display: "flex", alignItems: "center", justifyContent: "space-between", ...on("chrome") } },
-      h("div", { style: { fontFamily: "Spectral", fontSize: 34, color: slide.color } }, "Crossroads Wedding Co."),
+      h("div", { style: { fontFamily: "Spectral", fontSize: 34, color: slide.color } }, "Crossroads Wedding and Event Co."),
       h("div", { style: { fontSize: 28, color: slide.footerColor } }, slide.footer),
     ),
   );

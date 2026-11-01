@@ -7,13 +7,11 @@ const FALLBACK_SITE_URL = "https://crossroadsweddingco.shop";
 // alias, a fork) so canonicals and sitemap entries point at the right host.
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? FALLBACK_SITE_URL).replace(/\/+$/, "");
 
-export const SITE_NAME = "Crossroads Wedding Co.";
+export const SITE_NAME = "Crossroads Wedding and Event Co.";
 
-// The name the front page leads with now that we sell corporate events as well
-// as weddings (owner directive 2026-11-01: "change it on the front page to
-// Crossroads Wedding and Event Co"). SITE_NAME stays the name on emails, the
-// agreement and structured data until the business formally renames.
-export const EVENT_BRAND_NAME = "Crossroads Wedding and Event Co.";
+// Renamed everywhere 2026-11-01 (Jacob: "change the name everywhere to Wedding
+// and Event Co"). Kept as an alias so the front-page code that named it still reads.
+export const EVENT_BRAND_NAME = SITE_NAME;
 
 export const SITE_TAGLINE = "Wedding DJ, Live Music & Bar Service";
 

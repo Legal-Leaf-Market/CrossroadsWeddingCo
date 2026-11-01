@@ -362,7 +362,7 @@ export default function IgStudioClient() {
                       fontWeight: 700,
                     }}
                   >
-                    Crossroads Wedding Co.
+                    Crossroads Wedding and Event Co.
                   </div>
                 </div>
               </div>

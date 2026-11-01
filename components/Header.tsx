@@ -6,14 +6,15 @@ const NAV_LINKS = [
   { href: "/#contact", label: "Contact" },
 ];
 
-/** `brand="events"` is the front page's name, Crossroads Wedding and Event Co. */
-export default function Header({ brand }: { brand?: "events" } = {}) {
+/** `brand` is accepted for the front page's existing call; the name is the same everywhere now. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function Header(_props: { brand?: "events" } = {}) {
   return (
     <header className="sticky top-0 z-50 border-b border-parchment bg-cream/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <a href="/" className="text-base font-semibold tracking-tight text-charcoal sm:text-lg">
           Crossroads{" "}
-          <span className="text-terracotta">{brand === "events" ? "Wedding and Event Co." : "Wedding Co."}</span>
+          <span className="text-terracotta">Wedding and Event Co.</span>
         </a>
         <nav className="hidden gap-8 text-sm font-medium text-ink md:flex">
           {NAV_LINKS.map((link) => (

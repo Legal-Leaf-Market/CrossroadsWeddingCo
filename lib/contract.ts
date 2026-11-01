@@ -22,7 +22,7 @@ import { formatEventDate } from "@/lib/hub-constants";
 // before it carries real weight. Bump CONTRACT_VERSION on any wording change
 // so accepted snapshots stay traceable to the text that was accepted.
 
-export const CONTRACT_VERSION = "2026-10-03";
+export const CONTRACT_VERSION = "2026-11-01";
 
 export type ContractInput = {
   coupleNames: string;

@@ -82,7 +82,7 @@ export default function CountersignForm({
           className="mt-1 accent-terracotta"
         />
         <span>
-          I am signing this agreement on behalf of Crossroads Wedding Co. and I understand that
+          I am signing this agreement on behalf of Crossroads Wedding and Event Co. and I understand that
           typing my name here has the same effect as signing it.
         </span>
       </label>
