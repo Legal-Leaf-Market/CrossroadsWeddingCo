@@ -625,6 +625,15 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   "Booked intro calls" section lists upcoming calls (from yesterday on, not cancelled)
   with who they're with, contact, their date, notes and the link tag, so a venue
   referral is visible without the email.
+- **Terry is a bookable partner (2026-11-01, Jacob).** `lib/team.ts` has Terry with
+  title "Partner" (the only title stated) and `showOnTeam: false`, so `/book?with=terry`
+  works and the hours editor lists him, but the public "Who you get" section
+  (`PUBLIC_TEAM`) still shows only Jake and Nic until Jacob writes his roles and bio.
+  No office hours are seeded for him: he sets them at `/admin/[key]/hours`, and until
+  then his page offers no times and hands visitors to the date form. terry@ is not
+  printed on a card or confirmed to exist, so set `SCHEDULER_EMAIL_TERRY` in Netlify to
+  his real address; the owner is copied on every call regardless. Follow-up text
+  automation is parked (Jacob, 2026-11-01: "don't worry about it rn").
 - **Reviews page and moderated notes board (2026-11-01, Jacob).** `/reviews` (footer,
   sitemap) is a public board anyone can sign with a name, a "writing about" choice and
   a note, no email or login, so Jacob can send the link to someone like Adam and they

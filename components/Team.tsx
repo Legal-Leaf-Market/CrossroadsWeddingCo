@@ -1,5 +1,5 @@
 import SafeImage from "@/components/SafeImage";
-import { TEAM } from "@/lib/team";
+import { PUBLIC_TEAM } from "@/lib/team";
 
 // Who-you-get profile cards. Couples book people, not packages; WeddingPro's
 // own advice (Adam, 2026-08-28) is that faces build confidence. Cards fall
@@ -14,7 +14,7 @@ export default function Team() {
           the people at your wedding.
         </p>
         <div className="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2">
-          {TEAM.map((m) => (
+          {PUBLIC_TEAM.map((m) => (
             <div key={m.slug} className="rounded-2xl border border-parchment bg-white p-6 text-center">
               {m.photoUrl ? (
                 <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full">

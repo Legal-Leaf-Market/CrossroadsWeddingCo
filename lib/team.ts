@@ -34,6 +34,12 @@ export type TeamMember = {
   bio: string;
   initials: string;
   photoUrl?: string;
+  /**
+   * False keeps someone bookable for intro calls (lib/schedulers.ts) without
+   * putting them on the public "Who you get" section, for a partner who sells
+   * but whose title, roles and bio the owner has not yet written.
+   */
+  showOnTeam?: boolean;
 };
 
 export const TEAM: TeamMember[] = [
@@ -53,7 +59,24 @@ export const TEAM: TeamMember[] = [
     bio: "The live music and the steady hand behind the bar. Nic plays the solo acoustic sets, singer-songwriter style, and brings about twenty years of serving and bartending, with a current Indiana ATC permit. When we say licensed bartenders, he's who we mean.",
     initials: "N",
   },
+  {
+    // TERRY (2026-11-01, Jacob: "We are all partners and will all be reaching
+    // out in a sales capacity"). Bookable at /book?with=terry so calls from the
+    // venues he works land on his calendar. "Partner" is the only title anyone
+    // has stated, and roles and bio stay empty rather than invented, which is
+    // why he is off the public team section until Jacob writes them.
+    slug: "terry",
+    name: "Terry",
+    title: "Partner",
+    roles: "",
+    bio: "",
+    initials: "T",
+    showOnTeam: false,
+  },
 ];
+
+/** The people shown in the public "Who you get" section. */
+export const PUBLIC_TEAM: TeamMember[] = TEAM.filter((m) => m.showOnTeam !== false);
 
 export function findTeamMember(slug: string): TeamMember | null {
   return TEAM.find((m) => m.slug === slug) ?? null;
