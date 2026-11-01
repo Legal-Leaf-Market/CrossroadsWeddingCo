@@ -71,6 +71,17 @@ a{color:var(--accent)}
 .prep h4{margin:10px 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .prep ul{margin:0;padding-left:18px}
 .prep li{margin:2px 0}
+.goal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:10px;margin:14px 0}
+.goal .gh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+.goal h2{margin:0;font-size:1.1rem}
+.goal .gnum{font-size:1.2rem;font-weight:700;font-variant-numeric:tabular-nums}
+.gbar{height:10px;background:var(--sunk);border-radius:999px;overflow:hidden}
+.gbar span{display:block;height:100%;width:0;background:var(--ok);transition:width .3s}
+.gform{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.gform .f{flex:1 1 150px;min-width:0}
+.glist{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.glist li{display:flex;justify-content:space-between;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:6px;font-size:14px}
+@media (prefers-reduced-motion:reduce){.gbar span{transition:none}}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
@@ -86,6 +97,19 @@ a{color:var(--accent)}
     <label class="f" for="meName">Calling as<select id="meName"><option>Jake</option><option>Nic</option><option>Terry</option></select></label>
     <label class="f" for="meNum">Your number (fills in every [your number])<input type="text" id="meNum" inputmode="tel" autocomplete="tel" placeholder="(812) 555-0100"></label>
   </div>
+
+  <section class="goal" aria-labelledby="goalH">
+    <div class="gh"><h2 id="goalH">This week: $5,000 in deposits</h2><span class="gnum" id="goalTotal">$0 of $5,000</span></div>
+    <div class="gbar" aria-hidden="true"><span id="goalBar"></span></div>
+    <div class="tally"><span class="chip" id="goalWed">Weddings: 0 of 2 ($500 deposit each)</span><span class="chip" id="goalCorp">Corporate: 0 of 4 ($1,000 deposit each)</span></div>
+    <form class="gform" id="goalForm">
+      <label class="f" for="gType">Booked<select id="gType"><option value="corporate">Corporate event ($1,000 deposit)</option><option value="wedding">Wedding ($500 deposit)</option></select></label>
+      <label class="f" for="gName">Who<input type="text" id="gName" maxlength="120" placeholder="Company or couple" required></label>
+      <label class="f" for="gDate">Event date<input type="date" id="gDate"></label>
+      <button class="btn" type="submit">Log booking</button>
+    </form>
+    <ul class="glist" id="goalList"></ul>
+  </section>
 
   <div class="tally" id="tally"></div>
 
@@ -436,6 +460,33 @@ $("#lists").addEventListener("click",e=>{const b=e.target.closest("[data-lcopy]"
 $("#lists").addEventListener("change",e=>{const el=e.target.closest("[data-f]");if(!el)return;const id=el.closest(".lead").dataset.id;save(id,el.dataset.f,el.value);if(el.dataset.f==="status")el.closest(".lead").dataset.s=el.value});
 $("#lists").addEventListener("focusout",()=>setTimeout(()=>{if(!document.activeElement||!document.activeElement.closest(".lead"))render()},0));
 
+// Weekly deposit goal: 2 weddings at $500 + 4 corporate events at $1,000 = $5,000.
+const GOAL=5000, DEP={wedding:500,corporate:1000}, TARGET={wedding:2,corporate:4};
+let bookings=[];
+const money=(n)=>"$"+n.toLocaleString("en-US");
+function renderGoal(){
+  const c={wedding:0,corporate:0};let total=0;
+  for(const b of bookings){c[b.type]=(c[b.type]||0)+1;total+=DEP[b.type]||0}
+  $("#goalTotal").textContent=`${money(total)} of ${money(GOAL)}`;
+  $("#goalBar").style.width=Math.min(100,total/GOAL*100)+"%";
+  $("#goalWed").textContent=`Weddings: ${c.wedding} of ${TARGET.wedding} ($500 deposit each)`;
+  $("#goalCorp").textContent=`Corporate: ${c.corporate} of ${TARGET.corporate} ($1,000 deposit each)`;
+  $("#goalList").innerHTML=bookings.map(b=>`<li><span>${b.type==="wedding"?"Wedding":"Corporate"}: ${esc(b.name)}${b.date?" · "+esc(b.date):""} · ${money(DEP[b.type]||0)}${b.by?" · logged by "+esc(b.by):""}</span>${db&&canWrite&&!b.local?`<button class="btn" type="button" data-gdel="${esc(b.id)}">Remove</button>`:""}</li>`).join("");
+}
+$("#goalForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const type=$("#gType").value, name=$("#gName").value.trim().slice(0,120), date=$("#gDate").value, by=$("#meName").value||"Jake";
+  if(!name)return;
+  if(!db){bookings.push({id:"local"+Date.now(),type,name,date,by,local:true});renderGoal();e.target.reset();toast("Shown here only. Log it on the claude.ai copy to share it");return}
+  try{await db.collection("booked").add({type,name,date,by,at:Date.now()});e.target.reset();toast("Booked. Keep going")}
+  catch(err){toast("Didn't save: "+(err&&err.message?err.message:"try again"))}
+});
+$("#goalList").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-gdel]");if(!b||!db)return;
+  try{await db.collection("booked").doc(b.dataset.gdel).delete()}catch(err){toast("Couldn't remove that booking")}
+});
+renderGoal();
+
 render();
 (async()=>{
   const timer=setTimeout(()=>{$("#sync").textContent="The call log isn't loading. The list still works; notes won't save until it does."},10000);
@@ -444,6 +495,10 @@ render();
     if(!db){clearTimeout(timer);if(!window.claude){$("#sync").innerHTML='The shared call log lives on the <a href="https://claude.ai/artifact/C2wNZGNDXoDWv7YK5dfkz1" target="_blank" rel="noopener">claude.ai copy</a>. Everything else here works.'}else{$("#sync").textContent="Sign in to claude.ai to log calls. The list and scripts work without it."}render();return}
     const user=await (window.claude?.use?.("user")??null);
     canWrite=user?(user.can("data.write")!==false):true;
+    db.collection("booked").onSnapshot(snap=>{
+      bookings=snap.docs.map(d=>({id:d.id,...(d.data()||{})})).sort((a,b)=>(a.at||0)-(b.at||0));
+      renderGoal();
+    },()=>{});
     db.collection("calls").onSnapshot(snap=>{
       clearTimeout(timer);
       for(const d of snap.docs){log[d.id]=d.data()||{}}
