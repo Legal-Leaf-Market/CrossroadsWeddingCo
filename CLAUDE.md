@@ -580,8 +580,8 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   Co. until Jacob confirms. `/events` (footer-linked, in the sitemap) is the corporate
   page: $1,500 for DJ and sound, acoustic and bar quoted per event, calls go to
   `/book?with=jake`. Corporate leads and partner pitches (Ryan Furr Creative;
-  Matty Ortega, Matty O Entertainment / MOE) live in the lead playbook artifact, not in
-  this repo.
+  Matty Ortega, Matty O Entertainment / MOE) live only in the lead playbook artifact;
+  the committed copy of the playbook does not carry them.
 - **Holiday party call list and venue referrals (2026-11-01, Jacob).** The Nov 1 call
   list (venues, planners, Nov to Dec events, chamber members) is built into the
   "Crossroads Lead Playbook" artifact (claude.ai/artifact/C2wNZGNDXoDWv7YK5dfkz1) with a
@@ -590,8 +590,12 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   claude.ai account can reach it, a copy is served at `/admin/<ADMIN_DASH_KEY>/playbook`
   (Jacob, 2026-11-01): source `content/playbook/crossroads-playbook.html`, rebuilt into
   `lib/playbook-html.ts` by `node scripts/build-playbook.mjs`. The call log only works
-  on the claude.ai copy. The repo is public and Jacob chose to commit the call list
-  anyway (all from public listings), so it is readable on GitHub. Valle Vista leads that list, since the October 17 wedding outranks
+  on the claude.ai copy. **The call list IS in git, in a public repo, on purpose**
+  (Jacob, 2026-11-01, asked and answered after being told it would be readable on
+  GitHub): every entry came from a public listing. This supersedes the earlier rule that
+  contact data stays out of git. Do not delete or scrub the file as a leak; editing a
+  contact is fine. The claude.ai copy does not sync: an edit there needs the HTML
+  updated, the build script run, and a push. Valle Vista leads that list, since the October 17 wedding outranks
   anything a web search found. On the site: `/events` has a "For venues and event
   planners" section handing out `crossroadsweddingco.shop/events?src=venue` (`planner`
   is also a tag, mapping to "vendor"). Corporate inquiries arrive as intro calls, not
