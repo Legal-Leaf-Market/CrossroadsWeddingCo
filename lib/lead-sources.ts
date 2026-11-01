@@ -72,6 +72,9 @@ export const SRC_TAGS: Record<string, LeadSource> = {
   expo: "card_or_brochure",
   venue: "venue",
   ref: "friend",
+  // Corporate outreach (2026-11-01 holiday party calls): a venue or planner
+  // who puts us on their list gets /events?src=venue or ?src=planner to pass on.
+  planner: "vendor",
 };
 
 /** Accepts a raw ?src= value; returns a safe tag or null. */

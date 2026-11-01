@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { bookAppointment, getAvailability } from "@/lib/booking-server";
 import { sendIntroCallEmails } from "@/lib/email";
+import { cleanSrcTag } from "@/lib/lead-sources";
 import { findScheduler, APPOINTMENT_MINUTES } from "@/lib/schedulers";
 
 export const runtime = "nodejs";
@@ -52,6 +53,9 @@ const bookSchema = z.object({
   phone: z.string().trim().max(50).optional().default(""),
   eventDate: z.string().trim().max(20).optional().default(""),
   notes: z.string().trim().max(2000).optional().default(""),
+  // The visitor's first-touch ?src= tag. Never refused: a malformed tag is
+  // dropped by cleanSrcTag, so attribution can never cost a booked call.
+  src: z.string().max(80).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -81,6 +85,8 @@ export async function POST(req: NextRequest) {
     return noStore({ error: "That time didn't make sense. Pick one from the calendar." }, 400);
   }
 
+  const srcTag = cleanSrcTag(data.src);
+
   const result = await bookAppointment({
     person,
     startsAt,
@@ -89,6 +95,7 @@ export async function POST(req: NextRequest) {
     phone: data.phone,
     eventDate: data.eventDate,
     notes: data.notes,
+    srcTag,
   });
 
   if (!result.ok) {
@@ -115,6 +122,7 @@ export async function POST(req: NextRequest) {
     phone: data.phone,
     eventDate: data.eventDate,
     notes: data.notes,
+    srcTag,
   });
 
   return noStore({ ok: true, id: result.id });

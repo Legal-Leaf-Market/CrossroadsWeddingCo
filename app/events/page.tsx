@@ -20,7 +20,11 @@ const PRICE = `$${CORPORATE_DJ_SOUND_USD.toLocaleString("en-US")}`;
 const DEPOSIT = `$${CORPORATE_DEPOSIT_USD.toLocaleString("en-US")}`;
 const TITLE = `Corporate event and holiday party DJ: ${PRICE} flat for DJ and sound`;
 const DESCRIPTION = `DJ, sound and MC for corporate events, holiday parties, galas and company celebrations across Columbus, Indianapolis, Greenwood, Franklin and Bloomington. ${PRICE} flat, MC included.`;
-const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Event inquiry")}`;
+// The link a venue or planner passes on after putting us on their list. The
+// ?src=venue tag rides into the call booking (appointments.src_tag) and the
+// team's booking email. Tags are printed and shared: add, never rename.
+const REFERRAL_LINK = `${SITE_URL.replace(/^https?:\/\//, "")}/events?src=venue`;
+const MAILTO =`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Event inquiry")}`;
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -128,6 +132,36 @@ export default function EventsPage() {
                 {TRAVEL_SURCHARGE_RANGE} travel fee, quoted up front.
               </p>
             </div>
+          </div>
+        </section>
+
+        <section className="bg-cream py-16">
+          <div className="mx-auto max-w-4xl px-6">
+            <h2 className="text-3xl text-charcoal">For venues and event planners</h2>
+            <p className="mt-4 max-w-2xl text-ink/80">
+              When a client asks you who to call for a DJ, this is what you&apos;re handing them: one
+              flat price they can read on this page before anyone talks, an MC who runs your
+              timeline, and a crew that works inside your house rules. December short notice
+              included.
+            </p>
+            <ul className="mt-6 space-y-3 text-ink/80">
+              {[
+                "We arrive early and load in on your schedule.",
+                "We keep to your sound limits, cutoffs and hard stops.",
+                "We take the mic for welcomes, toasts and awards, so your coordinator doesn't have to.",
+                `The price doesn't change after the call: ${PRICE} for DJ and sound, MC included.`,
+              ].map((line) => (
+                <li key={line} className="flex gap-3">
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-terracotta" aria-hidden />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 text-ink/80">
+              Putting us on your vendor list? Send clients this link, so we know the booking came
+              from you:
+            </p>
+            <p className="mt-2 text-sm font-semibold text-charcoal [overflow-wrap:anywhere] sm:text-base">{REFERRAL_LINK}</p>
           </div>
         </section>
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { VENUE_TIME_ZONE } from "@/lib/site";
+import { readStoredSrc } from "@/components/SourceCapture";
 
 type DaySlots = { ymd: string; slots: string[] };
 type Status = "loading" | "ready" | "empty" | "booking" | "booked" | "error";
@@ -102,6 +103,7 @@ export default function CallScheduler({
           phone: String(form.get("phone") ?? ""),
           eventDate: String(form.get("eventDate") ?? ""),
           notes: String(form.get("notes") ?? ""),
+          src: readStoredSrc() ?? undefined,
         }),
       });
       const json = (await res.json()) as { error?: string; retry?: boolean };

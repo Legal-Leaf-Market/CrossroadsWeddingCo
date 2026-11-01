@@ -582,6 +582,17 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `/book?with=jake`. Corporate leads and partner pitches (Ryan Furr Creative;
   Matty Ortega, Matty O Entertainment / MOE) live in the lead playbook artifact, not in
   this repo.
+- **Holiday party call list and venue referrals (2026-11-01, Jacob).** The Nov 1 call
+  list (venues, planners, Nov to Dec events, chamber members) is built into the
+  "Crossroads Lead Playbook" artifact with a shared call log; contact data stays there,
+  not in git. Valle Vista leads that list, since the October 17 wedding outranks
+  anything a web search found. On the site: `/events` has a "For venues and event
+  planners" section handing out `crossroadsweddingco.shop/events?src=venue` (`planner`
+  is also a tag, mapping to "vendor"). Corporate inquiries arrive as intro calls, not
+  weddings rows, so `appointments.src_tag` now stores the first-touch tag and the
+  team's call-booked email says where the caller came from. `SourceCapture` no longer
+  tags an internal click on "Book a call with Jake" as a printed card: "card" is
+  inferred only when `/book?with=` arrives without a same-origin referrer.
 - **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely
   abandoned .com").** Web addresses AND email addresses moved to .shop; .com no longer
   exists for us, so nothing may reintroduce it. `SITE_URL` falls back to the .shop host,

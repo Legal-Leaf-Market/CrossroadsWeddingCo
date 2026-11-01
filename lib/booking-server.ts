@@ -125,6 +125,7 @@ export async function bookAppointment(input: {
   phone?: string;
   eventDate?: string;
   notes?: string;
+  srcTag?: string | null;
   now?: Date;
 }): Promise<BookResult> {
   const now = input.now ?? new Date();
@@ -154,6 +155,7 @@ export async function bookAppointment(input: {
         phone: input.phone || null,
         eventDate: input.eventDate || null,
         notes: input.notes ?? "",
+        srcTag: input.srcTag ?? null,
       })
       .returning({ id: appointments.id });
     return { ok: true, id: row.id };
