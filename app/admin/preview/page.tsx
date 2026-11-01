@@ -99,6 +99,7 @@ const SAMPLE: AdminData = {
       createdAt: "2026-01-15T12:00:00.000Z",
     },
   ],
+  calls: [],
   leads: [
     {
       id: 41,

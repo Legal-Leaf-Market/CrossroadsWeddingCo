@@ -621,7 +621,10 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   weddings rows, so `appointments.src_tag` now stores the first-touch tag and the
   team's call-booked email says where the caller came from. `SourceCapture` no longer
   tags an internal click on "Book a call with Jake" as a printed card: "card" is
-  inferred only when `/book?with=` arrives without a same-origin referrer.
+  inferred only when `/book?with=` arrives without a same-origin referrer. The dashboard's
+  "Booked intro calls" section lists upcoming calls (from yesterday on, not cancelled)
+  with who they're with, contact, their date, notes and the link tag, so a venue
+  referral is visible without the email.
 - **Reviews page and moderated notes board (2026-11-01, Jacob).** `/reviews` (footer,
   sitemap) is a public board anyone can sign with a name, a "writing about" choice and
   a note, no email or login, so Jacob can send the link to someone like Adam and they

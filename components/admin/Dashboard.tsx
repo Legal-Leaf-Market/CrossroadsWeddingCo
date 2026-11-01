@@ -1,8 +1,9 @@
 import ArchiveButton from "@/components/admin/ArchiveButton";
 import BookingEditor from "@/components/admin/BookingEditor";
-import type { AdminData, AdminWedding } from "@/lib/admin";
+import type { AdminCall, AdminData, AdminWedding } from "@/lib/admin";
+import { findScheduler } from "@/lib/schedulers";
 import { daysOut, formatEventDate } from "@/lib/hub-constants";
-import { SITE_NAME } from "@/lib/site";
+import { SITE_NAME, VENUE_TIME_ZONE } from "@/lib/site";
 import { leadSourceLabel, sourceForTag } from "@/lib/lead-sources";
 
 // Presentational owner dashboard, rendered by /admin/[key] with live data and
@@ -232,6 +233,63 @@ function SourceTally({ weddings }: { weddings: AdminWedding[] }) {
   );
 }
 
+// Intro calls booked from /book?with=<slug>. Corporate inquiries and venue
+// referrals come in here rather than as weddings rows, so this is where a
+// "?src=venue" link shows whether it worked.
+function CallList({ calls }: { calls: AdminCall[] }) {
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-semibold text-charcoal">Booked intro calls</h2>
+      {calls.length === 0 ? (
+        <p className="rounded-2xl border border-parchment bg-white p-5 text-sm text-ink/60">
+          No intro calls booked. Calls booked on the site show up here with where the caller came
+          from.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {calls.map((c) => {
+            const when = new Date(c.startsAt).toLocaleString("en-US", {
+              timeZone: VENUE_TIME_ZONE,
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            });
+            const host = findScheduler(c.personSlug)?.name ?? c.personSlug;
+            const source = c.srcTag
+              ? `${leadSourceLabel(sourceForTag(c.srcTag)) ?? "Tagged link"} (link tag: ${c.srcTag})`
+              : "No tagged link";
+            return (
+              <div key={c.id} className="rounded-2xl border border-parchment bg-white p-5 text-sm">
+                <p className="font-semibold text-charcoal">
+                  {when} · {c.name} with {host}
+                </p>
+                <p className="mt-1 break-words text-ink/70">
+                  <a href={`mailto:${c.email}`} className="underline decoration-parchment underline-offset-2 hover:text-terracotta">
+                    {c.email}
+                  </a>
+                  {c.phone && (
+                    <>
+                      {" · "}
+                      <a href={`tel:${c.phone}`} className="underline decoration-parchment underline-offset-2 hover:text-terracotta">
+                        {c.phone}
+                      </a>
+                    </>
+                  )}
+                  {c.eventDate && ` · their date ${formatEventDate(c.eventDate)}`}
+                </p>
+                <p className="mt-1 text-ink/55">Came in through: {source}</p>
+                {c.notes && <p className="mt-2 whitespace-pre-line break-words text-ink/80">{c.notes}</p>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Dashboard({ data, basePath }: { data: AdminData; basePath: string }) {
   return (
     <div className="min-h-screen bg-cream">
@@ -274,6 +332,7 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
 
       <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
         <SourceTally weddings={[...data.upcoming, ...data.past]} />
+        <CallList calls={data.calls} />
         <section>
           <h2 className="mb-3 text-lg font-semibold text-charcoal">Upcoming</h2>
           {data.upcoming.length === 0 ? (

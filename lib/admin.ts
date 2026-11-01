@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { leads, weddingMessages, weddings } from "@/lib/db/schema";
+import { appointments, leads, weddingMessages, weddings } from "@/lib/db/schema";
 
 /**
  * Gate for everything under /admin/[key]: true only when ADMIN_DASH_KEY is
@@ -65,10 +65,26 @@ export type AdminLead = {
   createdAt: string;
 };
 
+/** A booked intro call (corporate inquiries and venue referrals arrive this way). */
+export type AdminCall = {
+  id: string;
+  personSlug: string;
+  startsAt: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  eventDate: string | null;
+  notes: string;
+  /** First-touch ?src= tag the caller arrived with, e.g. "venue". */
+  srcTag: string | null;
+};
+
 export type AdminData = {
   upcoming: AdminWedding[];
   past: AdminWedding[];
   leads: AdminLead[];
+  /** Calls not cancelled, from yesterday on, soonest first. */
+  calls: AdminCall[];
 };
 
 function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): AdminWedding {
@@ -160,7 +176,7 @@ export async function countersignContract(
 }
 
 export async function getAdminData(): Promise<AdminData> {
-  const [allWeddings, recentLeads, unreadRows] = await Promise.all([
+  const [allWeddings, recentLeads, unreadRows, callRows] = await Promise.all([
     db.select().from(weddings).where(isNull(weddings.archivedAt)).orderBy(weddings.eventDate),
     db.select().from(leads).orderBy(desc(leads.createdAt)).limit(10),
     db
@@ -171,6 +187,17 @@ export async function getAdminData(): Promise<AdminData> {
       .from(weddingMessages)
       .where(sql`${weddingMessages.sender} = 'couple' and ${weddingMessages.readByTeam} = false`)
       .groupBy(weddingMessages.weddingId),
+    db
+      .select()
+      .from(appointments)
+      .where(
+        and(
+          isNull(appointments.cancelledAt),
+          sql`${appointments.startsAt} >= now() - interval '1 day'`,
+        ),
+      )
+      .orderBy(appointments.startsAt)
+      .limit(50),
   ]);
   const unreadByWedding = new Map(unreadRows.map((r) => [r.weddingId, r.count]));
 
@@ -197,6 +224,17 @@ export async function getAdminData(): Promise<AdminData> {
       venue: l.venue,
       source: l.source,
       createdAt: l.createdAt.toISOString(),
+    })),
+    calls: callRows.map((c) => ({
+      id: c.id,
+      personSlug: c.personSlug,
+      startsAt: c.startsAt.toISOString(),
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      eventDate: c.eventDate,
+      notes: c.notes,
+      srcTag: c.srcTag,
     })),
   };
 }
