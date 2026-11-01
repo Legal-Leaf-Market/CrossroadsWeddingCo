@@ -582,18 +582,6 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `/book?with=jake`. Corporate leads and partner pitches (Ryan Furr Creative;
   Matty Ortega, Matty O Entertainment / MOE) live in the lead playbook artifact, not in
   this repo.
-- **/reviews: photos, the couple's review, and a moderated guestbook (2026-11-01, Jacob).**
-  Photos and a short video from the October 17 Valle Vista wedding live in
-  `public/reviews/valle-vista/` (iPhone originals, auto-oriented, 1600px, lightly graded,
-  video re-encoded to 720p H.264). Anyone can sign the guestbook with just a name; every
-  entry is stored `pending` in `guestbook_entries` and shows only after approval at
-  `/admin/[key]/guestbook` (dashboard "Guestbook" link). Featuring one approved entry pins it
-  in the "From the couple" slot, held for Adam's review. Guards: honeypot, per-instance rate
-  limit, length caps, links refused; the owner gets a Resend alert per entry. No review or
-  rating structured data on this page (9.1). Confirm the couple is happy with their wedding
-  photos being public before promoting the page.
-- **Lead materials are in `docs/leads/`** (playbook source, Claude in Chrome brief, GigSalad and
-  The Bash kit) so another account can continue the sales work.
 - **crossroadsweddingco.shop is the only domain (2026-10-14, Jacob: "we completely
   abandoned .com").** Web addresses AND email addresses moved to .shop; .com no longer
   exists for us, so nothing may reintroduce it. `SITE_URL` falls back to the .shop host,

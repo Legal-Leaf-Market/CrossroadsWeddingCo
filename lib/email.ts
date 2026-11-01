@@ -194,25 +194,6 @@ export async function sendTeamInboxAlert(input: {
   if (error) console.error("[email] inbox alert failed:", error);
 }
 
-/** Tell the owners somebody signed the guestbook and it is waiting for approval. */
-export async function sendGuestbookAlert(input: { name: string; preview: string }): Promise<void> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return;
-  const resend = new Resend(key);
-  const adminKey = process.env.ADMIN_DASH_KEY;
-  const link =
-    adminKey && adminKey.length >= 16
-      ? `Approve or remove it: ${SITE_URL}/admin/${adminKey}/guestbook`
-      : `Approve or remove it from the dashboard's Guestbook page.`;
-  const { error } = await resend.emails.send({
-    from: FROM,
-    to: NOTIFY_TO,
-    subject: `New guestbook entry from ${input.name}`,
-    text: [`${input.name} signed the guestbook on /reviews:`, ``, input.preview, ``, link].join("\n"),
-  });
-  if (error) console.error("[email] guestbook alert failed:", error);
-}
-
 /** Tell the couple the team wrote back; content stays in the hub on purpose. */
 export async function sendHubMessagePointer(input: {
   to: string;
