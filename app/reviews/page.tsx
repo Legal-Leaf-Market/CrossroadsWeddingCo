@@ -79,34 +79,36 @@ export default async function ReviewsPage() {
             <div className="mx-auto max-w-5xl px-6">
               <h2 className="text-2xl text-charcoal">{ev.title}</h2>
               <p className="mt-1 text-sm text-ink/60">{ev.date}</p>
-              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {ev.media.map((m) =>
-                  m.kind === "video" ? (
-                    <video
-                      key={m.src}
-                      src={m.src}
-                      poster={m.poster}
-                      controls
-                      playsInline
-                      preload="none"
-                      width={m.width}
-                      height={m.height}
-                      className="h-auto w-full rounded-xl bg-charcoal"
-                      aria-label={m.alt}
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={m.src}
-                      src={m.src}
-                      alt={m.alt}
-                      width={m.width}
-                      height={m.height}
-                      loading="lazy"
-                      className="h-auto w-full rounded-xl object-cover"
-                    />
-                  ),
-                )}
+              {/* Columns, not a grid: the photos mix portrait and landscape, and
+                  a grid would crop or leave holes. */}
+              <div className="mt-6 columns-1 gap-3 sm:columns-2 lg:columns-3">
+                {ev.media.map((m) => (
+                  <div key={m.src} className="mb-3 break-inside-avoid">
+                    {m.kind === "video" ? (
+                      <video
+                        src={m.src}
+                        poster={m.poster}
+                        controls
+                        playsInline
+                        preload="none"
+                        width={m.width}
+                        height={m.height}
+                        className="h-auto w-full rounded-xl bg-charcoal"
+                        aria-label={m.alt}
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={m.src}
+                        alt={m.alt}
+                        width={m.width}
+                        height={m.height}
+                        loading="lazy"
+                        className="h-auto w-full rounded-xl"
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </section>

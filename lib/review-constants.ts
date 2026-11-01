@@ -27,4 +27,22 @@ export type ReviewMedia = {
 // with a poster), put them in public/reviews/<event>/, and list them here.
 // Only media we have permission to post (the agreement's marketing-photo
 // clause covers our own couples, with opt-out by message).
-export const REVIEW_EVENTS: { title: string; date: string; media: ReviewMedia[] }[] = [];
+const VV = "/reviews/valle-vista-2026-10-17";
+
+export const REVIEW_EVENTS: { title: string; date: string; media: ReviewMedia[] }[] = [
+  {
+    // Our first wedding (CLAUDE.md §9.2). Phone photos and one clip from the
+    // night, lightly graded only: rotation fixed, web-sized, a touch of warmth,
+    // location data stripped. Originals stay with Jacob, not in the repo.
+    title: "Valle Vista Golf Club & Conference Center, Greenwood",
+    date: "October 17, 2026",
+    media: [
+      { src: `${VV}/room-set.jpg`, kind: "image", alt: "The ballroom at Valle Vista with the DJ table and speakers set up before guests arrived", width: 1600, height: 1200 },
+      { src: `${VV}/dance-floor.mp4`, kind: "video", poster: `${VV}/dance-floor-poster.jpg`, alt: "A short clip of guests dancing, filmed from the DJ table", width: 720, height: 1280 },
+      { src: `${VV}/dj-table.jpg`, kind: "image", alt: "Our crew at the DJ table getting the music ready", width: 1600, height: 1200 },
+      { src: `${VV}/dance-floor.jpg`, kind: "image", alt: "Guests dancing, seen from behind the mixer and laptop at the DJ table", width: 1200, height: 1600 },
+      { src: `${VV}/jake-before.jpg`, kind: "image", alt: "Jake in the ballroom before the reception", width: 1200, height: 1600 },
+      { src: `${VV}/jake-reception.jpg`, kind: "image", alt: "Jake during the reception with guests on the floor behind him", width: 1200, height: 1600 },
+    ],
+  },
+];
