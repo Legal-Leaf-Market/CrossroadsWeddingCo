@@ -56,6 +56,10 @@ const BOOKABLE: { slug: string; envVar: string }[] = [
   { slug: "nic", envVar: "SCHEDULER_EMAIL_NIC" },
   { slug: "brayton", envVar: "SCHEDULER_EMAIL_BRAYTON" },
   { slug: "ashton", envVar: "SCHEDULER_EMAIL_ASHTON" },
+  // Added 2026-11-01. Unlike the four above, terry@ is NOT printed on a card
+  // or confirmed to exist: until it is, set SCHEDULER_EMAIL_TERRY in Netlify
+  // to his real address. The owner is copied on every call either way.
+  { slug: "terry", envVar: "SCHEDULER_EMAIL_TERRY" },
 ];
 
 function notifyEmailFor(slug: string, envVar: string): string {
