@@ -19,6 +19,7 @@ const SAMPLE: AdminData = {
       eventDate: "2027-06-12",
       venueName: "The Sycamore Barn",
       status: "deposit_paid",
+      packageType: "standard_dj_mc",
       addons: [
         { type: "acoustic_set", fee: 500 },
         { type: "bar_service", fee: null, minFee: 500 },
@@ -49,6 +50,7 @@ const SAMPLE: AdminData = {
       eventDate: "2026-10-03",
       venueName: "Backyard in Seymour",
       status: "inquiry",
+      packageType: "standard_dj_mc",
       addons: [],
       totalAmount: "1000.00",
       isDepositPaid: false,
@@ -78,6 +80,7 @@ const SAMPLE: AdminData = {
       eventDate: "2026-05-30",
       venueName: "Mill Race Park",
       status: "completed",
+      packageType: "standard_dj_mc",
       addons: [{ type: "acoustic_set", fee: 400 }],
       totalAmount: "1400.00",
       isDepositPaid: true,

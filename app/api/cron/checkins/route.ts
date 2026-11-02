@@ -63,6 +63,8 @@ export async function GET(request: Request) {
         notInArray(weddings.status, ["cancelled", "completed"]),
         sql`${weddings.eventDate} > current_date`,
         sql`${weddings.createdAt} < now() - interval '2 days'`,
+        // Corporate events are entered from the dashboard; these texts are written for couples.
+        sql`${weddings.packageType} is distinct from 'corporate'`,
       ),
     );
 
