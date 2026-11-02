@@ -1,6 +1,7 @@
 import ArchiveButton from "@/components/admin/ArchiveButton";
 import BookingEditor from "@/components/admin/BookingEditor";
 import type { AdminCall, AdminData, AdminWedding } from "@/lib/admin";
+import CorporateBookingForm from "@/components/admin/CorporateBookingForm";
 import { findScheduler } from "@/lib/schedulers";
 import { daysOut, formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME, VENUE_TIME_ZONE } from "@/lib/site";
@@ -67,6 +68,9 @@ function WeddingCard({
           <p className="text-sm text-ink/70">{wedding.venueName}</p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
+          {wedding.packageType === "corporate" && (
+            <span className="rounded-full bg-charcoal px-2.5 py-0.5 text-xs font-semibold text-cream">corporate</span>
+          )}
           {statusChip(wedding.status)}
           <p className="text-sm font-semibold text-charcoal">{money(wedding.totalAmount)}</p>
           <ArchiveButton
@@ -100,6 +104,7 @@ function WeddingCard({
             {a.fee != null ? ` $${a.fee}` : a.minFee != null ? ` from $${a.minFee}` : ""}
           </span>
         ))}
+        {wedding.packageType !== "corporate" && (
         <span
           className={
             wedding.contractAcceptedAt
@@ -114,6 +119,7 @@ function WeddingCard({
               ? "needs your signature"
               : "unsigned"}
         </span>
+        )}
         {wedding.checkinsSent.length > 0 && (
           <span className="rounded-full bg-charcoal/5 px-2 py-0.5 text-ink/50">
             check-ins: {wedding.checkinsSent.join(", ")}d
@@ -169,6 +175,15 @@ function WeddingCard({
           </>
         )}
         {basePath !== "/admin/preview" && (
+          <a
+            href={`${basePath}/invoice/${wedding.id}`}
+            className="rounded-full border border-terracotta px-4 py-1.5 font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
+          >
+            Invoice
+          </a>
+        )}
+        {/* The agreement is written for weddings; a corporate event has no contract page yet. */}
+        {basePath !== "/admin/preview" && wedding.packageType !== "corporate" && (
           <a
             href={`${basePath}/contract/${wedding.id}`}
             className="rounded-full border border-terracotta px-4 py-1.5 font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
@@ -331,6 +346,7 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
       </header>
 
       <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <CorporateBookingForm basePath={basePath} />
         <SourceTally weddings={[...data.upcoming, ...data.past]} />
         <CallList calls={data.calls} />
         <section>

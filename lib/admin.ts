@@ -1,7 +1,9 @@
-import { timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { appointments, leads, weddingMessages, weddings } from "@/lib/db/schema";
+import { nameSlug } from "@/lib/hub-constants";
+import { CORPORATE_PACKAGE } from "@/lib/invoice";
 
 /**
  * Gate for everything under /admin/[key]: true only when ADMIN_DASH_KEY is
@@ -26,6 +28,8 @@ export type AdminWedding = {
   eventDate: string;
   venueName: string;
   status: string;
+  /** "corporate" for events entered from the dashboard; wedding packages otherwise. */
+  packageType: string | null;
   addons: { type: string; fee: number | null; minFee?: number }[];
   totalAmount: string;
   isDepositPaid: boolean;
@@ -101,6 +105,7 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     eventDate: w.eventDate,
     venueName: w.venueName,
     status: w.status,
+    packageType: w.packageType,
     addons,
     totalAmount: w.totalAmount,
     isDepositPaid: w.isDepositPaid ?? false,
@@ -295,4 +300,50 @@ export async function updateAdminWedding(
   if (patch.status !== undefined) set.status = patch.status;
   await db.update(weddings).set(set).where(eq(weddings.id, weddingId));
   return true;
+}
+
+/**
+ * A corporate event, entered from the dashboard. Corporate inquiries come in by
+ * phone or as an intro call, never through the wedding booking form, so without
+ * this they have no booking record and nothing to invoice. Stored in the same
+ * table with package_type "corporate" so the dashboard, money editing and the
+ * invoice all work unchanged. Mints the same two credentials a wedding gets.
+ */
+export async function createCorporateBooking(input: {
+  company: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  eventDate: string;
+  venueName: string;
+  venueAddress?: string;
+  totalUsd: number;
+  depositUsd: number;
+  depositReceived: boolean;
+  notes?: string;
+}): Promise<string> {
+  const accessToken = `${nameSlug(input.company)}-${randomBytes(8).toString("hex")}`;
+  const shareToken = randomBytes(24).toString("hex");
+  const notes = [input.contactName && `Contact: ${input.contactName}`, input.notes].filter(Boolean).join("\n") || null;
+  const [row] = await db
+    .insert(weddings)
+    .values({
+      accessToken,
+      shareToken,
+      coupleNames: input.company,
+      contactEmail: input.email || null,
+      contactPhone: input.phone || null,
+      eventDate: input.eventDate,
+      venueName: input.venueName,
+      venueAddress: input.venueAddress || null,
+      packageType: CORPORATE_PACKAGE,
+      addons: [],
+      totalAmount: input.totalUsd.toFixed(2),
+      depositAmount: Math.min(input.depositUsd, input.totalUsd).toFixed(2),
+      isDepositPaid: input.depositReceived,
+      status: input.depositReceived ? "deposit_paid" : "inquiry",
+      notes,
+    })
+    .returning({ id: weddings.id });
+  return row.id;
 }

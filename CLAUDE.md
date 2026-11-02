@@ -627,6 +627,27 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   "Booked intro calls" section lists upcoming calls (from yesterday on, not cancelled)
   with who they're with, contact, their date, notes and the link tag, so a venue
   referral is visible without the email.
+- **Invoices and corporate bookings (2026-11-02, Jacob: "build build build ... invoicing first").**
+  Every booking card on the dashboard has an **Invoice** button opening
+  `/admin/[key]/invoice/[weddingId]`, printable to one Letter page (the print button masks the
+  admin key, like the agreement). `lib/invoice.ts` is pure and builds it from the booking row
+  and the `lib/site.ts` prices: line items from the services, and the STORED total is the
+  truth, so if "Edit money" sets a different total one "Additional" or "Adjustment" line makes
+  the lines add up rather than inventing a price. Custom terms replace the line items. Before
+  the deposit lands, "Deposit due now" is the amount due and the balance shows separately;
+  after, the balance is due 24 hours after the start time (the corporate rule is assumed to
+  match weddings until Jacob says otherwise); a settled balance prints a PAID stamp. Payment is
+  cash or check to the business name. The number is `CR-<event date>-<first 4 of the id>`,
+  stable with no counter. Corporate events are booked by phone, so the dashboard has an "Add
+  corporate booking" form (`POST /api/admin/[key]/corporate`) that writes a `weddings` row with
+  `package_type = 'corporate'` ($1,500 and $1,000 defaults, editable), minting the same tokens
+  and emailing nobody. Corporate rows show a "corporate" chip, hide the wedding Agreement button
+  and chip (the agreement is written for weddings; there is no corporate contract yet), and are
+  excluded from the check-in texts. The invoice footer is one quiet line pitching the tech and
+  process work ("Like how this invoice works? We built it ourselves ... Ask Jake"); point it at
+  the tech business's own page once that business has a name. Verified against a real Postgres
+  and headless Chromium: corporate and wedding invoices, a discount, a trade deal, the PAID
+  stamp, the 404 on a wrong key, no sideways scroll at 390 and 768.
 - **Terry is a bookable partner (2026-11-01, Jacob).** `lib/team.ts` has Terry with
   title "Partner" (the only title stated) and `showOnTeam: false`, so `/book?with=terry`
   works and the hours editor lists him, but the public "Who you get" section
