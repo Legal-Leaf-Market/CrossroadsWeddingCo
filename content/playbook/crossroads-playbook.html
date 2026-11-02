@@ -206,7 +206,7 @@ const SCRIPTS=[
 ];
 // Scripts written for one lead, shown on that lead's card next to its phone number.
 const LEAD_SCRIPTS={
- "li-alejandro-nazario": [["Text Alejandro", "Hi Alejandro, it's Jake Kennedy. Thanks for the note on LinkedIn! I'd love to catch up. Would a 20-minute call one day next week work? I'd really value your take on growing the corporate side."]],
+ "li-alejandro-nazario": [["Text Alejandro", "Hi Alejandro, it's Jake. Thanks for the note on LinkedIn! I'd love to catch up. Would a 20-minute call one day next week work? I'd really value your take on growing the corporate side."]],
  "li-shabir-ahmad": [["LinkedIn reply", "Thanks, Shabir, that means a lot, and I hope our paths cross again too. For your media clients, the short version: DJ, sound and an MC for company events, $1,500 flat, one invoice, anywhere from Indy to Louisville. Here's a page you can forward: crossroadsweddingco.shop/events\n\nJake"]],
  "li-jon-myers": [["Coffee follow-up", "Hi Jon, following up on coffee. Would a morning next week work? I'd love to hear what the Chamber has coming up, from the awards to member events, and how Crossroads can get involved.\n\nJake"]],
  "ryan-furr-creative": [
@@ -232,6 +232,42 @@ const LEAD_SCRIPTS={
   [
    "Voicemail",
    "Hi, this is Jake with Crossroads. We DJed the October 17 wedding in your ballroom, and we really enjoyed working with your team. I'm calling for two quick things: we'd love to be on your recommended vendor list for weddings, and we also do company holiday parties at $1,500 flat for DJ and sound, with December dates still open, short notice included. You can reach me at [your number]. That's Jake, Crossroads, [your number]. Thanks, and talk soon."
+  ]
+ ],
+ "andrew-sutherland": [
+  [
+   "Call or text opener",
+   "Andrew, it's Jake. I sold storm restoration for you back in the day, and I still use what I learned on those doors. I'm running my own companies now in Columbus, Indiana: Crossroads does DJ, sound and MC for company events, and I've started a process-fix business with a partner. Got 15 minutes this week to catch up?"
+  ],
+  [
+   "The process ask (once you're talking)",
+   "What still eats the most office time for you guys: insurance paperwork, supplements, tracking where each job sits, getting paid? We sit with the person doing that work for a day and build a fix around how they already do it. You pay once and own it. I'd love to try it on one headache of yours."
+  ],
+  [
+   "The event ask",
+   "Do you do a crew party or a customer event at the end of the season? We do DJ, sound and MC at $1,500 flat, and I'd make the drive for you."
+  ]
+ ],
+ "tim-victory": [
+  [
+   "Text to reopen (after you confirm his company)",
+   "Hey Tim, it's Jake from the Sutherland days. You still running your own roofing company? I'm doing my own thing now too and wanted to catch up."
+  ],
+  [
+   "The process ask",
+   "You were the guy fighting the insurance companies in the office. What took you the most hours back then, and is it any better now that it's your shop? Whatever you hate most is exactly the kind of thing my partner and I fix."
+  ]
+ ],
+ "crump-theatre": [
+  [
+   "Opener",
+   "Hi, this is Jake with Crossroads Wedding and Event Co. I played acoustic at your Crump fundraiser a few years back, and we've grown into a full DJ, sound and events company. With the restoration underway, I'd love to be on your list for fundraisers and events, whether that's acoustic, DJ and sound, or all of it. You can reach me at [your number]."
+  ]
+ ],
+ "tony-stewart-foundation": [
+  [
+   "Opener (confirm they still operate first)",
+   "Hi, this is Jake with Crossroads Wedding and Event Co. I played acoustic at the foundation's Crump fundraiser a few years back, and we've grown into a full DJ, sound and events company. Who handles events for Tony's charities now? I'd love to be on the list. You can reach me at [your number]."
   ]
  ],
  "dyes-walk": [
@@ -368,8 +404,12 @@ const PREP={
 const LEADS=[
 {id:"ryan-furr-creative",sec:"partner",name:"Ryan Furr, Ryan Furr Creative",type:"Partner (creative company, Indiana Sentinels)",city:"Columbus, two blocks from Jake",contact:"Ryan Furr; text Jordan Vickers first",phone:"",email:"",why:"A good friend with a full staff, steady corporate clients and a pro hockey team. One yes could mean recurring sound gigs.",src:"",flag:"Warm"},
 {id:"matty-o-entertainment",sec:"partner",name:"Matty Ortega, Matty O Entertainment (MOE)",type:"Partner (entertainment company)",city:"Indiana",contact:"Matty Ortega",phone:"",email:"",why:"Already booking events. Overflow partner both ways, and a place to sell our acoustic and bar add-ons.",src:"",flag:"Warm"},
+{id:"andrew-sutherland",sec:"partner",name:"Andrew Sutherland, Sutherland's Exteriors, LLC",type:"Personal connection (roofing company owner)",city:"Cornelius, NC (Charlotte area and Upstate SC)",contact:"Andrew Sutherland, owner; Jake has his number",phone:"",email:"",why:"Jake sold storm restoration for him. Confirmed on the NC Secretary of State registry: owner and member of Sutherland's Exteriors, LLC (SOSID 1048915, active; an Ohio LLC formed 2008, registered in NC). Office: 20484 Chartwell Center Dr, Suite I, Cornelius, NC 28031. Roofing, siding and gutters around Charlotte, Cornelius and Troutman. Two asks: company or crew events, and the Tech Therapists pitch on insurance-claim paperwork and job tracking.",src:"",flag:"Personal connection"},
+{id:"tim-victory",sec:"partner",name:"Tim, Victory Roofing (company not confirmed)",type:"Personal connection (roofing company owner)",city:"North Carolina, likely",contact:"Tim; Jake has his number. Last name to confirm",phone:"",email:"",why:"Worked Andrew Sutherland's insurance claims in the office, then started his own roofing company. Not matched yet on the NC registry: the Victory Roofing entities found are either dissolved (Greensboro, Gastonia) or have a different owner (Burlington). Confirm his last name and the company's legal name before pitching. Andrew and Tim are competitors now: never carry anything between them.",src:"",flag:"Needs verification",warn:1},
 {id:"forge-on-4th",sec:"venue",name:"Forge on 4th",type:"Venue",city:"Columbus",contact:"Venue coordinator (get the name on Nov 7)",phone:"",email:"",why:"Kat and Tanis's wedding is here on Saturday, November 7. Ask in person that night: a spot on their recommended vendor list, and an intro to their next couple. Address: 418 4th St, Columbus, IN 47201.",src:"",flag:"Our Nov 7 wedding"},
 {id:"valle-vista",sec:"venue",best:0,name:"Valle Vista Golf Club & Conference Center",type:"Venue",city:"Greenwood",contact:"Event Sales & Main Office",phone:"(317) 882-2955",email:"",why:"Our first wedding, October 17, was here and went very well. Call first: recommended list, holiday parties, short-notice dates. The research list ranked it low only because the website shows no holiday page.",src:"https://www.vallevista.com/",flag:"Warm"},
+{id:"crump-theatre",sec:"venue",name:"The Crump Theatre (Crump Center for the Performing Arts)",type:"Historic venue and fundraiser host",city:"Columbus",contact:"Jessica Schnepp, volunteer lead project coordinator (as quoted in The Republic); also ask who at the Columbus historical society co-hosted",phone:"",email:"",why:"Jake played acoustic at their Crump fundraiser with the Tony Stewart Foundation. The theatre is being restored with about $6.1 million in state READI funds, so ask about reopening events and fundraisers. Phone not listed: find it through the Crump Center or Heritage Fund.",src:"https://www.therepublic.com/?p=423094",flag:"Jake played here"},
+{id:"tony-stewart-foundation",sec:"venue",name:"Tony Stewart Foundation",type:"Charity (fundraiser host)",city:"Indianapolis area",contact:"Foundation office",phone:"(317) 299-6066",email:"",why:"Co-hosted the Crump fundraiser Jake played acoustic at. The Republic and IBJ reported the foundation would close at the end of 2024, so this number may be dead: confirm it still operates, or ask who now runs Tony Stewart's events.",src:"https://www.therepublic.com/?p=726217",flag:"May have closed",warn:1},
 {id:"dyes-walk",sec:"venue",best:1,name:"Dye's Walk Country Club",type:"Venue",city:"Greenwood",contact:"Kirby Sutton, Director of Private Events",phone:"(317) 535-8635",email:"membership@dyeswalkcc.com (general)",why:"Special Events page lists corporate dinners and holiday events, and there's a named decision-maker.",src:"https://dyeswalkcc.com/special-events/"},
 {id:"24-shelby",sec:"venue",best:2,name:"24 Shelby",type:"Venue",city:"Indianapolis",contact:"Sarah (owner/coordinator)",phone:"(317) 410-1552",email:"Sarah@24shelby.com",why:"Pushing holiday parties, no in-house DJ, and the FAQ says they coordinate with the client's DJ. Elevated stage add-on; up to 250 seated.",src:"https://24shelby.com/holiday-parties/"},
 {id:"industry-828",sec:"venue",best:3,name:"INDUSTRY (828 Venues)",type:"Venue",city:"Indianapolis",contact:"Not listed",phone:"(317) 561-0028",email:"",why:"Holiday party page, \"no locked-in vendor list\", clients bring their own entertainment. About 200-guest corporate parties. Same line reaches 828 Planning.",src:"https://industry.828venues.com/events/holiday-party/"},
@@ -521,7 +561,11 @@ function prepHtml(p){
 function statusOf(id){return log[id]?.status||DEF[id]||"todo"}
 // Star rating: 5 = confirmed they need a DJ (they told us, or posted it, like a Craigslist ad); 4 = warm or asked us to call; 3 = their page shows a fit; 2 = real contact, no sign of need yet; 1 = long shot.
 // Starting ratings come from what each listing actually says. A caller's rating, saved in the log, replaces it.
-const STARS={"ryan-furr-creative":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+const STARS={"andrew-sutherland":[4, "Personal connection: Jake worked for him, and the company is confirmed active on the NC registry."],
+"tim-victory":[2, "Personal connection, but his company isn't confirmed yet. Verify before calling."],
+"crump-theatre":[4, "Warm: Jake played their Crump fundraiser, and the restoration means events are coming."],
+"tony-stewart-foundation":[4, "Warm: Jake played their fundraiser. Check first: the foundation was reported closing at the end of 2024."],
+"ryan-furr-creative":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
 "matty-o-entertainment":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
 "forge-on-4th":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
 "valle-vista":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
