@@ -52,6 +52,8 @@ input[type=search]{width:14rem;max-width:100%}
 .kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
 .phone{font-variant-numeric:tabular-nums;font-weight:700;user-select:all}
 .why{margin:8px 0 0}
+.stars{margin:6px 0 0;font-size:13px;color:var(--muted)}.stars .sv{color:var(--warn);font-size:16px;letter-spacing:1px}
+.starpick{display:flex;gap:2px}.sp{font-size:22px;line-height:1;padding:2px 4px;border:0;background:none;color:var(--line);cursor:pointer}.sp.on{color:var(--warn)}.sp:focus-visible{outline:2px solid var(--accent)}
 .lscript{margin-top:10px;background:var(--sunk);border-radius:8px;padding:10px 12px;display:grid;gap:6px}
 .lscript h3{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .lscript p{margin:0;white-space:pre-wrap}
@@ -160,6 +162,7 @@ a{color:var(--accent)}
     <label class="f" for="fList">List<select id="fList">
       <option value="all">All leads</option>
       <option value="best">Best 10 for today</option>
+      <option value="hot">Hottest first (by stars)</option>
       <option value="partner">Partners: walk in first</option>
       <option value="venue">Venues and planners</option>
       <option value="event">Nov to Dec events</option>
@@ -516,12 +519,97 @@ function prepHtml(p){
    <h4>Before you go</h4><p>${esc(p.watch)}</p></details>`;
 }
 function statusOf(id){return log[id]?.status||DEF[id]||"todo"}
+// Star rating: 5 = confirmed they need a DJ (they told us, or posted it, like a Craigslist ad); 4 = warm or asked us to call; 3 = their page shows a fit; 2 = real contact, no sign of need yet; 1 = long shot.
+// Starting ratings come from what each listing actually says. A caller's rating, saved in the log, replaces it.
+const STARS={"ryan-furr-creative":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+"matty-o-entertainment":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+"forge-on-4th":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+"valle-vista":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+"li-alejandro-nazario":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+"li-shabir-ahmad":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+"li-marques-johnson":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+"li-jon-myers":[4,"Warm: we already know them, or they asked us to reach out. Call today."],
+"aia-indy":[4,"Their own listing says entertainment for this date isn't set yet."],
+"dyes-walk":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"24-shelby":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"industry-828":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"far-center":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"indiana-state-museum":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"eiteljorg":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"crane-bay":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"folktale":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"deer-park":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"the-ivy":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"blue-llama":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"toms-watch-bar":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"skyline-club":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"cc-indianapolis":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"fourwinds":[3,"Their own page shows a fit: holiday parties, no in-house DJ, outside vendors welcome, or a vendor list to join."],
+"spark-hilton":[3,"A dated event with a listed contact, and the music or performers aren't named. Ask who books sound."],
+"bloomington-chamber":[3,"A dated event with a listed contact, and the music or performers aren't named. Ask who books sound."],
+"franklin-lighting":[3,"A dated event with a listed contact, and the music or performers aren't named. Ask who books sound."],
+"canopy-of-lights":[3,"A dated event with a listed contact, and the music or performers aren't named. Ask who books sound."],
+"li-nick-seger":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-vic-meyer":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-alex-thatcher":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-john-greenwell":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-stephanie-atha":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-sarah-stair":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-tammy-densford":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-katy-head":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-karen-davis":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-beth-mcgraw":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-erin-hulse":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-david-richardt":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-elisa-skees":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-matt-tait":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"li-keith-fechtman":[3,"Jake knows them from a past job, so the message lands with a real person."],
+"compass-pointe":[3,"Best fit in the chamber list: a firm in Jake's finance network, or one party covering several stores."],
+"community-ford":[3,"Best fit in the chamber list: a firm in Jake's finance network, or one party covering several stores."],
+"royal-south-toyota":[3,"Best fit in the chamber list: a firm in Jake's finance network, or one party covering several stores."],
+"indiana-roof":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"grafton-peek":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"garment-factory":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"rfd-franklin":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"mavris":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"woolery-mill":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"biltwell":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"church-on-jefferson":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"holiday-inn-bloomington":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"wonderlab":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"mallow-run":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"fifth-third-whitehall":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"greenwood-parade":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"shaub-cpa":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"endress-hauser":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"malarkey":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"george-booth":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"iu-credit-union":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"mutual-savings":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"blue-co":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"li-amy-fischer":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"li-rachael-noel":[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],
+"light-it-up":[2,"Event is this week, but the organizer isn't listed and it's likely booked. Worth one try, mostly for next year."],
+"upland-wood-shop":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."],
+"harry-cooler":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."],
+"complete-weddings":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."],
+"beloved-event":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."],
+"terrys":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."],
+"jc-parks":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."],
+"iu-biddle":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."],
+"bloomington-convention":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."],
+"old-town-greenwood":[1,"Long shot: no contact listed, too small, likely in-house, closed, or a competitor."]};
+const STAR_DEFAULT={chamber:[1,"Member listing only. No event or contact info beyond the main line."],network:[2,"Referral ask. They hear about events but don't plan them."],linkedin:[2,"A cold LinkedIn message."],venue:[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],event:[2,"A dated event, need not confirmed."],partner:[3,"Partner."]};
+function starsOf(l){const e=log[l.id]||{};const n=+e.stars;if(n>=1&&n<=5)return {n,why:e.starWhy||"",by:e.starBy||e.by||"",mine:true};const d=STARS[l.id]||STAR_DEFAULT[l.sec]||[2,""];return {n:d[0],why:d[1],mine:false}}
+const starTxt=n=>"\u2605".repeat(n)+"\u2606".repeat(5-n);
 function card(l){
   const s=statusOf(l.id), e=log[l.id]||{};
   const opts=STATUSES.map(([v,t])=>`<option value="${v}"${v===s?" selected":""}>${t}</option>`).join("");
   const when=e.at?new Date(e.at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/Indiana/Indianapolis"}):"";
-  return `<article class="lead" data-s="${s}" data-id="${l.id}">
+  const st=starsOf(l);
+  return `<article class="lead" data-s="${s}" data-id="${l.id}" data-stars="${st.n}">
    <div>
+    <p class="stars"><span class="sv" aria-label="${st.n} of 5 stars">${starTxt(st.n)}</span> <span class="sw">${esc(st.why)}${st.mine&&st.by?` (rated by ${esc(st.by)})`:""}</span></p>
     <div class="top">${l.best!=null?`<span class="rank">${l.best===0?"Call first":"#"+l.best+" today"}</span>`:""}<span class="name">${esc(l.name)}</span>${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}</div>
     <div class="meta">${esc(l.type)}${l.city?" · "+esc(l.city):""}</div>
     <dl class="kv">
@@ -539,6 +627,8 @@ function card(l){
      <label class="f" for="st-${l.id}">Status<select id="st-${l.id}" data-f="status"${canWrite?"":" disabled"}>${opts}</select></label>
      <label class="f" for="fu-${l.id}">Follow up<input type="date" id="fu-${l.id}" data-f="followUp" value="${esc(e.followUp||"")}"${canWrite?"":" disabled"}></label>
     </div>
+    <div class="f"><span>Your rating</span><div class="starpick" role="group" aria-label="Rate this lead">${[1,2,3,4,5].map(n=>`<button type="button" class="sp${n<=st.n?" on":""}" data-star="${n}" aria-label="${n} star${n>1?"s":""}"${canWrite?"":" disabled"}>\u2605</button>`).join("")}</div></div>
+    <label class="f" for="sy-${l.id}">Why this rating<input id="sy-${l.id}" data-f="starWhy" value="${esc(st.mine?st.why:"")}" placeholder="Confirmed no DJ, saw a Craigslist post, budget set..."${canWrite?"":" disabled"}></label>
     <label class="f" for="nt-${l.id}">Notes from the call<textarea id="nt-${l.id}" data-f="note" placeholder="${l.li?"What they said, next step":"Who you talked to, what they said, next step"}"${canWrite?"":" disabled"}>${esc(e.note||"")}</textarea></label>
     <span class="stamp">${when?"Updated "+(e.by?"by "+esc(e.by)+", ":"")+when:"No calls logged"}</span>
    </div>
@@ -547,7 +637,7 @@ function card(l){
 function matches(l){
   const list=$("#fList").value, st=$("#fStatus").value, q=$("#fQ").value.trim().toLowerCase(), s=statusOf(l.id);
   if(list==="best"&&l.best==null)return false;
-  if(list!=="all"&&list!=="best"&&l.sec!==list)return false;
+  if(list!=="all"&&list!=="best"&&list!=="hot"&&l.sec!==list)return false;
   if(st==="open"&&!["todo","sent","replied","vm","talked"].includes(s))return false;
   if(!["all","open"].includes(st)&&s!==st)return false;
   if(q&&!(l.name+" "+l.city+" "+l.contact+" "+l.type).toLowerCase().includes(q))return false;
@@ -559,12 +649,15 @@ function render(){
   const focus=document.activeElement&&document.activeElement.closest(".lead")?document.activeElement.id:null;
   if(focus)return; // don't redraw under someone typing
   let html="";
-  if($("#fList").value==="best"){
+  if($("#fList").value==="hot"){
+    const rows=LEADS.filter(matches).sort((a,b)=>starsOf(b).n-starsOf(a).n||(a.best??99)-(b.best??99));
+    html=`<section class="sec"><header><h2>Hottest first</h2><span>5 stars at the top · ${rows.length}</span></header><div class="leads">${rows.map(card).join("")||'<p class="empty">Nothing here matches these filters.</p>'}</div></section>`;
+  } else if($("#fList").value==="best"){
     const rows=LEADS.filter(l=>l.best!=null&&matches(l)).sort((a,b)=>a.best-b.best);
     html=`<section class="sec"><header><h2>Best calls for the next two hours</h2><span>Valle Vista first, then the research list's top ten</span></header><div class="leads">${rows.map(card).join("")||'<p class="empty">Nothing here matches these filters.</p>'}</div></section>`;
   } else {
     for(const [k,h,sub] of SECS){
-      const rows=LEADS.filter(l=>l.sec===k&&matches(l)).sort(k==="event"?byDate:(a,b)=>(a.best??99)-(b.best??99));
+      const rows=LEADS.filter(l=>l.sec===k&&matches(l)).sort(k==="event"?byDate:(a,b)=>starsOf(b).n-starsOf(a).n||(a.best??99)-(b.best??99));
       if(!rows.length)continue;
       html+=`<section class="sec"><header><h2>${h}</h2><span>${sub} · ${rows.length}</span></header><div class="leads">${rows.map(card).join("")}</div></section>`;
     }
@@ -589,9 +682,10 @@ async function save(id,field,value){
     catch{toast("Didn't save. The shared log isn't connected and this browser blocks storage")}
     return;
   }
-  try{await db.collection("calls").doc(id).set({status:next.status||DEF[id]||"todo",note:next.note||"",followUp:next.followUp||"",at:next.at,by:next.by});toast("Saved")}
+  try{await db.collection("calls").doc(id).set({status:next.status||DEF[id]||"todo",note:next.note||"",followUp:next.followUp||"",stars:next.stars||"",starWhy:next.starWhy||"",starBy:next.starBy||"",at:next.at,by:next.by});toast("Saved")}
   catch(e){toast("Didn't save: "+(e&&e.message?e.message:"try again"))}
 }
+$("#lists").addEventListener("click",e=>{const p=e.target.closest("[data-star]");if(!p)return;const id=p.closest(".lead").dataset.id;const n=+p.dataset.star;const cur=log[id]||{};log[id]={...cur,starBy:$("#meName").value||"Jake"};save(id,"stars",n).then(render)});
 $("#lists").addEventListener("click",e=>{const b=e.target.closest("[data-lcopy]");if(!b)return;const [id,i]=b.dataset.lcopy.split(":");copy(voice(LEAD_SCRIPTS[id][+i][1]),b)});
 $("#lists").addEventListener("change",e=>{const el=e.target.closest("[data-f]");if(!el)return;const id=el.closest(".lead").dataset.id;save(id,el.dataset.f,el.value);if(el.dataset.f==="status")el.closest(".lead").dataset.s=el.value});
 $("#lists").addEventListener("focusout",()=>setTimeout(()=>{if(!document.activeElement||!document.activeElement.closest(".lead"))render()},0));
