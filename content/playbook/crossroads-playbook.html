@@ -40,8 +40,8 @@ input[type=search]{width:14rem;max-width:100%}
 .leads{display:grid;gap:10px}
 .lead{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;padding:14px;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}
 @media(max-width:720px){.lead{grid-template-columns:minmax(0,1fr)}}
-.lead[data-s="vm"]{border-left-color:var(--warn)}
-.lead[data-s="talked"],.lead[data-s="listed"]{border-left-color:var(--ok)}
+.lead[data-s="vm"],.lead[data-s="sent"]{border-left-color:var(--warn)}
+.lead[data-s="talked"],.lead[data-s="listed"],.lead[data-s="replied"]{border-left-color:var(--ok)}
 .lead[data-s="booked"]{border-left-color:var(--accent)}
 .lead[data-s="no"],.lead[data-s="skip"]{opacity:.62}
 .top{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
@@ -97,11 +97,12 @@ a{color:var(--accent)}
 <div class="wrap">
   <header>
     <h1>Crossroads lead playbook</h1>
-    <p class="sub">Holiday party calls for DJ and sound at $1,500 flat, built Nov 1, 2026 from public listings. Confirm every name and number on the call. Log each call below; Jake, Nic and Terry see the same log.</p>
+    <p class="sub">Holiday party calls for DJ and sound at $1,500 flat, built Nov 1, 2026 from public listings, plus the 29 LinkedIn messages Jake sent that day. Confirm every name and number on the call. Log each call below; Jake, Nic, Terry and Steven see the same log.</p>
   </header>
 
   <div class="me">
-    <label class="f" for="meName">Calling as (fills in your name and number)<select id="meName"><option value="Jake">Jake · (812) 565-9093</option><option value="Nic">Nic · (812) 343-9609</option><option value="Terry">Terry · (812) 671-3203</option></select></label>
+    <label class="f" for="meName">Calling as (fills in your name and number)<select id="meName"><option value="Jake">Jake · (812) 565-9093</option><option value="Nic">Nic · (812) 343-9609</option><option value="Terry">Terry · (812) 671-3203</option><option value="Steven">Steven (type your number)</option></select></label>
+    <label class="f" for="meNum">Different number? (optional, replaces the one above)<input type="text" id="meNum" inputmode="tel" autocomplete="tel" placeholder="(812) 555-0100"></label>
   </div>
 
   <section class="gig" aria-labelledby="gigH">
@@ -163,11 +164,15 @@ a{color:var(--accent)}
       <option value="venue">Venues and planners</option>
       <option value="event">Nov to Dec events</option>
       <option value="chamber">Chamber members</option>
+      <option value="linkedin">LinkedIn: people near us</option>
+      <option value="network">LinkedIn: referral network</option>
     </select></label>
     <label class="f" for="fStatus">Status<select id="fStatus">
       <option value="all">Any status</option>
       <option value="open">Still to call or follow up</option>
       <option value="todo">Not called</option>
+      <option value="sent">Messaged</option>
+      <option value="replied">Replied</option>
       <option value="vm">Left voicemail</option>
       <option value="talked">Talked</option>
       <option value="listed">On their list</option>
@@ -180,22 +185,27 @@ a{color:var(--accent)}
 
   <div id="lists"></div>
 
-  <p class="callout"><b>Not done yet:</b> the LinkedIn warm network (HR, office managers, assistants, events, owners in Indy, Greenwood, Franklin, Bloomington and Columbus). That runs through Claude in Chrome from your signed-in browser. The Indy and Franklin chamber directories weren't readable; Franklin Chamber is (317) 736-6334.</p>
+  <p class="callout"><b>LinkedIn:</b> the 29 messages Jake sent on Nov 1 are in the two LinkedIn lists. Alejandro Nazario and Shabir Ahmad have already replied. Finding new LinkedIn contacts (HR, office managers, events and owners in Indy, Greenwood, Franklin, Bloomington and Columbus) is still to do. <b>Also not done:</b> the Indy and Franklin chamber directories weren't readable; Franklin Chamber is (317) 736-6334.</p>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
 const SITE="crossroadsweddingco.shop";
-const STATUSES=[["todo","Not called"],["vm","Left voicemail"],["talked","Talked"],["listed","On their list"],["booked","Booked"],["no","Not a fit"],["skip","Skip"]];
+const STATUSES=[["todo","Not called"],["sent","Messaged"],["replied","Replied"],["vm","Left voicemail"],["talked","Talked"],["listed","On their list"],["booked","Booked"],["no","Not a fit"],["skip","Skip"]];
 const SCRIPTS=[
  ["Opener (venues and planners)","Hi, this is Jake with Crossroads Wedding and Event Co. When a company books their holiday party with you and asks about a DJ, who do you send them to? We do DJ and sound for corporate parties at $1,500 flat, and we still have December dates, including short notice. Could we be on your list?"],
  ["Opener (companies and chamber members)","Hi, this is Jake with Crossroads Wedding and Event Co., out of Columbus. Who plans your company's holiday party? We do DJ, sound and MC for corporate parties at $1,500 flat, and we still have December dates, short notice included."],
  ["Voicemail (any venue)","Hi, this is Jake with Crossroads Wedding and Event Co. We do DJ and sound for company holiday parties at $1,500 flat, and we still have December dates. I'd love to be on your list for clients who ask. Everything is at "+SITE+"/events. Again, Jake, Crossroads. Thanks."],
  ["Follow-up text or email (venue)","Thanks for the time today. Here's the page to send clients when they ask about a DJ: "+SITE+"/events?src=venue\n\n$1,500 flat for DJ and sound, MC included, and a $1,000 deposit locks the date. December is still open.\n\nJake, Crossroads"],
+ ["LinkedIn bump (no reply after a week)","Hi [first name], bumping this in case it got buried. Short version: Nic and I run Crossroads Wedding & Event Co. out of Columbus. We DJ and MC holiday parties and company events at $1,500 flat, and we still have December dates. If you're not the one who plans events, who should I talk to? Thanks!\n\nJake\n"+SITE+"/events"],
+ ["LinkedIn thanks for a referral","Thanks so much for thinking of us, [first name]. I'll reach out to them today and let you know how it goes.\n\nJake"],
  ["Follow-up text or email (planner)","Thanks for the time today. Here's the page to send clients when they ask about a DJ: "+SITE+"/events?src=planner\n\n$1,500 flat for DJ and sound, MC included, and a $1,000 deposit locks the date. December is still open.\n\nJake, Crossroads"]
 ];
 // Scripts written for one lead, shown on that lead's card next to its phone number.
 const LEAD_SCRIPTS={
+ "li-alejandro-nazario": [["Text Alejandro", "Hi Alejandro, it's Jake Kennedy. Thanks for the note on LinkedIn! I'd love to catch up. Would a 20-minute call one day next week work? I'd really value your take on growing the corporate side."]],
+ "li-shabir-ahmad": [["LinkedIn reply", "Thanks, Shabir, that means a lot, and I hope our paths cross again too. For your media clients, the short version: DJ, sound and an MC for company events, $1,500 flat, one invoice, anywhere from Indy to Louisville. Here's a page you can forward: crossroadsweddingco.shop/events\n\nJake"]],
+ "li-jon-myers": [["Coffee follow-up", "Hi Jon, following up on coffee. Would a morning next week work? I'd love to hear what the Chamber has coming up, from the awards to member events, and how Crossroads can get involved.\n\nJake"]],
  "ryan-furr-creative": [
   ["Text Jordan Vickers first","Hey Jordan! It's Jake. Is Ryan usually in the office Monday mornings? I want to stop by and pitch him on Crossroads doing sound and DJ for his corporate jobs and the Sentinels. Would love to see the studio too."],
   ["Walk-in opener","Ryan! Been way too long. I was two blocks away and had to see the building. Got five minutes? Crossroads is turning into a wedding and event company, and I want to be your crew for sound, DJ and MC: your corporate jobs, and the Sentinels if you ever need game-day sound. $1,500 flat for DJ and sound, so you always know your margin. Can we start with one gig?"],
@@ -273,6 +283,72 @@ const LEAD_SCRIPTS={
   [
    "Voicemail",
    "Hi, this is Jake with Crossroads Wedding and Event Co. I'm calling about the AIA Indianapolis Holiday Party and December Program on December 10 at Spohn Associates. I saw the details are still coming together, and if you haven't booked music and sound yet, we'd love to help. We do DJ, sound and MC for company events at $1,500 flat, and that includes a wireless mic for the program, so every speaker is heard. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "bloomington-chamber": [
+  [
+   "Voicemail",
+   "Hi Kaytee, this is Jake with Crossroads Wedding and Event Co., out of Columbus. I saw Business After Hours is at Stonecroft Health Campus on December 9, and at Indiana Farm Bureau Insurance on November 19. Since the hosts rotate, I'd love to offer music and a mic to the host sites, and talk about the Chamber's 2027 events. We do DJ, sound and MC for company events at $1,500 flat. You can reach me at [your number], or I'll follow up at the info inbox. Again, Jake, Crossroads, [your number]. Thanks, Kaytee."
+  ]
+ ],
+ "franklin-lighting": [
+  [
+   "Voicemail",
+   "Hi, this is Jake with Crossroads Wedding and Event Co., out of Columbus, calling for whoever books entertainment for Discover Downtown Franklin. I saw the Holiday Lighting and Winter Market on Saturday, December 5, with live entertainment on West Court Street from 6 to 7:30. If you still need sound, a DJ or an emcee for the parade and the courthouse lighting, we'd love to help, and we'd be glad to talk about next year's events too. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "canopy-of-lights": [
+  [
+   "Voicemail",
+   "Hi, this is Jake with Crossroads Wedding and Event Co., out of Columbus. I'm calling about Canopy of Lights on Friday, November 27, on the courthouse square. Could you point me to whoever books sound and entertainment for it? We do DJ, sound and MC for community and company events, and if this year is set, I'd love to be on the list for 2027. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "old-town-greenwood": [
+  [
+   "Voicemail (no number listed yet: find one on discoveroldtowngreenwood.org)",
+   "Hi, this is Jake with Crossroads Wedding and Event Co. We're a DJ crew out of Columbus, and we just did a wedding in Greenwood at Valle Vista. I'm calling about the Holiday Open House on November 20 and 21 at Main and Madison. If you'd like music on the street or a mic for announcements, we'd love to help, and we'd also like to hear about Old Town's events next year. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "greenwood-parade": [
+  [
+   "Voicemail (same line as Folktale: leave one message for both)",
+   "Hi, this is Jake with Crossroads Wedding and Event Co. We're a DJ crew out of Columbus, and we just did a wedding in Greenwood at Valle Vista. Two quick things. First, I'd love to ask about being added to your Friends of Folktale vendor list as a DJ. Second, I'm hoping to learn the 2026 date for the Greenwood Lighted Parade and Tree Lighting, and who books sound for it. We do DJ, sound and MC, and we still have December dates. You can reach me at [your number], or I'll follow up by email. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "spark-hilton": [
+  [
+   "Voicemail (to the Bloomington Chamber)",
+   "Hi Kaytee, this is Jake with Crossroads Wedding and Event Co., out of Columbus. I saw the ribbon cutting for Spark by Hilton Bloomington on November 10. Could you put me in touch with the hotel's general manager or sales lead? A new hotel means new events, and we'd love to be the DJ and sound they recommend to guests. We do company parties at $1,500 flat, MC included. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "ashley-furniture": [
+  [
+   "Voicemail (to the Bloomington Chamber; the cutting is Nov 6, so call today)",
+   "Hi Kaytee, this is Jake with Crossroads Wedding and Event Co., out of Columbus. I saw the ribbon cutting for Ashley Furniture Bloomington this Friday, November 6. Could you share a contact for the store manager? If they'd like music and a mic for the grand opening weekend, we can still help on short notice. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "fifth-third-whitehall": [
+  [
+   "Voicemail (to the Bloomington Chamber)",
+   "Hi Kaytee, this is Jake with Crossroads Wedding and Event Co., out of Columbus. I saw the ribbon cutting for Fifth Third Bank at Whitehall Plaza on November 30. Could you share a contact for the branch manager? We'd love to offer music and a mic for the opening, and talk about their customer and holiday events. We do DJ, sound and MC at $1,500 flat. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "hope-gala": [
+  [
+   "Voicemail",
+   "Hi Sarah, this is Jake with Crossroads Wedding and Event Co., out of Columbus. I saw the Hope Gala is November 7 at Biltwell Event Center. I'm guessing your entertainment is already set for this year, so I'm calling about 2027. We do DJ, sound and MC for galas and company events, including a wireless mic for the program. I'd love to be on your list when planning starts. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks, Sarah."
+  ]
+ ],
+ "night-of-vonnegut": [
+  [
+   "Voicemail (no number listed yet: try the Kurt Vonnegut Museum's main line)",
+   "Hi, this is Jake with Crossroads Wedding and Event Co., out of Columbus, calling for whoever plans Night of Vonnegut. I'm guessing this year's November 7 event is all set, so I'm calling about 2027 and the museum's other events. We do DJ, sound and MC for fundraisers and private events, including a wireless mic for the program. I'd love to be on your list. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
+  ]
+ ],
+ "light-it-up": [
+  [
+   "Voicemail (no organizer listed yet: find who runs it first)",
+   "Hi, this is Jake with Crossroads Wedding and Event Co., out of Columbus. I'm calling about Light it Up: Music, Dance and Stories Give Back on November 5. If you need any help with sound this week, we can do short notice. If you're all set, I'd love to be on your list for next year's event. We do DJ, sound and MC for fundraisers and community events. You can reach me at [your number]. Again, Jake, Crossroads, [your number]. Thanks."
   ]
  ],
  "compass-pointe": [
@@ -394,23 +470,59 @@ const LEADS=[
 {id:"fletcher-cdjr",sec:"chamber",name:"Fletcher Chrysler Dodge Jeep Ram",type:"Dealership",city:"Franklin",contact:"Tom Thompson",phone:"(317) 738-4170",email:"",why:"Aspire member.",src:"https://web.aspirejohnsoncounty.com/Automobile-Dealers"},
 {id:"tom-obrien",sec:"chamber",name:"Tom O'Brien CDJR Greenwood",type:"Dealership",city:"Greenwood",contact:"Brian Miller",phone:"(317) 881-6791",email:"",why:"Aspire member.",src:"https://web.aspirejohnsoncounty.com/Automobile-Dealers"},
 {id:"ray-skillman",sec:"chamber",name:"Ray Skillman Auto Center",type:"Dealership group",city:"Indianapolis (south)",contact:"Lana Leary",phone:"(317) 888-9500",email:"",why:"Aspire member.",src:"https://web.aspirejohnsoncounty.com/Automobile-Dealers"},
-{id:"van-valer",sec:"chamber",name:"Van Valer Law Firm, LLP",type:"Law firm",city:"Greenwood",contact:"Eric Prime",phone:"(317) 881-7575",email:"",why:"Aspire member.",src:"https://web.aspirejohnsoncounty.com/Law-Firms"}
+{id:"van-valer",sec:"chamber",name:"Van Valer Law Firm, LLP",type:"Law firm",city:"Greenwood",contact:"Eric Prime",phone:"(317) 881-7575",email:"",why:"Aspire member.",src:"https://web.aspirejohnsoncounty.com/Law-Firms"},
+// LinkedIn warm network: messages Jake sent Nov 1, 2026. def: starting status until someone logs one.
+{id:"li-jon-myers",sec:"linkedin",def:"sent",name:"Jon Myers, Columbus Area Chamber of Commerce",type:"Chamber leader",city:"Columbus",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Just took the helm at the Columbus Area Chamber after years running the Columbus Bar. Jake offered sound and MC for Chamber awards, annual events and member gatherings, asked how Crossroads can get more involved, and asked for coffee this month.",src:"",flag:"Coffee ask"},
+{id:"li-nick-seger",sec:"linkedin",def:"sent",name:"Nick Seger, Elwood",type:"Former coworker",city:"Columbus",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"From Jake's days on Elwood's accounting team. Asked about Elwood events this holiday season or in 2027, and who the best person to talk to is. Vic Meyer at Elwood got the same pitch: whoever answers first, ask who plans Elwood's events, then follow up with that person instead of the other.",src:""},
+{id:"li-vic-meyer",sec:"linkedin",def:"sent",name:"Vic (Victor) Meyer, Elwood",type:"Former coworker, finance",city:"Columbus",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"From Jake's accounting days at Elwood. Pitched $1,500 flat with one clean invoice for AP, for this holiday season or 2027. Same company as Nick Seger, so coordinate before following up.",src:""},
+{id:"li-alex-thatcher",sec:"linkedin",def:"sent",name:"Alex Thatcher, LHP",type:"Former coworker",city:"Columbus",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"From Jake's time on LHP's accounting team. Pitched holiday parties, appreciation nights, awards dinners and picnics at $1,500 flat, and offered to talk with whoever plans LHP's events. Stephanie Atha, John Greenwell and Tammy Densford are LHP alumni too.",src:""},
+{id:"li-john-greenwell",sec:"linkedin",def:"sent",name:"John Greenwell, JCBank",type:"Former coworker",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Overlapped at LHP in 2018, where he led LHP's 10th anniversary event. Asked about JCBank customer appreciation nights, holiday parties and community events, or who books them. JCBank is also on the chamber list (Michelle Gordon, Columbus branch), so ask John first instead of calling her cold.",src:""},
+{id:"li-stephanie-atha",sec:"linkedin",def:"sent",name:"Stephanie Atha, LER TechForce",type:"Director of Employee Experience",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"New Director of Employee Experience, and an LHP alum with Jake. Offered to take holiday parties, team celebrations and recognition events off her plate, with a wireless mic for speeches and raffles. Asked for coffee.",src:""},
+{id:"li-sarah-stair",sec:"linkedin",def:"sent",name:"Sarah Stair, CMA, Centra",type:"Former coworker",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"From the Elwood accounting team. Pitched holiday parties, member appreciation events, awards dinners and picnics at $1,500 flat, with one clean invoice for AP. Asked about Centra's events, or who plans them.",src:""},
+{id:"li-amy-fischer",sec:"linkedin",def:"sent",name:"Amy Fischer, SHRM-CP, Vernet",type:"HR, new contact",city:"Columbus",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"A fellow Columbus person with a workplace-culture focus; no earlier history. Pitched holiday parties, employee appreciation days, service awards and summer picnics, and said December dates are still open.",src:""},
+{id:"li-rachael-noel",sec:"linkedin",def:"sent",name:"Rachael Noel, Bill Austin & Associates",type:"Friend",city:"Columbus",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Just hit a year at Bill Austin & Associates. Asked whether the office has anything coming up, or knows anyone in town who needs a DJ. Jake also wants to catch up with her.",src:""},
+{id:"li-tammy-densford",sec:"linkedin",def:"sent",name:"Tammy Densford, VSG",type:"Controller, Jake's former boss at LHP",city:"Madison",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Jake was on her accounting team at LHP. Pitched plant celebrations, service awards, holiday parties and picnics, with one flat price and one invoice for AP. Madison is an easy drive.",src:""},
+{id:"li-katy-head",sec:"linkedin",def:"sent",name:"Katy Head (Sotiroff), SHRM-CP, LittleStar",type:"VP of HR",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"First year as VP of HR at LittleStar, and a fellow Elwood alum. Pitched holiday parties, staff appreciation nights and recognition events: sound and mic set up before guests arrive, workplace-friendly music, someone on the board for speeches and raffles.",src:""},
+{id:"li-karen-davis",sec:"linkedin",def:"sent",name:"Karen Davis, Acuity",type:"HR",city:"Crawfordsville",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Overlapped at FULLBEAUTY in 2019, when Jake was on the finance team. Pitched holiday parties, service awards, site celebrations and picnics for the Crawfordsville team.",src:""},
+{id:"li-keith-fechtman",sec:"linkedin",def:"sent",name:"Keith Fechtman, UIndy",type:"University events",city:"Indianapolis",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Has 100+ alumni events behind him and now runs university events at UIndy. Asked to be on his list as an outside or backup DJ and MC for galas, award dinners and receptions, and asked for coffee in Indy.",src:""},
+{id:"li-beth-mcgraw",sec:"linkedin",def:"sent",name:"Beth McGraw, Shiel Sexton",type:"Former coworker",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"From Jake's BGBC days. Asked for an intro to whoever plans Shiel Sexton's holiday party and project milestone celebrations, and offered a DJ for anything her team needs.",src:""},
+{id:"li-erin-hulse",sec:"linkedin",def:"sent",name:"Erin Hulse, Deviate",type:"Family office",city:"Indianapolis",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"A fellow Hoosier in the family office world, from Jake's KnowLedger days. Pitched $1,500 flat for Indy events, and asked about Deviate's own events or an Indy business owner who's planning one.",src:""},
+{id:"li-david-richardt",sec:"linkedin",def:"sent",name:"David Richardt, Springline",type:"Accounting firm",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"From Jake's 2020 year at BGBC. Two asks: Springline's own holiday or client event, and referrals when the firm's business-owner clients ask for a DJ.",src:""},
+{id:"li-marques-johnson",sec:"linkedin",def:"sent",name:"Marques Johnson, CPA, Hillenbrand",type:"Mentor",city:"Cincinnati area",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"A mentor to Jake. Asked about Hillenbrand events or anyone in his circle, and for advice as Crossroads grows the corporate side. Cincinnati is an easy drive from Columbus.",src:"",flag:"Mentor"},
+{id:"li-elisa-skees",sec:"linkedin",def:"sent",name:"Elisa Skees, Twelve Talents",type:"FP&A",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"A longtime contact who has helped Jake before; new FP&A role at Twelve Talents. Asked about Twelve Talents holiday or client events, or clients who ask her for a DJ.",src:""},
+{id:"li-matt-tait",sec:"linkedin",def:"sent",name:"Matt Tait, Decimal",type:"Accounting firm",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Congratulated him on Decimal Global and launching Unreconciled. Asked about Decimal team or client events, and for referrals from his network of business owners.",src:""},
+{id:"li-alejandro-nazario",sec:"network",def:"replied",name:"Alejandro Nazario, CFA, CFP®, TOS",type:"Mentor",city:"Houston",contact:"",phone:"",email:"",li:"Text him; his cell is in the LinkedIn thread",why:"Replied Nov 1 at 5:25 pm: wished Jake luck, said he'd love to catch up, and asked Jake to text him to set it up. Jake had asked for his take on growing the corporate side, and for referrals if a family or firm in his network plans a Midwest event.",src:"",flag:"Replied"},
+{id:"li-shabir-ahmad",sec:"network",def:"replied",name:"Shabir Ahmad, CBIZ",type:"Former KnowLedger colleague",city:"",contact:"",phone:"",email:"",li:"Reply on LinkedIn",why:"Replied Nov 1 at 4:28 pm: he'll ask his team whether any clients need us, and he has a couple of media clients he can check with. Thank him and give him a link he can forward.",src:"",flag:"Replied"},
+{id:"li-phil-strassler",sec:"network",def:"sent",name:"Phil Strassler",type:"Works with rising-gen family leaders",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Asked for referrals when a family in his network plans a wedding or celebration in Indiana or Kentucky.",src:""},
+{id:"li-joseph-ocbena",sec:"network",def:"sent",name:"Joseph Ocbena, Armanino",type:"KnowLedger contact",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Asked about Armanino team or client events in the Midwest, or anyone who needs a DJ and MC in Indiana. Jake's offer of a solution-architecture chat still stands.",src:""},
+{id:"li-logan-taylor",sec:"network",def:"sent",name:"Logan Taylor, First Rate",type:"KnowLedger data partner",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Asked for referrals for anyone who needs a DJ and MC in the Midwest.",src:""},
+{id:"li-amit-rihal",sec:"network",def:"sent",name:"Amit Rihal, Archway",type:"KnowLedger contact",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"\"Relationship Builder\" is in his title, so he hears about events. Asked for referrals in our part of the Midwest.",src:""},
+{id:"li-bill-rouse",sec:"network",def:"sent",name:"Bill Rouse, BPM",type:"Former KnowLedger colleague",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Asked for referrals for anyone who needs a DJ and MC in the Midwest, and to catch up sometime.",src:""},
+{id:"li-raymond-dinunzio",sec:"network",def:"sent",name:"Raymond DiNunzio, TOS",type:"KnowLedger contact",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Asked for referrals when a family or firm he works with plans a Midwest event. Same firm as Alejandro Nazario.",src:""},
+{id:"li-john-yeager",sec:"network",def:"sent",name:"John Yeager, Whitley Penn",type:"Family office",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"His podcast series was Jake's intro to the family office world. Asked for referrals from the business owners he works with in our corner of the Midwest.",src:""},
+{id:"li-anne-costello",sec:"network",def:"sent",name:"Anne Costello, CrossCountry",type:"KnowLedger contact",city:"",contact:"",phone:"",email:"",li:"LinkedIn message, sent Nov 1",why:"Asked about CrossCountry team or client events in the Midwest, or anyone who needs a DJ in Indiana.",src:""}
 ];
-const SECS=[["partner","Partners: walk in first","Friends with clients. The ask: be their crew."],["venue","Venues and planners","Warmest first. The ask: put us on your list."],["event","Nov to Dec events","Dated events: who books sound, and 2027."],["chamber","Chamber members, 25+ employees","Ask who plans the holiday party."]];
+const DEF=Object.fromEntries(LEADS.filter(l=>l.def).map(l=>[l.id,l.def]));
+const SECS=[["partner","Partners: walk in first","Friends with clients. The ask: be their crew."],["venue","Venues and planners","Warmest first. The ask: put us on your list."],["event","Nov to Dec events","Dated events: who books sound, and 2027."],["chamber","Chamber members, 25+ employees","Ask who plans the holiday party."],["linkedin","LinkedIn: people near us","Messaged Nov 1. The ask: their events, or who plans them."],["network","LinkedIn: referral network","Messaged Nov 1. Mostly out of town; the ask is referrals."]];
 
 const $=(s)=>document.querySelector(s);
-const log={}; let db=null, canWrite=false;
+// Controls stay open: only an explicit "no write access" from claude.ai locks them. Without the shared log, saves stay on this device.
+const log={}; let db=null, canWrite=true;
+const LOCAL_KEY="cr_log_local";
+let localLog={};
+try{localLog=JSON.parse(localStorage.getItem(LOCAL_KEY)||"{}")||{};Object.assign(log,localLog)}catch{}
 const esc=(s)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),1600)}
 async function copy(text,btn){try{await navigator.clipboard.writeText(text);toast("Copied")}catch{const r=document.createRange();const p=btn.previousElementSibling;if(p){r.selectNodeContents(p);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selected. Copy it from there")}}}
 
 // Scripts are written in Jake's voice; each partner sees them with their own name and number.
 const NUMS={Jake:"(812) 565-9093",Nic:"(812) 343-9609",Terry:"(812) 671-3203"};
-function voice(t){const n=$("#meName").value||"Jake";const num=NUMS[n]||NUMS.Jake;let o=t.replace(/\bJake\b/g,n);if(num)o=o.replace(/\[your number\]/g,num);return o}
+function voice(t){const n=$("#meName").value||"Jake";const num=$("#meNum").value.trim()||NUMS[n]||"";let o=t.replace(/\bJake\b/g,n);if(num)o=o.replace(/\[your number\]/g,num);return o}
 function renderScripts(){$("#scripts").innerHTML=SCRIPTS.map(([h,t],i)=>`<div class="script"><h3>${esc(h)}</h3><p>${esc(voice(t))}</p><button class="btn" data-copy="${i}">Copy</button></div>`).join("")}
-try{const me=JSON.parse(localStorage.getItem("cr_me")||"{}");if(["Jake","Nic","Terry"].includes(me.name))$("#meName").value=me.name;}catch{}
-function saveMe(){try{localStorage.setItem("cr_me",JSON.stringify({name:$("#meName").value}))}catch{}}
+try{const me=JSON.parse(localStorage.getItem("cr_me")||"{}");if(["Jake","Nic","Terry","Steven"].includes(me.name))$("#meName").value=me.name;if(me.num)$("#meNum").value=me.num}catch{}
+function saveMe(){try{localStorage.setItem("cr_me",JSON.stringify({name:$("#meName").value,num:$("#meNum").value.trim()}))}catch{}}
 $("#meName").addEventListener("change",()=>{saveMe();renderScripts();render()});
+$("#meNum").addEventListener("input",()=>{saveMe();renderScripts();render()});
 renderScripts();
 $("#scripts").addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if(b)copy(voice(SCRIPTS[+b.dataset.copy][1]),b)});
 
@@ -424,7 +536,7 @@ function prepHtml(p){
    <h4>If they say...</h4><ul>${p.pushback.map(([q,a])=>`<li><b>${esc(q)}:</b> ${esc(a)}</li>`).join("")}</ul>
    <h4>Before you go</h4><p>${esc(p.watch)}</p></details>`;
 }
-function statusOf(id){return log[id]?.status||"todo"}
+function statusOf(id){return log[id]?.status||DEF[id]||"todo"}
 function card(l){
   const s=statusOf(l.id), e=log[l.id]||{};
   const opts=STATUSES.map(([v,t])=>`<option value="${v}"${v===s?" selected":""}>${t}</option>`).join("");
@@ -432,10 +544,10 @@ function card(l){
   return `<article class="lead" data-s="${s}" data-id="${l.id}">
    <div>
     <div class="top">${l.best!=null?`<span class="rank">${l.best===0?"Call first":"#"+l.best+" today"}</span>`:""}<span class="name">${esc(l.name)}</span>${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}</div>
-    <div class="meta">${esc(l.type)} · ${esc(l.city)}</div>
+    <div class="meta">${esc(l.type)}${l.city?" · "+esc(l.city):""}</div>
     <dl class="kv">
      ${l.contact?`<dt>Ask for</dt><dd>${esc(l.contact)}</dd>`:""}
-     <dt>Phone</dt><dd>${l.phone?`<span class="phone">${esc(l.phone)}</span>`:"Not listed"}</dd>
+     ${l.li?`<dt>Reach</dt><dd>${esc(l.li)}</dd>`:`<dt>Phone</dt><dd>${l.phone?`<span class="phone">${esc(l.phone)}</span>`:"Not listed"}</dd>`}
      ${l.email?`<dt>Email</dt><dd>${esc(l.email)}</dd>`:""}
     </dl>
     <p class="why">${esc(l.why)}</p>
@@ -448,7 +560,7 @@ function card(l){
      <label class="f" for="st-${l.id}">Status<select id="st-${l.id}" data-f="status"${canWrite?"":" disabled"}>${opts}</select></label>
      <label class="f" for="fu-${l.id}">Follow up<input type="date" id="fu-${l.id}" data-f="followUp" value="${esc(e.followUp||"")}"${canWrite?"":" disabled"}></label>
     </div>
-    <label class="f" for="nt-${l.id}">Notes from the call<textarea id="nt-${l.id}" data-f="note" placeholder="Who you talked to, what they said, next step"${canWrite?"":" disabled"}>${esc(e.note||"")}</textarea></label>
+    <label class="f" for="nt-${l.id}">Notes from the call<textarea id="nt-${l.id}" data-f="note" placeholder="${l.li?"What they said, next step":"Who you talked to, what they said, next step"}"${canWrite?"":" disabled"}>${esc(e.note||"")}</textarea></label>
     <span class="stamp">${when?"Updated "+(e.by?"by "+esc(e.by)+", ":"")+when:"No calls logged"}</span>
    </div>
   </article>`;
@@ -457,7 +569,7 @@ function matches(l){
   const list=$("#fList").value, st=$("#fStatus").value, q=$("#fQ").value.trim().toLowerCase(), s=statusOf(l.id);
   if(list==="best"&&l.best==null)return false;
   if(list!=="all"&&list!=="best"&&l.sec!==list)return false;
-  if(st==="open"&&!["todo","vm","talked"].includes(s))return false;
+  if(st==="open"&&!["todo","sent","replied","vm","talked"].includes(s))return false;
   if(!["all","open"].includes(st)&&s!==st)return false;
   if(q&&!(l.name+" "+l.city+" "+l.contact+" "+l.type).toLowerCase().includes(q))return false;
   return true;
@@ -487,11 +599,16 @@ try{const f=JSON.parse(localStorage.getItem("cr_filters")||"{}");if(f.list)$("#f
 ["#fList","#fStatus"].forEach(s=>$(s).addEventListener("change",()=>{try{localStorage.setItem("cr_filters",JSON.stringify({list:$("#fList").value,status:$("#fStatus").value}))}catch{}}));
 
 async function save(id,field,value){
-  if(!db)return;
   const prev=log[id]||{};
   const next={...prev,[field]:value,at:Date.now(),by:$("#meName").value||"Jake"};
   log[id]=next;
-  try{await db.collection("calls").doc(id).set({status:next.status||"todo",note:next.note||"",followUp:next.followUp||"",at:next.at,by:next.by});toast("Saved")}
+  if(!db){
+    localLog[id]=next;
+    try{localStorage.setItem(LOCAL_KEY,JSON.stringify(localLog));toast("Saved on this device only. The shared log isn't connected")}
+    catch{toast("Didn't save. The shared log isn't connected and this browser blocks storage")}
+    return;
+  }
+  try{await db.collection("calls").doc(id).set({status:next.status||DEF[id]||"todo",note:next.note||"",followUp:next.followUp||"",at:next.at,by:next.by});toast("Saved")}
   catch(e){toast("Didn't save: "+(e&&e.message?e.message:"try again"))}
 }
 $("#lists").addEventListener("click",e=>{const b=e.target.closest("[data-lcopy]");if(!b)return;const [id,i]=b.dataset.lcopy.split(":");copy(voice(LEAD_SCRIPTS[id][+i][1]),b)});
@@ -527,22 +644,32 @@ renderGoal();
 
 render();
 (async()=>{
-  const timer=setTimeout(()=>{$("#sync").textContent="The call log isn't loading. The list still works; notes won't save until it does."},10000);
+  const LOCAL_NOTE=" Notes you log now save on this device only.";
+  const timer=setTimeout(()=>{if(!db)$("#sync").textContent="The shared call log is slow to connect."+LOCAL_NOTE},10000);
   try{
-    db=await (window.claude?.use?.("db")??null);
-    if(!db){clearTimeout(timer);if(!window.claude){$("#sync").innerHTML='The shared call log lives on the <a href="https://claude.ai/artifact/C2wNZGNDXoDWv7YK5dfkz1" target="_blank" rel="noopener">claude.ai copy</a>. Everything else here works.'}else{$("#sync").textContent="Sign in to claude.ai to log calls. The list and scripts work without it."}render();return}
+    const d=await (window.claude?.use?.("db")??null);
+    clearTimeout(timer);
+    if(!d){
+      if(!window.claude){$("#sync").innerHTML='The shared call log lives on the <a href="https://claude.ai/artifact/C2wNZGNDXoDWv7YK5dfkz1" target="_blank" rel="noopener">claude.ai copy</a>.'+LOCAL_NOTE}
+      else{$("#sync").textContent="The shared call log didn't connect. Sign in to claude.ai and reload to share notes."+LOCAL_NOTE}
+      render();return;
+    }
+    db=d;
     const user=await (window.claude?.use?.("user")??null);
-    canWrite=user?(user.can("data.write")!==false):true;
+    const can=user?await user.can("data.write"):null;
+    canWrite=can!==false; // null means claude.ai didn't say; a refused save will tell us
+    $("#sync").textContent=canWrite?"Connecting the shared call log…":"View only: ask Jake for edit access to log calls";
+    render();
     db.collection("booked").onSnapshot(snap=>{
       bookings=snap.docs.map(d=>({id:d.id,...(d.data()||{})})).sort((a,b)=>(a.at||0)-(b.at||0));
       renderGoal();
     },()=>{});
     db.collection("calls").onSnapshot(snap=>{
-      clearTimeout(timer);
       for(const d of snap.docs){log[d.id]=d.data()||{}}
       $("#sync").textContent=canWrite?"Call log is live and shared":"View only: ask Jake for edit access to log calls";
       render();
-    },err=>{clearTimeout(timer);$("#sync").textContent="Call log stopped syncing. Reload the page."});
-  }catch(e){clearTimeout(timer);$("#sync").textContent="Call log unavailable. The list and scripts still work."}
+    },err=>{$("#sync").textContent="Call log stopped syncing. Reload the page.";render()});
+  }catch(e){clearTimeout(timer);$("#sync").textContent="Call log unavailable."+LOCAL_NOTE;render()}
 })();
 </script>
+
