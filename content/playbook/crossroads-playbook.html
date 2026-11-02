@@ -101,8 +101,7 @@ a{color:var(--accent)}
   </header>
 
   <div class="me">
-    <label class="f" for="meName">Calling as<select id="meName"><option>Jake</option><option>Nic</option><option>Terry</option></select></label>
-    <label class="f" for="meNum">Your number (fills in every [your number])<input type="text" id="meNum" inputmode="tel" autocomplete="tel" placeholder="(812) 555-0100"></label>
+    <label class="f" for="meName">Calling as (fills in your name and number)<select id="meName"><option value="Jake">Jake · (812) 565-9093</option><option value="Nic">Nic · (812) 343-9609</option><option value="Terry">Terry · (812) 671-3203</option></select></label>
   </div>
 
   <section class="gig" aria-labelledby="gigH">
@@ -406,12 +405,12 @@ function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("on");c
 async function copy(text,btn){try{await navigator.clipboard.writeText(text);toast("Copied")}catch{const r=document.createRange();const p=btn.previousElementSibling;if(p){r.selectNodeContents(p);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selected. Copy it from there")}}}
 
 // Scripts are written in Jake's voice; each partner sees them with their own name and number.
-function voice(t){const n=$("#meName").value||"Jake";const num=$("#meNum").value.trim();let o=t.replace(/\bJake\b/g,n);if(num)o=o.replace(/\[your number\]/g,num);return o}
+const NUMS={Jake:"(812) 565-9093",Nic:"(812) 343-9609",Terry:"(812) 671-3203"};
+function voice(t){const n=$("#meName").value||"Jake";const num=NUMS[n]||NUMS.Jake;let o=t.replace(/\bJake\b/g,n);if(num)o=o.replace(/\[your number\]/g,num);return o}
 function renderScripts(){$("#scripts").innerHTML=SCRIPTS.map(([h,t],i)=>`<div class="script"><h3>${esc(h)}</h3><p>${esc(voice(t))}</p><button class="btn" data-copy="${i}">Copy</button></div>`).join("")}
-try{const me=JSON.parse(localStorage.getItem("cr_me")||"{}");if(["Jake","Nic","Terry"].includes(me.name))$("#meName").value=me.name;if(me.num)$("#meNum").value=me.num}catch{}
-function saveMe(){try{localStorage.setItem("cr_me",JSON.stringify({name:$("#meName").value,num:$("#meNum").value.trim()}))}catch{}}
+try{const me=JSON.parse(localStorage.getItem("cr_me")||"{}");if(["Jake","Nic","Terry"].includes(me.name))$("#meName").value=me.name;}catch{}
+function saveMe(){try{localStorage.setItem("cr_me",JSON.stringify({name:$("#meName").value}))}catch{}}
 $("#meName").addEventListener("change",()=>{saveMe();renderScripts();render()});
-$("#meNum").addEventListener("input",()=>{saveMe();renderScripts();render()});
 renderScripts();
 $("#scripts").addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if(b)copy(voice(SCRIPTS[+b.dataset.copy][1]),b)});
 
