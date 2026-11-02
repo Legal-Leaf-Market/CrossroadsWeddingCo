@@ -52,6 +52,7 @@ input[type=search]{width:14rem;max-width:100%}
 .kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
 .phone{font-variant-numeric:tabular-nums;font-weight:700;user-select:all}
 .why{margin:8px 0 0}
+.due{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--sunk);color:var(--fg);vertical-align:middle}.due.soon{background:#f6e3b4;color:#6b4a00}.due.late{background:#f3c9c2;color:#8a1f12}.due.gone{opacity:.6}
 .stars{margin:6px 0 0;font-size:13px;color:var(--muted)}.stars .sv{color:var(--warn);font-size:16px;letter-spacing:1px}
 .starpick{display:flex;gap:2px}.sp{font-size:22px;line-height:1;padding:2px 4px;border:0;background:none;color:var(--line);cursor:pointer}.sp.on{color:var(--warn)}.sp:focus-visible{outline:2px solid var(--accent)}
 .lscript{margin-top:10px;background:var(--sunk);border-radius:8px;padding:10px 12px;display:grid;gap:6px}
@@ -654,7 +655,7 @@ function card(l){
   return `<article class="lead" data-s="${s}" data-id="${l.id}" data-stars="${st.n}">
    <div>
     <p class="stars"><span class="sv" aria-label="${st.n} of 5 stars">${starTxt(st.n)}</span> <span class="sw">${esc(st.why)}${st.mine&&st.by?` (rated by ${esc(st.by)})`:""}</span></p>
-    <div class="top">${l.best!=null?`<span class="rank">${l.best===0?"Call first":"#"+l.best+" today"}</span>`:""}<span class="name">${esc(l.name)}</span>${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}</div>
+    <div class="top">${l.best!=null?`<span class="rank">${l.best===0?"Call first":"#"+l.best+" today"}</span>`:""}<span class="name">${esc(l.name)}</span>${dueChip(l)}${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}</div>
     <div class="meta">${esc(l.type)}${l.city?" · "+esc(l.city):""}</div>
     <dl class="kv">
      ${l.contact?`<dt>Ask for</dt><dd>${esc(l.contact)}</dd>`:""}
@@ -687,21 +688,34 @@ function matches(l){
   if(q&&!(l.name+" "+l.city+" "+l.contact+" "+l.type).toLowerCase().includes(q))return false;
   return true;
 }
-// Events: soonest first, so the next one is always at the top. Past dates drop to the bottom; no date (not posted yet) goes last.
-function byDate(a,b){const t=new Date().toLocaleDateString("en-CA",{timeZone:"America/Indiana/Indianapolis"});const r=w=>!w?3:(w<t?2:1);return r(a.when)-r(b.when)||String(a.when||"").localeCompare(String(b.when||""))}
+// Urgency: anything with a date goes first, most urgent at the top (Jacob, 2026-11-02).
+// A lead's date is its follow-up date (overdue follow-ups lead) or its event date, whichever comes first.
+// Past event dates sink to the bottom; undated leads sit in between, by stars.
+function todayStr(){return new Date().toLocaleDateString("en-CA",{timeZone:"America/Indiana/Indianapolis"})}
+function dueOf(l){const t=todayStr();const fu=(log[l.id]||{}).followUp||"";const ev=l.when||"";
+  const c=[];if(fu)c.push({d:fu,k:"fu"});if(ev&&ev>=t)c.push({d:ev,k:"ev"});
+  if(c.length){c.sort((a,b)=>a.d.localeCompare(b.d));return {...c[0],past:c[0].d<t}}
+  if(ev)return {d:ev,k:"ev",past:true,gone:true};return null}
+function rank(l){const d=dueOf(l);return !d?2:(d.gone?3:1)}
+function byStars(a,b){return starsOf(b).n-starsOf(a).n||(a.best??99)-(b.best??99)}
+function byUrgency(a,b){const ra=rank(a),rb=rank(b);if(ra!==rb)return ra-rb;if(ra===1)return dueOf(a).d.localeCompare(dueOf(b).d)||byStars(a,b);if(ra===3)return dueOf(b).d.localeCompare(dueOf(a).d);return byStars(a,b)}
+function dueChip(l){const d=dueOf(l);if(!d)return "";const t=todayStr();const days=Math.round((new Date(d.d+"T12:00")-new Date(t+"T12:00"))/864e5);
+  const what=d.k==="fu"?"Follow up":"Event";const nice=new Date(d.d+"T12:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  let txt,cls="due";if(d.gone){txt="Event passed "+nice;cls+=" gone"}else if(days<0){txt=what+" overdue ("+nice+")";cls+=" late"}else if(days===0){txt=what+" today";cls+=" late"}else if(days===1){txt=what+" tomorrow";cls+=" soon"}else{txt=what+" "+nice+" · in "+days+" days";if(days<=7)cls+=" soon"}
+  return `<span class="${cls}">${txt}</span>`}
 function render(){
   const focus=document.activeElement&&document.activeElement.closest(".lead")?document.activeElement.id:null;
   if(focus)return; // don't redraw under someone typing
   let html="";
   if($("#fList").value==="hot"){
-    const rows=LEADS.filter(matches).sort((a,b)=>starsOf(b).n-starsOf(a).n||(a.best??99)-(b.best??99));
-    html=`<section class="sec"><header><h2>Hottest first</h2><span>5 stars at the top · ${rows.length}</span></header><div class="leads">${rows.map(card).join("")||'<p class="empty">Nothing here matches these filters.</p>'}</div></section>`;
+    const rows=LEADS.filter(matches).sort(byUrgency);
+    html=`<section class="sec"><header><h2>Hottest first</h2><span>Dated leads first (most urgent on top), then 5 stars down · ${rows.length}</span></header><div class="leads">${rows.map(card).join("")||'<p class="empty">Nothing here matches these filters.</p>'}</div></section>`;
   } else if($("#fList").value==="best"){
     const rows=LEADS.filter(l=>l.best!=null&&matches(l)).sort((a,b)=>a.best-b.best);
     html=`<section class="sec"><header><h2>Best calls for the next two hours</h2><span>Valle Vista first, then the research list's top ten</span></header><div class="leads">${rows.map(card).join("")||'<p class="empty">Nothing here matches these filters.</p>'}</div></section>`;
   } else {
     for(const [k,h,sub] of SECS){
-      const rows=LEADS.filter(l=>l.sec===k&&matches(l)).sort(k==="event"?byDate:(a,b)=>starsOf(b).n-starsOf(a).n||(a.best??99)-(b.best??99));
+      const rows=LEADS.filter(l=>l.sec===k&&matches(l)).sort(byUrgency);
       if(!rows.length)continue;
       html+=`<section class="sec"><header><h2>${h}</h2><span>${sub} · ${rows.length}</span></header><div class="leads">${rows.map(card).join("")}</div></section>`;
     }
