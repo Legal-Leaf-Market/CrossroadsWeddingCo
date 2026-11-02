@@ -611,8 +611,7 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `lib/playbook-html.ts` by `node scripts/build-playbook.mjs`. The call log only works
   on the claude.ai copy; anywhere else the Status, Follow up and Notes fields stay usable and
   save on that device only, and the page says so (2026-11-02: they used to lock, which left
-  the site copy unusable). Steven is in the "Calling as" picker (2026-11-02) with no saved
-  number: he types his own into the optional number box until Jacob supplies it for `NUMS`. **The call list IS in git, in a public repo, on purpose**
+  the site copy unusable). Steven is in the "Calling as" picker (2026-11-02), number (336) 684-8415 in `NUMS`. **The call list IS in git, in a public repo, on purpose**
   (Jacob, 2026-11-01, asked and answered after being told it would be readable on
   GitHub): every entry came from a public listing. This supersedes the earlier rule that
   contact data stays out of git. Do not delete or scrub the file as a leak; editing a
