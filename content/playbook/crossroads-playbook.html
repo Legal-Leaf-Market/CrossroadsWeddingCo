@@ -71,6 +71,13 @@ a{color:var(--accent)}
 .prep h4{margin:10px 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .prep ul{margin:0;padding-left:18px}
 .prep li{margin:2px 0}
+.gig{background:var(--panel);border:2px solid var(--accent);border-radius:12px;padding:16px;display:grid;gap:12px;margin:14px 0}
+.gig h2{margin:0;font-size:1.2rem}
+.gig .gwhen{color:var(--accent);font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;margin:0}
+.gig .kv{margin:0}
+.gig h3{margin:4px 0 0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.gig ul{margin:0;padding-left:1.2rem;display:grid;gap:4px}
+.gig .note{font-size:13px;color:var(--muted);margin:0}
 .goal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:10px;margin:14px 0}
 .goal .gh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
 .goal h2{margin:0;font-size:1.1rem}
@@ -97,6 +104,37 @@ a{color:var(--accent)}
     <label class="f" for="meName">Calling as<select id="meName"><option>Jake</option><option>Nic</option><option>Terry</option></select></label>
     <label class="f" for="meNum">Your number (fills in every [your number])<input type="text" id="meNum" inputmode="tel" autocomplete="tel" placeholder="(812) 555-0100"></label>
   </div>
+
+  <section class="gig" aria-labelledby="gigH">
+    <p class="gwhen">On the books · Saturday, November 7</p>
+    <h2 id="gigH">Kat and Tanis at Forge on 4th: prep for Nic</h2>
+    <dl class="kv">
+      <dt>Couple</dt><dd>Kat McKinney and Tanis. The run sheet uses their married name, Copeland.</dd>
+      <dt>Venue</dt><dd>Forge on 4th, 418 4th St, Columbus, IN 47201</dd>
+      <dt>Crew</dt><dd>Jake DJs. Nic shadows. Kat was asked by Messenger whether the new partners can shadow, so confirm she said yes before Saturday.</dd>
+      <dt>Money</dt><dd>Nothing to collect. This one is a custom deal (equipment plus cash) and the deposit and balance are already settled.</dd>
+      <dt>Times</dt><dd>Start time, load-in and the full order of the day are in their planning hub and run sheet, not here.</dd>
+    </dl>
+    <h3>Before Saturday</h3>
+    <ul>
+      <li>Open the bookings dashboard and find Kat and Tanis. Their card has the planning hub, the run sheet, the live console and the vendor link.</li>
+      <li>Read the run sheet top to bottom, then check it against their own files under "Your documents" in the hub. Their paperwork is the official version; ours has to match it.</li>
+      <li>Learn the VIP name pronunciations in the hub, and know the big-moment songs and the do-not-play list.</li>
+      <li>Open the live console on your phone and know where Start is for each block. If something runs long, everything after it shifts on its own.</li>
+      <li>Have the vendor live link ready to text to the photographer and the Forge on 4th staff, so they can follow the timeline without asking.</li>
+    </ul>
+    <h3>At the venue</h3>
+    <ul>
+      <li>Learn the Forge on 4th coordinator's name, and before you leave, ask for a spot on their recommended vendor list and an intro to their next couple.</li>
+      <li>Remind Kat and Tanis about the referral deal: for each couple they send who books, they get $75 and that couple gets $25 off.</li>
+    </ul>
+    <h3>After</h3>
+    <ul>
+      <li>Within a week, ask them to leave a note at crossroadsweddingco.shop/reviews#sign.</li>
+      <li>Ask before posting any photos from the day. The agreement allows it, but they can opt out by message.</li>
+    </ul>
+    <p class="note">Kat and Tanis are our trial couple: new features get tried with them first, so tell Jake anything that felt clunky.</p>
+  </section>
 
   <section class="goal" aria-labelledby="goalH">
     <div class="gh"><h2 id="goalH">This week: $5,000 in deposits</h2><span class="gnum" id="goalTotal">$0 of $5,000</span></div>
@@ -270,6 +308,7 @@ const PREP={
 const LEADS=[
 {id:"ryan-furr-creative",sec:"partner",name:"Ryan Furr, Ryan Furr Creative",type:"Partner (creative company, Indiana Sentinels)",city:"Columbus, two blocks from Jake",contact:"Ryan Furr; text Jordan Vickers first",phone:"",email:"",why:"A good friend with a full staff, steady corporate clients and a pro hockey team. One yes could mean recurring sound gigs.",src:"",flag:"Warm"},
 {id:"matty-o-entertainment",sec:"partner",name:"Matty Ortega, Matty O Entertainment (MOE)",type:"Partner (entertainment company)",city:"Indiana",contact:"Matty Ortega",phone:"",email:"",why:"Already booking events. Overflow partner both ways, and a place to sell our acoustic and bar add-ons.",src:"",flag:"Warm"},
+{id:"forge-on-4th",sec:"venue",name:"Forge on 4th",type:"Venue",city:"Columbus",contact:"Venue coordinator (get the name on Nov 7)",phone:"",email:"",why:"Kat and Tanis's wedding is here on Saturday, November 7. Ask in person that night: a spot on their recommended vendor list, and an intro to their next couple. Address: 418 4th St, Columbus, IN 47201.",src:"",flag:"Our Nov 7 wedding"},
 {id:"valle-vista",sec:"venue",best:0,name:"Valle Vista Golf Club & Conference Center",type:"Venue",city:"Greenwood",contact:"Event Sales & Main Office",phone:"(317) 882-2955",email:"",why:"Our first wedding, October 17, was here and went very well. Call first: recommended list, holiday parties, short-notice dates. The research list ranked it low only because the website shows no holiday page.",src:"https://www.vallevista.com/",flag:"Warm"},
 {id:"dyes-walk",sec:"venue",best:1,name:"Dye's Walk Country Club",type:"Venue",city:"Greenwood",contact:"Kirby Sutton, Director of Private Events",phone:"(317) 535-8635",email:"membership@dyeswalkcc.com (general)",why:"Special Events page lists corporate dinners and holiday events, and there's a named decision-maker.",src:"https://dyeswalkcc.com/special-events/"},
 {id:"24-shelby",sec:"venue",best:2,name:"24 Shelby",type:"Venue",city:"Indianapolis",contact:"Sarah (owner/coordinator)",phone:"(317) 410-1552",email:"Sarah@24shelby.com",why:"Pushing holiday parties, no in-house DJ, and the FAQ says they coordinate with the client's DJ. Elevated stage add-on; up to 250 seated.",src:"https://24shelby.com/holiday-parties/"},
