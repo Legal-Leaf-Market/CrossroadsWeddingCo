@@ -46,6 +46,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    ...["/brochures", "/brochures/wedding", "/brochures/corporate"].map((path) => ({
+      url: `${SITE_URL}${path}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
     ...CITIES.map((c) => ({
       url: `${SITE_URL}${cityPath(c)}`,
       lastModified: new Date(),
