@@ -35,3 +35,52 @@ h4 {
   font-family: var(--font-display);
   font-weight: 600;
 }
+
+/* Brochures (2026-11-03). A face is drawn at print size and scaled on screen;
+   printing drops the scale so each face fills one 11x8.5in page (the brochure
+   pages set @page to that size with no margin). */
+@media print {
+  .brochure-sheet {
+    width: 1056px !important;
+    height: 816px !important;
+    aspect-ratio: auto !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    break-after: page;
+  }
+  .brochure-sheet > .brochure-sheet-inner {
+    transform: none !important;
+    visibility: visible !important;
+    position: static !important;
+  }
+  .brochure-print-root {
+    background: #fff;
+  }
+}
+
+/* The floating share pop-up: deliberately loud, and quiet for anyone who asks
+   their device for less motion. */
+@keyframes cw-wiggle {
+  0%, 82%, 100% { transform: rotate(0) scale(1); }
+  85% { transform: rotate(-12deg) scale(1.12); }
+  88% { transform: rotate(10deg) scale(1.12); }
+  91% { transform: rotate(-8deg) scale(1.08); }
+  94% { transform: rotate(6deg) scale(1.04); }
+  97% { transform: rotate(-3deg) scale(1); }
+}
+@keyframes cw-ping {
+  0% { transform: scale(1); opacity: 0.5; }
+  75%, 100% { transform: scale(1.35, 1.6); opacity: 0; }
+}
+@keyframes cw-pop {
+  from { opacity: 0; transform: translateY(18px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+.cw-wiggle { animation: cw-wiggle 4s ease-in-out infinite; }
+.cw-ping { animation: cw-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+.cw-pop { animation: cw-pop 0.3s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .cw-wiggle, .cw-ping, .cw-pop { animation: none; }
+  .cw-ping { display: none; }
+}

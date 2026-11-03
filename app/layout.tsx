@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Spectral, Karla } from "next/font/google";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 import SourceCapture from "@/components/SourceCapture";
+import BrochurePopup from "@/components/BrochurePopup";
 import "./globals.css";
 
 const spectral = Spectral({
@@ -80,6 +81,7 @@ export default function RootLayout({
       <body className={`${spectral.variable} ${karla.variable} antialiased`}>
         {children}
         <SourceCapture />
+        <BrochurePopup />
         <Analytics />
       </body>
     </html>
