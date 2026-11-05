@@ -826,6 +826,17 @@ decisions absorbed from it:
     identity slice, so a couple could receive a message signed Brayton on a thread
     that had told them only two people were on it. It now names the team rather than
     counting it, which stays true the next time the roster changes.
+- **Run sheet pre-flight, proof/final, custom edits (2026-11-05, from the Gemini DJ prep kit
+  spec for the Kat and Tanis wedding).** The spec proposed a separate Python repo; it was built
+  here instead so the checks read the rows the hub writes. `lib/preflight.ts` is pure and flags:
+  blocks at the same minute, a block running into the next, a song moment on the schedule with no
+  song, one song set for two moments, a song both requested and on do-not-play (title or a banned
+  artist), every custom edit, and a reminder to check against the couple's uploaded documents (the
+  official record; nothing here reads a PDF). **Deliberately not ported:** the recessional-under-2:15
+  and open-floor 85 to 95% crate checks, because both need song lengths this site does not store
+  and must never guess. The run sheet prints a PROOF banner and the checks by default; `?final=1`
+  hides both from print. `music_cues.custom_edit` is a per-song "Custom edit" checkbox in the hub.
+  The Kat and Tanis trifold and runbook were already sent and were not touched.
 - **Phase 1 (live 2026-08-26):** flat-rate site, city pages, booking flow writing `weddings`
   rows (legacy `leads` fallback), Resend emails from jake@, Stripe scaffolded and gated,
   schema self-applying at build.

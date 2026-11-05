@@ -22,6 +22,8 @@ export type CueRow = {
   /** The song's own Spotify link; renders as a playable row when set. */
   spotifyUrl: string;
   isLivePerformance: boolean;
+  /** A cut, mashup or special fade the DJ has to prepare in advance. */
+  customEdit: boolean;
 };
 
 export type TrackRow = { trackTitle: string; artist: string };
@@ -152,6 +154,7 @@ export default function MusicSection({
     notes: "",
     spotifyUrl: "",
     isLivePerformance: false,
+    customEdit: false,
   });
   const toGrid = (rows: CueRow[]) => {
     const out: CueRow[] = [];
@@ -614,6 +617,15 @@ export default function MusicSection({
                         className="accent-terracotta"
                       />
                       Played live
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-ink/60">
+                      <input
+                        type="checkbox"
+                        checked={cue.customEdit}
+                        onChange={(e) => updateCue(index, { customEdit: e.target.checked })}
+                        className="accent-terracotta"
+                      />
+                      Custom edit
                     </label>
                     <RemoveButton
                       label={`Clear ${cueLabel(index)}`}

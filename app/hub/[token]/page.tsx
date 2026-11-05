@@ -185,6 +185,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             notes: cue.notes ?? "",
             spotifyUrl: cue.spotifyUrl ?? "",
             isLivePerformance: cue.isLivePerformance ?? false,
+            customEdit: cue.customEdit ?? false,
           }))}
           initialMustPlay={playlists
             .filter((p) => p.category === "must_play")

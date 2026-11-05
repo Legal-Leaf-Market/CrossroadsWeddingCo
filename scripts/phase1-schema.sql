@@ -469,3 +469,7 @@ CREATE TABLE IF NOT EXISTS guestbook_entries (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_guestbook_created ON guestbook_entries (created_at DESC);
+
+-- Custom edit flag per song (2026-11-05). A cue marked custom_edit is a cut,
+-- mashup or fade the DJ must have prepared; the run sheet warns until the day.
+ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS custom_edit BOOLEAN NOT NULL DEFAULT false;

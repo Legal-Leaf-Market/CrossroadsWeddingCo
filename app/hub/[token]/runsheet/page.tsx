@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import PrintButton from "@/components/hub/PrintButton";
 import { CUE_TYPES, getPortalData } from "@/lib/hub";
 import { formatEventDate } from "@/lib/hub-constants";
+import { countDocuments } from "@/lib/documents";
+import { preflight } from "@/lib/preflight";
+import PreflightPanel from "@/components/hub/PreflightPanel";
 import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +22,17 @@ function time12(hhmm: string): string {
   return `${hour}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-export default async function RunSheetPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function RunSheetPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ final?: string }>;
+}) {
   const { token } = await params;
+  // Proof is the default: a sheet printed before anyone has checked it says so
+  // on paper. ?final=1 is the deliberate act of calling it done.
+  const isFinal = (await searchParams).final === "1";
   const data = await getPortalData(token);
   if (!data) notFound();
   const { wedding, timeline, cues, vips, playlists } = data;
@@ -31,6 +43,23 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
   const doNotPlay = playlists.filter((p) => p.category === "do_not_play" && hasTrack(p));
   const mustPlay = playlists.filter((p) => p.category === "must_play" && hasTrack(p));
   const roster = vips.filter((v) => v.fullName.trim() !== "" || v.role.trim() !== "");
+  const checks = preflight({
+    timeline: timeline.map((t) => ({
+      title: t.title,
+      start: t.scheduledStartTime.slice(0, 5),
+      minutes: t.estimatedDurationMinutes,
+    })),
+    cues: cues.map((c) => ({
+      cueType: c.cueType,
+      label: c.label ?? "",
+      trackTitle: c.trackTitle,
+      artist: c.artist,
+      customEdit: c.customEdit ?? false,
+    })),
+    mustPlay,
+    doNotPlay: playlists.filter((p) => p.category === "do_not_play"),
+    documentCount: await countDocuments(wedding.id),
+  });
 
   return (
     <div className="min-h-screen bg-white p-8 text-charcoal print:p-0">
@@ -41,6 +70,8 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
           </a>
           <PrintButton />
         </div>
+
+        <PreflightPanel checks={checks} isFinal={isFinal} base={`/hub/${token}/runsheet`} />
 
         <header className="mt-4 border-b-2 border-charcoal pb-3">
           <div className="flex items-baseline justify-between">
@@ -115,6 +146,7 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
                     <li key={`${cue.cueType}-${i}`}>
                       <span className="font-semibold">{label}:</span> {track}
                       {cue.isLivePerformance ? " (live)" : ""}
+                      {cue.customEdit ? <strong> (custom edit)</strong> : null}
                       {cue.notes && (
                         <span className="block text-ink/60">{cue.notes}</span>
                       )}
