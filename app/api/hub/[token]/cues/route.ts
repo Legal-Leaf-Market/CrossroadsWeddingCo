@@ -26,6 +26,7 @@ const schema = z.object({
         notes: z.string().trim().max(2000).optional().default(""),
         spotifyUrl: z.string().trim().max(500).optional().default(""),
         isLivePerformance: z.boolean().optional().default(false),
+        customEdit: z.boolean().optional().default(false),
       }),
     )
     .max(40),
@@ -45,6 +46,7 @@ async function currentCues(ex: Tx | typeof db, weddingId: string) {
     notes: c.notes ?? "",
     spotifyUrl: c.spotifyUrl ?? "",
     isLivePerformance: c.isLivePerformance ?? false,
+    customEdit: c.customEdit ?? false,
   }));
 }
 
@@ -96,6 +98,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ token: stri
             notes: c.notes || null,
             spotifyUrl: c.spotifyUrl || null,
             isLivePerformance: c.isLivePerformance,
+            customEdit: c.customEdit,
           })),
         );
       }

@@ -236,6 +236,9 @@ export const musicCues = pgTable("music_cues", {
   orderIndex: integer("order_index").notNull().default(0),
   // The couple's own note for this moment, shown to the DJ on the run sheet.
   notes: text("notes"),
+  /** The DJ plays a custom edit of this song (a cut, a mashup, a fade the
+   *  couple asked for), so the file has to be in hand before the day. */
+  customEdit: boolean("custom_edit").notNull().default(false),
 });
 
 // 7b. Wedding messages: the one master conversation per wedding (AppFolio
