@@ -473,3 +473,19 @@ CREATE INDEX IF NOT EXISTS idx_guestbook_created ON guestbook_entries (created_a
 -- Custom edit flag per song (2026-11-05). A cue marked custom_edit is a cut,
 -- mashup or fade the DJ must have prepared; the run sheet warns until the day.
 ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS custom_edit BOOLEAN NOT NULL DEFAULT false;
+
+-- Shared call log for the lead playbook served at /admin/[key]/playbook
+-- (2026-11-06, Jacob: "make this a static link that saves the changes we
+-- make"). One row per lead id (the card's id in the playbook), holding the
+-- same fields the claude.ai copy keeps: status, note, followUp, stars,
+-- starWhy, starBy, at, by. Bookings feed the weekly deposit goal.
+CREATE TABLE IF NOT EXISTS playbook_calls (
+    lead_id VARCHAR(100) PRIMARY KEY,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS playbook_bookings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

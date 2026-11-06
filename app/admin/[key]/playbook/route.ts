@@ -6,8 +6,9 @@ export const dynamic = "force-dynamic";
 
 // The Crossroads lead playbook (call list, scripts), for partners signed in to
 // a different claude.ai account than the one that owns the artifact. Same gate
-// as the rest of /admin: a wrong key 404s. The shared call log only works on
-// the claude.ai copy; here the page says so and links to it.
+// as the rest of /admin: a wrong key 404s. This copy saves to the site's own
+// call log (/api/admin/[key]/playbook); the page finds it through
+// window.CR_PLAYBOOK_API.
 // Edit content/playbook/crossroads-playbook.html, then run
 // `node scripts/build-playbook.mjs`.
 export async function GET(_req: Request, ctx: { params: Promise<{ key: string }> }) {
@@ -17,7 +18,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ key: string }>
     '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">' +
-    "</head><body>" +
+    "<script>window.CR_PLAYBOOK_API=" +
+    JSON.stringify(`/api/admin/${encodeURIComponent(key)}/playbook`).replace(/</g, "\\u003c") +
+    "</script></head><body>" +
     PLAYBOOK_HTML +
     "</body></html>";
   return new Response(page, {
