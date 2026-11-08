@@ -11,7 +11,7 @@ export default function Team() {
         <h2 className="text-center text-3xl text-charcoal">Who you get</h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-ink/70">
           No rotating roster of strangers. When you book Crossroads, these are
-          the people at your wedding.
+          the people at your event.
         </p>
         <div className="mx-auto mt-10 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {PUBLIC_TEAM.map((m) => (
