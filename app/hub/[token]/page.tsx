@@ -211,7 +211,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           <a href={`/hub/${token}/messages`} className="underline decoration-parchment underline-offset-2 hover:text-terracotta">
             message us
           </a>{" "}
-          and we both see it right away.
+          and the whole team sees it right away.
         </p>
       </main>
     </div>

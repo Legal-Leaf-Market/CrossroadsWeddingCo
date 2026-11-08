@@ -45,7 +45,7 @@ export default async function ContractPreviewPage({
             acceptedName={signed ? "Taylor Morgan" : null}
             coupleNames="Jordan Hayes & Taylor Morgan"
             countersigned={signed ? { name: "Jacob Kennedy", at: "2026-10-20T19:05:00Z" } : null}
-            countersignedTitle="Co-founder"
+            countersignedTitle="Chief Executive Officer"
             version={CONTRACT_VERSION}
             demo
           />

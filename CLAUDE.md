@@ -660,6 +660,15 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   printed on a card or confirmed to exist, so set `SCHEDULER_EMAIL_TERRY` in Netlify to
   his real address; the owner is copied on every call regardless. Follow-up text
   automation is parked (Jacob, 2026-11-01: "don't worry about it rn").
+- **Three partners with officer titles (2026-11-08, Jacob: "it's now me, Nic and Terry").**
+  Jacob is Chief Executive Officer, Nic Chief Operating Officer, Terry (Winchester) Chief
+  Business Officer. `TeamMember.executiveTitle` in `lib/team.ts` holds the officer title and
+  shows first on "Who you get" and on `/book?with=<slug>`; `title`/`roles` stay the on-the-day
+  jobs (Jake Event Producer, Nic Event Manager, Terry Stage Manager: DJ, bar, stage management).
+  Terry is on the public team section now (`showOnTeam: false` removed) and in `TEAM_NAMES`, so
+  he can reply in the hub thread. His bio says only what Jacob stated: lots of event promotion
+  and execution experience, the go-to guy on most things. The countersign form defaults to
+  "Chief Executive Officer". This supersedes the earlier "Terry is a bookable partner" note.
 - **Reviews page and moderated notes board (2026-11-01, Jacob).** `/reviews` (footer,
   sitemap) is a public board anyone can sign with a name, a "writing about" choice and
   a note, no email or login, so Jacob can send the link to someone like Adam and they
