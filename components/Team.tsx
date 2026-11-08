@@ -13,7 +13,7 @@ export default function Team() {
           No rotating roster of strangers. When you book Crossroads, these are
           the people at your wedding.
         </p>
-        <div className="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2">
+        <div className="mx-auto mt-10 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {PUBLIC_TEAM.map((m) => (
             <div key={m.slug} className="rounded-2xl border border-parchment bg-white p-6 text-center">
               {m.photoUrl ? (
@@ -30,7 +30,8 @@ export default function Team() {
                 </div>
               )}
               <h3 className="mt-4 text-xl text-charcoal">{m.name}</h3>
-              <p className="text-sm font-semibold text-terracotta">{m.title}</p>
+              <p className="text-sm font-semibold text-terracotta">{m.executiveTitle}</p>
+              <p className="text-sm text-ink/70">{m.title}</p>
               <p className="mt-1 text-xs uppercase tracking-widest text-ink/50">{m.roles}</p>
               <p className="mt-3 text-sm text-ink/70">{m.bio}</p>
             </div>

@@ -146,7 +146,7 @@ export default function HubPreviewPage() {
           <a href="/hub/preview/messages" className="underline decoration-parchment underline-offset-2">
             message us
           </a>{" "}
-          and we both see it right away.
+          and the whole team sees it right away.
         </p>
       </main>
     </div>

@@ -15,7 +15,7 @@ export default function CountersignForm({
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [title, setTitle] = useState("Co-founder");
+  const [title, setTitle] = useState("Chief Executive Officer");
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
