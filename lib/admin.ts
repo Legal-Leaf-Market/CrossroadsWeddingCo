@@ -32,6 +32,7 @@ export type AdminWedding = {
   packageType: string | null;
   addons: { type: string; fee: number | null; minFee?: number }[];
   totalAmount: string;
+  depositAmount: string;
   isDepositPaid: boolean;
   isBalancePaid: boolean;
   contactEmail: string | null;
@@ -108,6 +109,7 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     packageType: w.packageType,
     addons,
     totalAmount: w.totalAmount,
+    depositAmount: w.depositAmount,
     isDepositPaid: w.isDepositPaid ?? false,
     isBalancePaid: w.isBalancePaid ?? false,
     contactEmail: w.contactEmail,
