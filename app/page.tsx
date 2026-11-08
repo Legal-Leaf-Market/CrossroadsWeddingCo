@@ -4,7 +4,7 @@ import HolidayBanner from "@/components/HolidayBanner";
 import { CORPORATE_DJ_SOUND_USD, DJ_DAY_RATE_USD, EVENT_BRAND_NAME } from "@/lib/site";
 import Hero from "@/components/Hero";
 import Services from "@/components/Services";
-import Gallery from "@/components/Gallery";
+import FromOurEvents from "@/components/FromOurEvents";
 import Pricing from "@/components/Pricing";
 import About from "@/components/About";
 import Team from "@/components/Team";
@@ -28,11 +28,11 @@ export default function Home() {
       <Header brand="events" />
       <main>
         <Hero />
+        <FromOurEvents />
+        <Team />
         <Services />
-        <Gallery />
         <Pricing />
         <About />
-        <Team />
         <ContactCTA />
       </main>
       <Footer />
