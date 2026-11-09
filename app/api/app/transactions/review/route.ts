@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getBooksWorkspace, sameOrigin } from "@/lib/auth";
 import { matchLine } from "@/lib/books/matching";
+import { applySplit } from "@/lib/books/splits";
+import { MAX_SPLIT_PARTS } from "@/lib/books/logic";
 import { applyReview, createRule } from "@/lib/books/review";
 
 export const runtime = "nodejs";
@@ -31,6 +33,14 @@ const schema = z.discriminatedUnion("action", [
     kind: z.enum(["deposit", "balance"]),
     categoryId: z.string().max(40).optional(),
   }),
+  z.object({
+    action: z.literal("split"),
+    ids: z.array(z.string().max(40)).length(1),
+    parts: z
+      .array(z.object({ categoryId: z.string().max(40), amountCents: z.number().int(), note: z.string().max(200).optional() }))
+      .min(2)
+      .max(MAX_SPLIT_PARTS),
+  }),
 ]);
 
 export async function POST(req: NextRequest) {
@@ -41,6 +51,11 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Bad request" }, { status: 400, headers: NO_STORE });
   const input = parsed.data;
   try {
+    if (input.action === "split") {
+      const r = await applySplit(ws.tenant.id, ws.user.id, input.ids[0], input.parts);
+      if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status, headers: NO_STORE });
+      return NextResponse.json({ ok: true, updated: 1 }, { headers: NO_STORE });
+    }
     if (input.action === "match") {
       const m = await matchLine(ws.tenant.id, ws.user.id, {
         transactionId: input.ids[0],

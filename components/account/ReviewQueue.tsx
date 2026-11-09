@@ -19,6 +19,7 @@ export type QueueItem = {
   bookingName?: string | null;
   paymentKind?: string | null;
   suggestions?: MatchSuggestion[];
+  splitParts?: { categoryName: string; amountCents: number }[];
   accountName: string;
   mask: string | null;
 };
@@ -87,6 +88,92 @@ async function post(body: Record<string, unknown>) {
  * reason it was suggested; any open booking can be picked by hand. Nothing is
  * matched until a person presses Match.
  */
+/**
+ * Split one bank line across categories. Amounts are typed as plain dollars;
+ * the line's own direction is applied on save, and Save stays off until the
+ * parts add up to the line exactly. The server checks the same rule again.
+ */
+function SplitEditor({
+  item,
+  categories,
+  busy,
+  onSave,
+}: {
+  item: QueueItem;
+  categories: QueueCategory[];
+  busy: boolean;
+  onSave: (parts: { categoryId: string; amountCents: number }[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState([
+    { categoryId: "", amount: "" },
+    { categoryId: "", amount: "" },
+  ]);
+  const totalCents = Math.abs(item.amountCents);
+  const toCents = (v: string) => {
+    const n = Number(v.replace(/[$,\s]/g, ""));
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0;
+  };
+  const assigned = rows.reduce((s, r) => s + toCents(r.amount), 0);
+  const left = totalCents - assigned;
+  const ready = left === 0 && rows.length >= 2 && rows.every((r) => r.categoryId && toCents(r.amount) > 0);
+  const set = (i: number, patch: Partial<{ categoryId: string; amount: string }>) =>
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  if (!open) {
+    return (
+      <button type="button" className="justify-self-start text-xs font-semibold text-ink/60 hover:text-terracotta-dark sm:ml-7" onClick={() => setOpen(true)}>
+        Split across categories
+      </button>
+    );
+  }
+  return (
+    <div className="grid gap-2 rounded-xl bg-cream/70 p-3 text-sm sm:ml-7">
+      {rows.map((r, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2">
+          <select aria-label={`Category for part ${i + 1}`} className={select} value={r.categoryId} onChange={(e) => set(i, { categoryId: e.target.value })}>
+            <CategoryOptions categories={categories} amountCents={item.amountCents} />
+          </select>
+          <input
+            aria-label={`Amount for part ${i + 1}`}
+            inputMode="decimal"
+            placeholder="0.00"
+            className={`${select} w-28 sm:w-28`}
+            value={r.amount}
+            onChange={(e) => set(i, { amount: e.target.value })}
+          />
+          {rows.length > 2 && (
+            <button type="button" className="text-xs font-semibold text-ink/55 hover:text-terracotta-dark" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}>
+              Remove
+            </button>
+          )}
+        </div>
+      ))}
+      <div className="flex flex-wrap items-center gap-3">
+        {rows.length < 20 && (
+          <button type="button" className="text-xs font-semibold text-ink/60 hover:text-terracotta-dark" onClick={() => setRows((rs) => [...rs, { categoryId: "", amount: "" }])}>
+            Add a part
+          </button>
+        )}
+        <span className={`text-xs font-semibold ${left === 0 ? "text-emerald-800" : "text-terracotta-dark"}`} role="status">
+          {left === 0 ? "Adds up" : left > 0 ? `${usd(left)} left to assign` : `${usd(-left)} too much`}
+        </span>
+        <button
+          type="button"
+          className={primary}
+          disabled={!ready || busy}
+          onClick={() => onSave(rows.map((r) => ({ categoryId: r.categoryId, amountCents: Math.sign(item.amountCents) * toCents(r.amount) })))}
+        >
+          Save split
+        </button>
+        <button type="button" className="text-xs font-semibold text-ink/55 hover:text-terracotta-dark" onClick={() => setOpen(false)}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MatchPanel({
   item,
   bookings,
@@ -211,6 +298,12 @@ export default function ReviewQueue({
     finish([item.id], await post({ action: "exclude", ids: [item.id], note: notes[item.id], rule: ruleFor(item) }));
   }
 
+  async function split(item: QueueItem, parts: { categoryId: string; amountCents: number }[]) {
+    setBusy(item.id);
+    setMsg("");
+    finish([item.id], await post({ action: "split", ids: [item.id], parts }));
+  }
+
   async function match(item: QueueItem, bookingId: string, kind: "deposit" | "balance") {
     setBusy(item.id);
     setMsg("");
@@ -324,7 +417,11 @@ export default function ReviewQueue({
                   </p>
                   {view !== "unreviewed" && (
                     <p className="mt-1 text-sm text-ink/70">
-                      {view === "categorized" ? item.categoryName ?? "Category removed" : "Not business"}
+                      {view === "categorized"
+                        ? item.splitParts?.length
+                          ? `Split: ${item.splitParts.map((p) => `${p.categoryName} ${usd(Math.abs(p.amountCents))}`).join(", ")}`
+                          : item.categoryName ?? "Category removed"
+                        : "Not business"}
                       {item.bookingName && (
                         <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                           {item.paymentKind === "deposit" ? "Deposit" : "Payment"} from {item.bookingName}
@@ -374,6 +471,9 @@ export default function ReviewQueue({
                     </label>
                   )}
                 </div>
+              ) : null}
+              {view === "unreviewed" ? (
+                <SplitEditor item={item} categories={categories} busy={busy !== ""} onSave={(parts) => split(item, parts)} />
               ) : null}
               {view === "unreviewed" && item.amountCents > 0 ? (
                 <MatchPanel item={item} bookings={bookings} busy={busy !== ""} onMatch={(b, k) => match(item, b, k)} />

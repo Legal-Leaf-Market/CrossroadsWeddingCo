@@ -781,3 +781,22 @@ CREATE CONSTRAINT TRIGGER journal_lines_balance
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS payment_kind VARCHAR(20); -- deposit | balance
 CREATE INDEX IF NOT EXISTS idx_bank_tx_booking ON bank_transactions (tenant_id, booking_id) WHERE booking_id IS NOT NULL;
+
+-- ── Split transactions (2026-11-09) ─────────────────────────────────────────
+-- One bank line in several categories (one store run: gear and office). The
+-- parts carry the same sign as the line and add up to it exactly; the code
+-- enforces that when a person saves a split, and if the bank later changes the
+-- line's amount the split no longer fits, so the line goes back to review
+-- rather than posting numbers that disagree with the bank.
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS is_split BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS bank_transaction_splits (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    transaction_id UUID NOT NULL REFERENCES bank_transactions(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES ledger_categories(id) ON DELETE RESTRICT,
+    amount_cents BIGINT NOT NULL,
+    note VARCHAR(200),
+    position INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_bank_tx_splits ON bank_transaction_splits (tenant_id, transaction_id);

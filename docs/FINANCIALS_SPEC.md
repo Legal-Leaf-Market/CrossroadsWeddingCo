@@ -93,9 +93,23 @@ And hand its accountant a general ledger at tax time.
 15. **Re-sorting a matched line clears the match** (sort, set aside, move back), and its ledger
     entry is voided and reposted like any other change.
 
+## Split transactions (added 2026-11-09)
+
+16. **One bank line, several categories.** The parts carry the line's sign, none is zero, there
+    are at least two, and they add up to the line to the cent. The line posts as ONE balanced
+    entry: the bank side once, a category line per part.
+17. **Any other decision replaces the split** (a plain sort, set aside, move back, a booking
+    match), and the entry is voided and reposted as usual.
+18. **If the bank changes a split line's amount, the split goes back to review** with a note
+    saying so, and its entry is voided. Posting parts that no longer add up to what the bank
+    says would put a number in the books nobody chose. Once a person sorts it again, the note
+    is removed.
+19. **A pending line's split carries to the posted line** when the amount is unchanged; if it
+    changed, the posted line waits in review.
+
 ## Not in v1
 
 Accrual and booking deposits as a liability; one bank line paying several bookings; refunds to a
-client matched back to the booking; split lines;
+client matched back to the booking;
 manual journal entries; invoices posting receivables; the house account (Crossroads runs from
 `/admin`, which has no bank feed); closing a period (locking months); sales tax.

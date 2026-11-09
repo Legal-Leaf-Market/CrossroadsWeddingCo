@@ -2,6 +2,7 @@ import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-o
 import { db } from "@/lib/db";
 import { bankAccounts, bankTransactions, ledgerCategories, weddings } from "@/lib/db/schema";
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
+import { clearSplits } from "@/lib/books/splits";
 import { creditFor, type OpenBooking, type PaymentKind } from "@/lib/books/logic";
 export { PAYMENT_KINDS, suggestFor, creditFor, type OpenBooking, type PaymentKind, type Suggestion } from "@/lib/books/logic";
 
@@ -152,6 +153,7 @@ export async function matchLine(
     .returning({ id: bankTransactions.id });
   if (!res.length) return { ok: false, status: 404, error: "That transaction can't be matched. Only money coming in can." };
 
+  await clearSplits(tenantId, [input.transactionId]); // a match replaces any split
   await markPaidFromReceipts(tenantId, booking.id);
   await postBankLedgerQuietly(tenantId);
   return { ok: true };
