@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   customType,
   date,
@@ -441,3 +442,73 @@ export const userSessions = pgTable(
 
 export type Tenant = typeof tenants.$inferSelect;
 export type User = typeof users.$inferSelect;
+
+// 15. Integrations groundwork: bank and card feeds (2026-11-09). See
+// scripts/phase1-schema.sql and lib/integrations/.
+export const integrationConnections = pgTable(
+  "integration_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    provider: varchar("provider", { length: 30 }).notNull(),
+    externalId: varchar("external_id", { length: 200 }).notNull(),
+    institutionId: varchar("institution_id", { length: 100 }),
+    institutionName: varchar("institution_name", { length: 200 }),
+    status: varchar("status", { length: 30 }).notNull().default("active"),
+    /** AES-256-GCM, lib/secrets.ts. Never sent to a browser, never logged. */
+    secretCiphertext: text("secret_ciphertext"),
+    syncCursor: text("sync_cursor"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_integration_tenant").on(t.tenantId)],
+);
+
+export const bankAccounts = pgTable(
+  "bank_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    connectionId: uuid("connection_id").notNull().references(() => integrationConnections.id, { onDelete: "restrict" }),
+    externalId: varchar("external_id", { length: 200 }).notNull(),
+    name: varchar("name", { length: 200 }).notNull(),
+    officialName: varchar("official_name", { length: 200 }),
+    mask: varchar("mask", { length: 10 }),
+    type: varchar("type", { length: 30 }),
+    subtype: varchar("subtype", { length: 40 }),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    currentBalanceCents: bigint("current_balance_cents", { mode: "number" }),
+    availableBalanceCents: bigint("available_balance_cents", { mode: "number" }),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_bank_accounts_tenant").on(t.tenantId)],
+);
+
+/** amountCents: positive = money in, negative = money out (Plaid's sign is flipped on the way in). */
+export const bankTransactions = pgTable(
+  "bank_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    bankAccountId: uuid("bank_account_id").notNull().references(() => bankAccounts.id, { onDelete: "restrict" }),
+    externalId: varchar("external_id", { length: 200 }).notNull(),
+    postedDate: date("posted_date").notNull(),
+    authorizedDate: date("authorized_date"),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    merchant: varchar("merchant", { length: 255 }),
+    description: text("description").notNull().default(""),
+    rawCategory: varchar("raw_category", { length: 120 }),
+    pending: boolean("pending").notNull().default(false),
+    reviewStatus: varchar("review_status", { length: 20 }).notNull().default("unreviewed"),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_bank_tx_tenant_date").on(t.tenantId, t.postedDate)],
+);

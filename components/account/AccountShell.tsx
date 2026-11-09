@@ -14,11 +14,19 @@ export default function AccountShell({ children, signedIn = false }: { children:
             {PLATFORM_NAME}
           </Link>
           {signedIn ? (
+            <div className="flex items-center gap-4">
+              <Link href="/app" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Bookings
+              </Link>
+              <Link href="/app/integrations" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Integrations
+              </Link>
             <form action="/api/auth/logout" method="post">
               <button type="submit" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Sign out
               </button>
             </form>
+            </div>
           ) : (
             <Link href="/login" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
               Sign in

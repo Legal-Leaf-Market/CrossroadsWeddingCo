@@ -32,6 +32,10 @@ pnpm ig:posts   # regenerate the Instagram images in content/instagram/
 | `SIGNUP_OPEN` | `/signup` | Set to `1` to let other businesses create accounts. Unset means the page says signups aren't open and `/api/signup` answers 403. |
 | `NEXT_PUBLIC_PLATFORM_NAME` | `/signup`, `/login`, `/app`, sign-in emails | Name of the software sold to other businesses. Defaults to the working name "Crossroads Agency OS". |
 | `RESEND_PLATFORM_FROM` | Sign-in emails | Optional. Defaults to `<platform name> <booking@crossroadsweddingco.shop>`. |
+| `PLAID_CLIENT_ID` / `PLAID_SECRET` | Bank and card feeds (`/app/integrations`) | From the Plaid dashboard. Unset means the page shows "Not available yet" and every Plaid route answers 501. |
+| `PLAID_ENV` | Bank feeds | `sandbox` (default, Plaid's test banks) or `production`. |
+| `PLAID_WEBHOOK_URL` | Bank feeds | Optional. Defaults to `<site>/api/webhooks/plaid`. |
+| `INTEGRATIONS_KEY` | Bank feeds | 64 hex characters (`openssl rand -hex 32`). Encrypts stored bank access tokens; without it nothing can be connected. Losing it means every bank must be reconnected, so keep a copy somewhere safe. |
 | `IG_STUDIO_MODEL` | `/ig-studio` | Optional model override. |
 
 `NEXT_PUBLIC_*` variables are inlined at build time, so changing one in Vercel
@@ -118,3 +122,14 @@ house account (`HOUSE_TENANT_ID` in `lib/tenant-constants.ts`); every existing
 table defaults to it, and `/admin/[key]` reads only house rows. Without
 `RESEND_API_KEY` in production, signup and sign-in refuse with a 503 instead
 of promising an email; in local dev the link is printed to the server log.
+
+## Bank and card feeds (Plaid)
+
+`/app/integrations` lets a business account connect bank and card accounts
+through Plaid. The access token Plaid returns is encrypted with
+`INTEGRATIONS_KEY` (AES-256-GCM, `lib/secrets.ts`) and never reaches a
+browser. Transactions arrive through `/transactions/sync` (`lib/integrations/bank-feed.ts`),
+on connect, on the Refresh button, and when Plaid's signed webhook
+(`/api/webhooks/plaid`) says there is something new. Amounts are stored as
+integer cents with positive meaning money in. Rows land as "unreviewed":
+nothing is categorized or posted to books yet.

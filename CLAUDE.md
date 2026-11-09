@@ -737,6 +737,28 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   thread (it emails Jake), and video calls all 404 for customer bookings until each is
   rebuilt per account. `weddings.package_type` holds `EVENT_TYPES` keys for customer rows.
 
+- **Integrations groundwork: Plaid bank and card feeds (2026-11-09, Jacob: "start laying the
+  groundwork for integrating with Plaid and Found").** Found has no public developer API
+  (checked 2026-11-09; it is a fintech whose accounts sit at Lead Bank), so Found, like any
+  bank, is reached through Plaid if Plaid lists it; do not build a direct Found integration
+  without a published API. Tables: `integration_connections` (one per Plaid item, unique on
+  provider + external id; an item already on another account is refused, never moved),
+  `bank_accounts`, `bank_transactions` (integer cents, POSITIVE = money in; Plaid's sign is
+  flipped once in `plaidAmountToCents`; `review_status` starts `unreviewed`; removals set
+  `removed_at`, nothing is deleted). Access tokens are AES-256-GCM under `INTEGRATIONS_KEY`
+  (`lib/secrets.ts`, `v1:` prefix for future rotation); without the key nothing can be saved.
+  `lib/integrations/plaid-client.ts` is fetch-only (no SDK, no new dependency) and verifies
+  webhooks (ES256 JWT, key by kid from /webhook_verification_key/get, iat within 5 minutes,
+  body SHA-256). `syncConnection` pages to the end, restarts from the original cursor on
+  TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION, and applies every page plus the new cursor in
+  ONE transaction. `PLAID_BASE_URL` points at a stand-in server for local tests and is ignored
+  in production. Verified against a local Plaid stand-in: connect, two-page sync with a forced
+  restart, add/modify/remove, ITEM_LOGIN_REQUIRED to needs_reauth, signed webhooks (tampered,
+  stale and unsigned all 401), cross-account 404s, no token in the DB in clear or in logs.
+  Plaid production pricing is not public; new US teams since 2026-04-15 get a free trial
+  plan capped at 10 production items. NEXT: categorization rules and the ledger
+  (docs from Jacob: "Crossroads Financials" spec, GL posting rules) sit on these rows.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

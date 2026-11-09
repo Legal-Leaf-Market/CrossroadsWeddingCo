@@ -552,3 +552,80 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id);
+
+-- Integrations groundwork (2026-11-09, Jacob: "start laying the groundwork for
+-- integrating with Plaid and Found"). Bank and card feeds come in through an
+-- aggregator (Plaid first; Found has no public API, so a Found account is
+-- reached through an aggregator if at all). These tables are the raw feed the
+-- general ledger will later sit on: amounts are integer cents, every row
+-- belongs to an account (tenant), and a provider's own ids are kept with a
+-- unique constraint so a re-sync can never double-insert.
+--
+-- secret_ciphertext holds the provider's long-lived access token encrypted
+-- with AES-256-GCM under INTEGRATIONS_KEY (lib/secrets.ts). It is never stored
+-- or logged in plain text, and nothing in the app ever sends it to a browser.
+CREATE TABLE IF NOT EXISTS integration_connections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    provider VARCHAR(30) NOT NULL,              -- 'plaid'
+    external_id VARCHAR(200) NOT NULL,          -- Plaid item_id
+    institution_id VARCHAR(100),
+    institution_name VARCHAR(200),
+    status VARCHAR(30) NOT NULL DEFAULT 'active', -- active | needs_reauth | disconnected | error
+    secret_ciphertext TEXT,
+    sync_cursor TEXT,
+    last_synced_at TIMESTAMPTZ,
+    last_error TEXT,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_integration_external
+    ON integration_connections (provider, external_id);
+CREATE INDEX IF NOT EXISTS idx_integration_tenant ON integration_connections (tenant_id);
+
+CREATE TABLE IF NOT EXISTS bank_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    connection_id UUID NOT NULL REFERENCES integration_connections(id) ON DELETE RESTRICT,
+    external_id VARCHAR(200) NOT NULL,          -- Plaid account_id
+    name VARCHAR(200) NOT NULL,
+    official_name VARCHAR(200),
+    mask VARCHAR(10),
+    type VARCHAR(30),                           -- depository | credit | loan | investment
+    subtype VARCHAR(40),                        -- checking | savings | credit card ...
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    current_balance_cents BIGINT,
+    available_balance_cents BIGINT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_accounts_external ON bank_accounts (connection_id, external_id);
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_tenant ON bank_accounts (tenant_id);
+
+-- amount_cents: POSITIVE = money INTO the account, negative = money out.
+-- Plaid reports the opposite sign (positive = outflow); lib/integrations/plaid.ts
+-- flips it once on the way in so nothing downstream has to remember.
+CREATE TABLE IF NOT EXISTS bank_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    bank_account_id UUID NOT NULL REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+    external_id VARCHAR(200) NOT NULL,          -- Plaid transaction_id
+    posted_date DATE NOT NULL,
+    authorized_date DATE,
+    amount_cents BIGINT NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    merchant VARCHAR(255),
+    description TEXT NOT NULL DEFAULT '',
+    raw_category VARCHAR(120),
+    pending BOOLEAN NOT NULL DEFAULT false,
+    -- Review state for the coming categorization step. Nothing here posts to a
+    -- ledger yet; a bank line only becomes books when a person or a rule says so.
+    review_status VARCHAR(20) NOT NULL DEFAULT 'unreviewed', -- unreviewed | categorized | matched | excluded
+    removed_at TIMESTAMPTZ,                     -- the bank withdrew it (pending that never posted)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_tx_external ON bank_transactions (bank_account_id, external_id);
+CREATE INDEX IF NOT EXISTS idx_bank_tx_tenant_date ON bank_transactions (tenant_id, posted_date DESC);
