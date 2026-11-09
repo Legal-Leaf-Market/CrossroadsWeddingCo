@@ -113,7 +113,10 @@ export default async function IntegrationsPage() {
         <section className="mt-6 rounded-2xl border border-parchment bg-white p-6">
           <h2 className="text-xl text-charcoal">Latest transactions</h2>
           <p className="mt-1 text-sm text-ink/60">
-            {unreviewed} waiting to be sorted. Sorting them into your books comes next; nothing is categorized automatically yet.
+            {unreviewed} waiting to be sorted.{" "}
+            <Link href="/app/transactions" className="font-semibold text-terracotta-dark hover:underline">
+              Sort them
+            </Link>
           </p>
           <ul className="mt-4 divide-y divide-parchment text-sm">
             {txs.map((t) => (

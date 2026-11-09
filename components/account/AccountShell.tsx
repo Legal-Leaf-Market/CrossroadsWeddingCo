@@ -14,9 +14,12 @@ export default function AccountShell({ children, signedIn = false }: { children:
             {PLATFORM_NAME}
           </Link>
           {signedIn ? (
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
               <Link href="/app" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Bookings
+              </Link>
+              <Link href="/app/transactions" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Transactions
               </Link>
               <Link href="/app/integrations" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Integrations

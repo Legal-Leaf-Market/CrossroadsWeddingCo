@@ -759,6 +759,40 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   plan capped at 10 production items. NEXT: categorization rules and the ledger
   (docs from Jacob: "Crossroads Financials" spec, GL posting rules) sit on these rows.
 
+- **Bank review queue and rules (2026-11-09, Jacob: "pick up where this left off").** A
+  signed-in account sorts its bank lines at `/app/transactions` (tabs: To sort, oldest first;
+  Sorted; Not business) and manages categories and rules at `/app/transactions/rules`.
+  `lib/books/review.ts` is server-only; `lib/books/categories.ts` is the client-safe half
+  (§9.3's split). **Sorting is a label, not bookkeeping**: `bank_transactions` gains
+  `category_id`, `note`, `reviewed_at/by`, `rule_id`, `rules_paused`, and nothing writes a
+  debit or credit. `ledger_categories` is per account, seeded once with 25 starter
+  categories for an event business (seeded only when the account has none, so an account
+  that trims its own list keeps it); `kind` is income / expense / transfer / equity,
+  `tax_line` is a Schedule C HINT left blank where the line depends on facts we lack (gear),
+  and `gl_code` is empty on purpose for the ledger layer to map. Categories are hidden,
+  never deleted. Nothing is preselected in the picker: the bank's own guess shows as
+  "Bank says: ..." text only, because a guess that gets saved is a wrong book. **Rules**
+  (`categorization_rules`) come only from "Always do this" on a person's own sort
+  (merchant equals, or description contains, plus money in or out); a person's sort is
+  saved first, so a refused rule never costs it. Rules sort only rows that are unreviewed,
+  not removed and not `rules_paused`, re-checked in the UPDATE's WHERE so a person sorting
+  the same row at the same moment wins; any person action (sort, set aside, move back)
+  pauses rules on that row for good, so a later sync can never undo a decision. Most
+  specific rule wins (exact, then longer, then newest); duplicates are refused; deleting a
+  rule leaves what it sorted. **Pending to posted**: Plaid removes a pending line and adds a
+  posted one carrying `pending_transaction_id` (now stored as `pending_external_id`); a
+  decision made on the pending line carries to the posted one. Both run in `afterSync`,
+  called after the sync transaction commits and caught, so sorting can never fail a sync.
+  `/api/app/transactions/export` is the CSV for the accountant (formula-leading cells
+  neutralized). Verified against a real Postgres and headless Chromium: cross-account ids
+  update 0 rows, another account's category is refused, cross-origin 403, no session 401,
+  rule backfill, duplicate rule refused while the sort saves, a moved-back row survives a
+  re-run, pending carry-over, case-insensitive merchant match, no sideways scroll at 390 and
+  1280. NOT YET: split transactions, matching deposits to bookings (`review_status`
+  'matched' is reserved for it), the house account (Crossroads uses `/admin`, which has no
+  bank feed yet), and the ledger itself, which waits on Jacob's "Crossroads Financials" spec
+  and GL posting rules (they were in the claude.ai chat, not in this repo).
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

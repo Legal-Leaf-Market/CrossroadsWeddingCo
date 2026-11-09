@@ -629,3 +629,48 @@ CREATE TABLE IF NOT EXISTS bank_transactions (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_tx_external ON bank_transactions (bank_account_id, external_id);
 CREATE INDEX IF NOT EXISTS idx_bank_tx_tenant_date ON bank_transactions (tenant_id, posted_date DESC);
+
+-- ── Bank transaction review: categories, rules, and who sorted what ──────────
+-- (2026-11-09) The review queue sits on bank_transactions. A category is the
+-- business's own word for a kind of money (Event income, Gear, Fuel); it is
+-- NOT a general-ledger account yet. gl_code is left for the ledger layer to
+-- fill in from the posting rules, so this table can be mapped, not rebuilt.
+CREATE TABLE IF NOT EXISTS ledger_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(80) NOT NULL,
+    kind VARCHAR(20) NOT NULL,                  -- income | expense | transfer | equity
+    tax_line VARCHAR(80),                       -- a Schedule C hint, never a promise
+    gl_code VARCHAR(20),                        -- filled in by the ledger layer
+    sort_order INT NOT NULL DEFAULT 100,
+    is_archived BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_categories_name ON ledger_categories (tenant_id, lower(name));
+
+-- A rule sorts NEW bank lines the way a person already sorted one. It never
+-- touches a row a person has reviewed or reopened (rules_paused).
+CREATE TABLE IF NOT EXISTS categorization_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    match_field VARCHAR(20) NOT NULL,           -- merchant | description
+    match_type VARCHAR(20) NOT NULL,            -- equals | contains
+    pattern VARCHAR(200) NOT NULL,
+    direction VARCHAR(10) NOT NULL DEFAULT 'any', -- any | in | out
+    action VARCHAR(20) NOT NULL,                -- categorize | exclude
+    category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT,
+    applied_count INT NOT NULL DEFAULT 0,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_categorization_rules_tenant ON categorization_rules (tenant_id);
+
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS rule_id UUID REFERENCES categorization_rules(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS rules_paused BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS pending_external_id VARCHAR(200);
+CREATE INDEX IF NOT EXISTS idx_bank_tx_review ON bank_transactions (tenant_id, review_status, posted_date DESC);

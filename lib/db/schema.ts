@@ -506,9 +506,53 @@ export const bankTransactions = pgTable(
     rawCategory: varchar("raw_category", { length: 120 }),
     pending: boolean("pending").notNull().default(false),
     reviewStatus: varchar("review_status", { length: 20 }).notNull().default("unreviewed"),
+    categoryId: uuid("category_id").references(() => ledgerCategories.id, { onDelete: "restrict" }),
+    note: text("note"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    ruleId: uuid("rule_id").references(() => categorizationRules.id, { onDelete: "set null" }),
+    rulesPaused: boolean("rules_paused").notNull().default(false),
+    pendingExternalId: varchar("pending_external_id", { length: 200 }),
     removedAt: timestamp("removed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("idx_bank_tx_tenant_date").on(t.tenantId, t.postedDate)],
 );
+
+/** A business's own name for a kind of money. Not a GL account; gl_code is for the ledger layer. */
+export const ledgerCategories = pgTable(
+  "ledger_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 80 }).notNull(),
+    kind: varchar("kind", { length: 20 }).notNull(),
+    taxLine: varchar("tax_line", { length: 80 }),
+    glCode: varchar("gl_code", { length: 20 }),
+    sortOrder: integer("sort_order").notNull().default(100),
+    isArchived: boolean("is_archived").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+);
+
+export const categorizationRules = pgTable(
+  "categorization_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    matchField: varchar("match_field", { length: 20 }).notNull(),
+    matchType: varchar("match_type", { length: 20 }).notNull(),
+    pattern: varchar("pattern", { length: 200 }).notNull(),
+    direction: varchar("direction", { length: 10 }).notNull().default("any"),
+    action: varchar("action", { length: 20 }).notNull(),
+    categoryId: uuid("category_id").references(() => ledgerCategories.id, { onDelete: "restrict" }),
+    appliedCount: integer("applied_count").notNull().default(0),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_categorization_rules_tenant").on(t.tenantId)],
+);
+export type LedgerCategory = typeof ledgerCategories.$inferSelect;
+export type CategorizationRule = typeof categorizationRules.$inferSelect;

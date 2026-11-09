@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { bankAccounts, bankTransactions, integrationConnections } from "@/lib/db/schema";
 import { decryptSecret, encryptSecret } from "@/lib/secrets";
 import { SITE_URL } from "@/lib/site";
+import { afterSync } from "@/lib/books/review";
 import { PLATFORM_NAME } from "@/lib/tenant-constants";
 import {
   PlaidError,
@@ -165,6 +166,7 @@ function txValues(tenantId: string, bankAccountId: string, t: PlaidTransaction) 
     description: t.name ?? "",
     rawCategory: t.personal_finance_category?.detailed?.slice(0, 120) ?? t.personal_finance_category?.primary?.slice(0, 120) ?? null,
     pending: t.pending,
+    pendingExternalId: t.pending_transaction_id?.slice(0, 200) ?? null,
   };
 }
 
@@ -264,6 +266,13 @@ export async function syncConnection(connectionId: string, fetchImpl?: typeof fe
       .set({ syncCursor: cursor ?? null, lastSyncedAt: new Date(), status: "active", lastError: null, updatedAt: new Date() })
       .where(eq(integrationConnections.id, connectionId));
   });
+  // Sorting runs after the feed is safely written, outside its transaction:
+  // a failure here must never cost a sync. Unsorted rows simply wait.
+  try {
+    await afterSync(conn.tenantId);
+  } catch (err) {
+    console.error("[books] post-sync sorting failed:", err instanceof Error ? err.message : err);
+  }
   return { added, modified, removed };
 }
 

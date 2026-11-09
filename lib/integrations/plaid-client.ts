@@ -80,6 +80,7 @@ export type PlaidTransaction = {
   name: string;
   merchant_name: string | null;
   pending: boolean;
+  pending_transaction_id?: string | null;
   personal_finance_category?: { primary?: string; detailed?: string } | null;
 };
 
