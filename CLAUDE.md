@@ -894,6 +894,24 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   it (38 cases); five deliberate sabotages (cash deposit ignored, paid-in-full ignored, weak
   date penalty, money out allowed, stop words dropped) are each caught. Run it after touching
   any of this.
+- **`/my-wedding`, the one link Jake sends every couple (2026-11-09, Jacob: "make a public site
+  for all my current customers ... I'll send them the link").** A couple types the email on
+  their booking and that address gets their private planning hub link (`sendHubLinks`). No
+  accounts and NO PASSWORDS: Jacob asked to give every couple the password "changme1234"; that
+  was declined, because one shared, guessable password would open every couple's agreement,
+  money and messages to anyone who learns it, and the hub link already does the job privately.
+  `lib/my-wedding.ts` `hubsForEmail`: house-account weddings only (the page is Crossroads
+  branded; a customer account's couple with the same email is never sent anything),
+  cancelled left out, archived kept, matching `contact_email` or any `hub_invite_emails`
+  entry, case-insensitive, at most five. The reply is identical whether or not the email is
+  on file, so the page cannot be used to check who our clients are; rate limited per IP and
+  per email. noindex. A booking with no email on it cannot use this; add one from the hub's
+  Details or the dashboard first. Needs `RESEND_API_KEY` and crossroadsweddingco.shop verified
+  in Resend, or nothing is sent (logged in production, printed locally). Verified on the
+  realistic copy: booking email in capitals and an invited email both get the right hub, the
+  other account's couple and a cancelled booking get nothing, a stranger gets the same reply,
+  the fourth try in an hour is refused, the emailed hub link opens, no sideways scroll at 390
+  and 1280.
 
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New

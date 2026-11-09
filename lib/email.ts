@@ -369,3 +369,53 @@ export async function sendLoginLink(input: {
     return false;
   }
 }
+
+// --- "Find my wedding" (2026-11-09) ---------------------------------------
+// A couple asks for their planning hub link from /my-wedding. It only ever goes
+// to an address already on their booking, and the link is the same private hub
+// link the booking email carried. No new credential, no password.
+export async function sendHubLinks(input: {
+  to: string;
+  weddings: { coupleNames: string; eventDate: string; hubPath: string }[];
+}): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !input.weddings.length) return false;
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const when = (iso: string) =>
+    new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const rows = input.weddings.map((w) => ({ ...w, url: `${SITE_URL}${w.hubPath}` }));
+  try {
+    const { error } = await new Resend(key).emails.send({
+      from: FROM,
+      to: input.to,
+      subject: rows.length === 1 ? `Your planning hub for ${rows[0].coupleNames}` : `Your planning hubs`,
+      text: [
+        `Here's the link you asked for. It's private to you, so keep it to yourselves.`,
+        ``,
+        ...rows.flatMap((w) => [`${w.coupleNames}, ${when(w.eventDate)}`, w.url, ``]),
+        `If you didn't ask for this, ignore it: the link only came to an address already on your booking.`,
+        `Please don't reply to this email; message us in your hub.`,
+      ].join("\n"),
+      html:
+        `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
+        `Here's the link you asked for. It's private to you, so keep it to yourselves.` +
+        rows
+          .map(
+            (w) =>
+              `<div style="margin: 18px 0;"><strong>${esc(w.coupleNames)}</strong>, ${esc(when(w.eventDate))}<br>` +
+              `<a href="${esc(w.url)}" style="display: inline-block; margin-top: 8px; background: #c1633d; color: #faf5ec; font-weight: bold; padding: 12px 22px; border-radius: 999px; text-decoration: none;">Open your planning hub</a></div>`,
+          )
+          .join("") +
+        `<p style="color: #6b625a;">If you didn't ask for this, ignore it: the link only came to an address already on your booking. Please don't reply to this email; message us in your hub.</p>` +
+        `</div>`,
+    });
+    if (error) {
+      console.error("[email] hub links failed:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[email] hub links failed:", err);
+    return false;
+  }
+}
