@@ -4,6 +4,7 @@ import { bankAccounts, bankTransactions, categorizationRules, ledgerCategories, 
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
 import { STARTER_CATEGORIES, normalizeMatchText, type ReviewStatus } from "@/lib/books/categories";
 import { orderRules, ruleMatches } from "@/lib/books/logic";
+import { clearSplits, noteWithoutBrokenSplit, reopenBrokenSplits, splitsFor, type SplitView } from "@/lib/books/splits";
 export { orderRules, ruleMatches } from "@/lib/books/logic";
 
 // The bank review queue. Every function takes the tenant id from the session
@@ -64,6 +65,8 @@ export type QueueRow = {
   bookingId: string | null;
   bookingName: string | null;
   paymentKind: string | null;
+  /** The parts of a split line, in order; empty when it is not split. */
+  splitParts: SplitView[];
   accountName: string;
   mask: string | null;
 };
@@ -104,7 +107,12 @@ export async function listQueue(tenantId: string, status: ReviewStatus, limit = 
     // The queue is worked oldest first, like a pile; sorted and excluded read newest first.
     .orderBy(status === "unreviewed" ? asc(bankTransactions.postedDate) : desc(bankTransactions.postedDate), asc(bankTransactions.createdAt))
     .limit(limit);
-  return rows.map(({ ruleId, reviewedBy, ...r }) => ({ ...r, sortedByRule: !!ruleId && !reviewedBy }));
+  const parts = await splitsFor(tenantId, rows.map((r) => r.id));
+  return rows.map(({ ruleId, reviewedBy, ...r }) => ({
+    ...r,
+    sortedByRule: !!ruleId && !reviewedBy,
+    splitParts: parts.get(r.id) ?? [],
+  }));
 }
 
 export async function queueCounts(tenantId: string): Promise<Record<ReviewStatus, number>> {
@@ -151,6 +159,8 @@ export async function applyReview(tenantId: string, userId: string, input: Revie
     set = {};
   }
   if (note !== undefined) set.note = note;
+  // A person sorted it again: drop the automatic broken-split note (a SQL expression, evaluated per row).
+  else if (input.action === "categorize" || input.action === "exclude") set.note = noteWithoutBrokenSplit as unknown as string;
   if (!Object.keys(set).length) return { ok: true, updated: 0 };
 
   const res = await db
@@ -158,7 +168,10 @@ export async function applyReview(tenantId: string, userId: string, input: Revie
     .set({ ...set, updatedAt: now })
     .where(scope)
     .returning({ id: bankTransactions.id });
-  if (res.length && input.action !== "note") await postBankLedgerQuietly(tenantId);
+  if (res.length && input.action !== "note") {
+    await clearSplits(tenantId, res.map((r) => r.id)); // a new decision replaces any split
+    await postBankLedgerQuietly(tenantId);
+  }
   return { ok: true, updated: res.length };
 }
 
@@ -339,6 +352,9 @@ export async function carryPendingReviews(tenantId: string): Promise<number> {
            reviewed_by   = old.reviewed_by,
            rule_id       = old.rule_id,
            rules_paused  = old.rules_paused,
+           is_split      = old.is_split,
+           booking_id    = old.booking_id,
+           payment_kind  = old.payment_kind,
            updated_at    = now()
       FROM bank_transactions AS old
      WHERE posted.tenant_id = ${tenantId}
@@ -349,12 +365,27 @@ export async function carryPendingReviews(tenantId: string): Promise<number> {
        AND posted.review_status = 'unreviewed'
        AND posted.removed_at IS NULL
        AND old.review_status <> 'unreviewed'
+       AND (NOT old.is_split OR old.amount_cents = posted.amount_cents)
+  `);
+  // A carried split brings its parts. (A split whose amount changed is not
+  // carried above: the posted line waits in review instead.)
+  await db.execute(sql`
+    INSERT INTO bank_transaction_splits (tenant_id, transaction_id, category_id, amount_cents, note, position)
+    SELECT posted.tenant_id, posted.id, s.category_id, s.amount_cents, s.note, s.position
+      FROM bank_transactions posted
+      JOIN bank_transactions old
+        ON old.tenant_id = posted.tenant_id AND old.bank_account_id = posted.bank_account_id
+       AND old.external_id = posted.pending_external_id
+      JOIN bank_transaction_splits s ON s.transaction_id = old.id AND s.tenant_id = old.tenant_id
+     WHERE posted.tenant_id = ${tenantId} AND posted.is_split
+       AND NOT EXISTS (SELECT 1 FROM bank_transaction_splits x WHERE x.transaction_id = posted.id)
   `);
   return res.rowCount ?? 0;
 }
 
 /** Called by the bank feed after every successful sync. */
 export async function afterSync(tenantId: string): Promise<void> {
+  await reopenBrokenSplits(tenantId);
   await carryPendingReviews(tenantId);
   await runRules(tenantId);
   // Posting is derived, so it runs after every sync: a bank correcting an
@@ -373,6 +404,7 @@ export async function exportCsv(tenantId: string): Promise<string> {
       description: bankTransactions.description,
       amountCents: bankTransactions.amountCents,
       status: bankTransactions.reviewStatus,
+      id: bankTransactions.id,
       category: ledgerCategories.name,
       kind: ledgerCategories.kind,
       taxLine: ledgerCategories.taxLine,
@@ -383,6 +415,7 @@ export async function exportCsv(tenantId: string): Promise<string> {
     .leftJoin(ledgerCategories, eq(bankTransactions.categoryId, ledgerCategories.id))
     .where(and(eq(bankTransactions.tenantId, tenantId), isNull(bankTransactions.removedAt)))
     .orderBy(asc(bankTransactions.postedDate));
+  const splits = await splitsFor(tenantId, rows.map((r) => r.id));
   const cell = (v: unknown) => {
     let s = v === null || v === undefined ? "" : String(v);
     // A cell starting with = + - @ runs as a formula in a spreadsheet; neutralize it.
@@ -398,7 +431,9 @@ export async function exportCsv(tenantId: string): Promise<string> {
       r.description,
       (r.amountCents / 100).toFixed(2),
       r.status,
-      r.category,
+      splits.get(r.id)?.length
+        ? `Split: ${splits.get(r.id)!.map((p) => `${p.categoryName} ${(p.amountCents / 100).toFixed(2)}`).join("; ")}`
+        : r.category,
       r.kind,
       r.taxLine,
       r.note,

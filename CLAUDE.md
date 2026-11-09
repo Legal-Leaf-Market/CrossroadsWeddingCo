@@ -912,6 +912,28 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   other account's couple and a cancelled booking get nothing, a stranger gets the same reply,
   the fourth try in an hour is refused, the emailed hub link opens, no sideways scroll at 390
   and 1280.
+- **Split transactions (2026-11-09, after PR #106 merged; Jacob: "move on").** Spec items 16 to
+  19. `bank_transactions.is_split` plus `bank_transaction_splits` (tenant, transaction, category,
+  signed amount, note, position). `lib/books/splits.ts`: `applySplit` locks the line FOR UPDATE,
+  checks `splitProblem` (logic.ts: two to twenty parts, line's sign, none zero, exact sum) and
+  that every category is this account's and not hidden, then replaces the parts and marks the
+  line categorized with `category_id` NULL. The ledger posts it with `splitPosting` (bank side
+  once, a line per part), and the fingerprint includes the parts, so a re-split voids and
+  reposts. Any other decision calls `clearSplits` (sort, set aside, move back, match).
+  `afterSync` runs `reopenBrokenSplits` first: a split whose parts no longer add up to the
+  bank's amount goes back to review with `BROKEN_SPLIT_NOTE`, removed once a person sorts it
+  again. Carrying a pending decision to the posted line now also carries a split (only when the
+  amount is unchanged) and, a gap found on the way, the booking match, which it used to drop.
+  Queue: "Split across categories" on every line to sort, with a running "left to assign" and
+  Save off until it adds up; Sorted shows the parts; the CSV says "Split: Gear -120.00; Office
+  -30.00". Verified: `verify-books.mjs` (54 cases; three sabotages of the split rules each
+  caught), 18 checks on a real Postgres (refusals for a bad sum, one part, another account's
+  category or line; one balanced three-line entry; no-op repost; re-split void and repost; a
+  plain sort replacing the split; a bank amount change reopening it with the note; pending
+  carry-over; money-in split into income and tips; a match replacing a split; the whole ledger
+  balancing), headless Chromium at 390 and 1280, and the production-copy audit (every existing
+  row identical apart from a test row with no share link, which the long-standing share-token
+  backfill filled in as designed).
 
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New

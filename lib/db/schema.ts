@@ -516,6 +516,7 @@ export const bankTransactions = pgTable(
     pendingExternalId: varchar("pending_external_id", { length: 200 }),
     bookingId: uuid("booking_id").references(() => weddings.id, { onDelete: "set null" }),
     paymentKind: varchar("payment_kind", { length: 20 }),
+    isSplit: boolean("is_split").notNull().default(false),
     removedAt: timestamp("removed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -598,3 +599,15 @@ export const journalLines = pgTable("journal_lines", {
   creditCents: bigint("credit_cents", { mode: "number" }).notNull().default(0),
 });
 export type LedgerAccount = typeof ledgerAccounts.$inferSelect;
+
+/** Parts of a split bank line. Same sign as the line, adding up to it exactly. */
+export const bankTransactionSplits = pgTable("bank_transaction_splits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  transactionId: uuid("transaction_id").notNull().references(() => bankTransactions.id, { onDelete: "cascade" }),
+  categoryId: uuid("category_id").notNull().references(() => ledgerCategories.id, { onDelete: "restrict" }),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  note: varchar("note", { length: 200 }),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

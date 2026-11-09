@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   bankAccounts,
+  bankTransactionSplits,
   bankTransactions,
   journalEntries,
   journalLines,
@@ -11,7 +12,7 @@ import {
   type LedgerAccount,
 } from "@/lib/db/schema";
 import { ACCOUNT_RANGES, accountTypeForBank, type AccountType } from "@/lib/books/ledger-constants";
-import { bankLinePosting, type LineInput } from "@/lib/books/logic";
+import { bankLinePosting, splitPosting, splitProblem, type LineInput } from "@/lib/books/logic";
 export { bankLinePosting } from "@/lib/books/logic";
 
 // The ledger: double entry, cash basis, append-only. The spec is
@@ -195,12 +196,38 @@ export async function postBankLedger(tenantId: string): Promise<{ posted: number
         bookingId: bankTransactions.bookingId,
         bookingName: weddings.coupleNames,
         paymentKind: bankTransactions.paymentKind,
+        isSplit: bankTransactions.isSplit,
       })
       .from(bankTransactions)
       .innerJoin(bankAccounts, eq(bankTransactions.bankAccountId, bankAccounts.id))
       .leftJoin(ledgerCategories, eq(bankTransactions.categoryId, ledgerCategories.id))
       .leftJoin(weddings, and(eq(bankTransactions.bookingId, weddings.id), eq(weddings.tenantId, tenantId)))
       .where(eq(bankTransactions.tenantId, tenantId));
+
+    // Parts of split lines, mapped to their ledger accounts, in the order saved.
+    const splitRows = await tx
+      .select({
+        transactionId: bankTransactionSplits.transactionId,
+        accountId: ledgerCategories.ledgerAccountId,
+        amountCents: bankTransactionSplits.amountCents,
+      })
+      .from(bankTransactionSplits)
+      .innerJoin(ledgerCategories, eq(bankTransactionSplits.categoryId, ledgerCategories.id))
+      .where(eq(bankTransactionSplits.tenantId, tenantId))
+      .orderBy(asc(bankTransactionSplits.position));
+    const partsBy = new Map<string, { accountId: string | null; amountCents: number }[]>();
+    for (const r of splitRows) partsBy.set(r.transactionId, [...(partsBy.get(r.transactionId) ?? []), r]);
+    const partsOf = (l: { id: string; isSplit: boolean; amountCents: number }) => {
+      if (!l.isSplit) return null;
+      const parts = partsBy.get(l.id) ?? [];
+      // A split posts only when its parts still fit the line and every part has an account.
+      if (splitProblem(l.amountCents, parts) || parts.some((p) => !p.accountId)) return undefined;
+      return parts as { accountId: string; amountCents: number }[];
+    };
+    const fp = (l: (typeof lines)[number]) => {
+      const parts = partsOf(l);
+      return parts ? `${fingerprintOf(l)}|split:${parts.map((p) => `${p.accountId}:${p.amountCents}`).join(",")}` : fingerprintOf(l);
+    };
 
     const live = await tx
       .select({ id: journalEntries.id, sourceId: journalEntries.sourceId, fingerprint: journalEntries.fingerprint })
@@ -211,11 +238,17 @@ export async function postBankLedger(tenantId: string): Promise<{ posted: number
     const toVoid: { id: string; reason: string }[] = [];
     const toPost: typeof lines = [];
     for (const l of lines) {
+      const parts = partsOf(l);
       const qualifies =
-        l.reviewStatus === "categorized" && !l.pending && !l.removedAt && l.amountCents !== 0 && !!l.bankLedgerId && !!l.catLedgerId;
-      const fp = qualifies ? fingerprintOf(l) : null;
+        l.reviewStatus === "categorized" &&
+        !l.pending &&
+        !l.removedAt &&
+        l.amountCents !== 0 &&
+        !!l.bankLedgerId &&
+        (l.isSplit ? !!parts : !!l.catLedgerId);
+      const want = qualifies ? fp(l) : null;
       const existing = liveBySource.get(l.id);
-      if (existing && existing.fingerprint === fp) continue;
+      if (existing && existing.fingerprint === want) continue;
       if (existing) {
         const reason = !qualifies
           ? l.removedAt
@@ -248,9 +281,11 @@ export async function postBankLedger(tenantId: string): Promise<{ posted: number
           memo: memoOf(l),
           sourceType: "bank_transaction",
           sourceId: l.id,
-          fingerprint: fingerprintOf(l),
+          fingerprint: fp(l),
         },
-        bankLinePosting(l.amountCents, l.bankLedgerId!, l.catLedgerId!),
+        l.isSplit
+          ? splitPosting(l.amountCents, l.bankLedgerId!, partsOf(l)!)
+          : bankLinePosting(l.amountCents, l.bankLedgerId!, l.catLedgerId!),
       );
     }
     return { posted: toPost.length, voided: toVoid.length };

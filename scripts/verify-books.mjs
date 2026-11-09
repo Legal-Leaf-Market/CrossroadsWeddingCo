@@ -6,7 +6,7 @@
 // data: a booking settled in trade suggested as owing money, a cash deposit
 // treated as unpaid, a balance not marked paid because its deposit never
 // touched the bank.
-import { bankLinePosting, creditFor, normalizeMatchText, orderRules, ruleMatches, suggestFor } from "../lib/books/logic.ts";
+import { bankLinePosting, creditFor, normalizeMatchText, orderRules, ruleMatches, splitPosting, splitProblem, suggestFor } from "../lib/books/logic.ts";
 
 let failures = 0;
 function check(label, got, want) {
@@ -105,6 +105,38 @@ check("at most three", suggestFor(line(50000, "x"), Array.from({ length: 6 }, (_
 check("a date far from the event drops an amount-only match", suggestFor(line(50000, "x", "2020-01-01"), [hayes]), []);
 check("...and a name-only match", suggestFor(line(12345, "MORGAN", "2020-01-01"), [hayes]), []);
 check("...but amount AND name still suggests", ids(suggestFor(line(50000, "MORGAN", "2020-01-01"), [hayes])), ["hayes:deposit"]);
+
+// ── Split transactions ──────────────────────────────────────────────────────
+const P = (...a) => a.map((amountCents) => ({ amountCents }));
+check("a split that adds up is fine", splitProblem(-15000, P(-12000, -3000)), null);
+check("money in splits too", splitProblem(20000, P(15000, 5000)), null);
+check("one part is not a split", splitProblem(-15000, P(-15000)), "A split needs at least two parts.");
+check("parts short of the line", splitProblem(-15000, P(-12000, -2000)), "The parts are 10.00 short of the transaction.");
+check("parts over the line", splitProblem(-15000, P(-12000, -4000)), "The parts are 10.00 over the transaction.");
+check("a money-in part on money out is refused", splitProblem(-15000, P(-20000, 5000)), "Every part of money going out is money out.");
+check("a zero part is refused", splitProblem(-15000, P(-15000, 0)), "Every part needs an amount.");
+check("a zero line can't be split", splitProblem(0, P(1, -1)), "A zero line can't be split.");
+check("off by one cent is refused", splitProblem(-10000, P(-3333, -3333, -3333)), "The parts are 0.01 short of the transaction.");
+check(
+  "split money out posts one balanced entry",
+  splitPosting(-15000, "card", [
+    { accountId: "gear", amountCents: -12000 },
+    { accountId: "office", amountCents: -3000 },
+  ]),
+  [
+    { accountId: "gear", debitCents: 12000, creditCents: 0 },
+    { accountId: "office", debitCents: 3000, creditCents: 0 },
+    { accountId: "card", debitCents: 0, creditCents: 15000 },
+  ],
+);
+{
+  const lines = splitPosting(20000, "bank", [
+    { accountId: "income", amountCents: 15000 },
+    { accountId: "tips", amountCents: 5000 },
+  ]);
+  check("split money in balances", lines.reduce((s, l) => s + l.debitCents - l.creditCents, 0), 0);
+  check("split money in debits the bank once", lines.filter((l) => l.debitCents > 0).map((l) => l.accountId), ["bank"]);
+}
 
 if (failures) {
   console.log(`\n${failures} FAILED`);
