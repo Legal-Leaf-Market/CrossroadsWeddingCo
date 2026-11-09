@@ -757,3 +757,11 @@ CREATE CONSTRAINT TRIGGER journal_lines_balance
     AFTER INSERT OR UPDATE OR DELETE ON journal_lines
     DEFERRABLE INITIALLY DEFERRED
     FOR EACH ROW EXECUTE FUNCTION journal_entry_check();
+
+-- ── Matching deposits to bookings (2026-11-09) ──────────────────────────────
+-- A money-in bank line can be tied to one of the account's bookings. Matching
+-- is a link on the line, not a review status: a matched line is still a sorted
+-- (categorized) income line and posts to the ledger exactly as before.
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS payment_kind VARCHAR(20); -- deposit | balance
+CREATE INDEX IF NOT EXISTS idx_bank_tx_booking ON bank_transactions (tenant_id, booking_id) WHERE booking_id IS NOT NULL;

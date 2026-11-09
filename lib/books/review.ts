@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { bankAccounts, bankTransactions, categorizationRules, ledgerCategories } from "@/lib/db/schema";
+import { bankAccounts, bankTransactions, categorizationRules, ledgerCategories, weddings } from "@/lib/db/schema";
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
 import { STARTER_CATEGORIES, normalizeMatchText, type ReviewStatus } from "@/lib/books/categories";
 
@@ -59,6 +59,9 @@ export type QueueRow = {
   categoryName: string | null;
   note: string | null;
   sortedByRule: boolean;
+  bookingId: string | null;
+  bookingName: string | null;
+  paymentKind: string | null;
   accountName: string;
   mask: string | null;
 };
@@ -79,12 +82,16 @@ export async function listQueue(tenantId: string, status: ReviewStatus, limit = 
       note: bankTransactions.note,
       ruleId: bankTransactions.ruleId,
       reviewedBy: bankTransactions.reviewedBy,
+      bookingId: bankTransactions.bookingId,
+      bookingName: weddings.coupleNames,
+      paymentKind: bankTransactions.paymentKind,
       accountName: bankAccounts.name,
       mask: bankAccounts.mask,
     })
     .from(bankTransactions)
     .innerJoin(bankAccounts, eq(bankTransactions.bankAccountId, bankAccounts.id))
     .leftJoin(ledgerCategories, eq(bankTransactions.categoryId, ledgerCategories.id))
+    .leftJoin(weddings, and(eq(bankTransactions.bookingId, weddings.id), eq(weddings.tenantId, tenantId)))
     .where(
       and(
         eq(bankTransactions.tenantId, tenantId),
@@ -133,11 +140,11 @@ export async function applyReview(tenantId: string, userId: string, input: Revie
   if (input.action === "categorize") {
     const cat = await ownCategory(tenantId, input.categoryId);
     if (!cat || cat.isArchived) return { ok: false, status: 400, error: "That category isn't available." };
-    set = { reviewStatus: "categorized", categoryId: cat.id, reviewedAt: now, reviewedBy: userId, ruleId: null, rulesPaused: true };
+    set = { reviewStatus: "categorized", categoryId: cat.id, reviewedAt: now, reviewedBy: userId, ruleId: null, rulesPaused: true, bookingId: null, paymentKind: null };
   } else if (input.action === "exclude") {
-    set = { reviewStatus: "excluded", categoryId: null, reviewedAt: now, reviewedBy: userId, ruleId: null, rulesPaused: true };
+    set = { reviewStatus: "excluded", categoryId: null, reviewedAt: now, reviewedBy: userId, ruleId: null, rulesPaused: true, bookingId: null, paymentKind: null };
   } else if (input.action === "reopen") {
-    set = { reviewStatus: "unreviewed", categoryId: null, reviewedAt: null, reviewedBy: null, ruleId: null, rulesPaused: true };
+    set = { reviewStatus: "unreviewed", categoryId: null, reviewedAt: null, reviewedBy: null, ruleId: null, rulesPaused: true, bookingId: null, paymentKind: null };
   } else {
     set = {};
   }

@@ -7,6 +7,7 @@ import {
   journalLines,
   ledgerAccounts,
   ledgerCategories,
+  weddings,
   type LedgerAccount,
 } from "@/lib/db/schema";
 import { ACCOUNT_RANGES, accountTypeForBank, type AccountType } from "@/lib/books/ledger-constants";
@@ -158,6 +159,29 @@ async function lockTenant(tx: Tx, tenantId: string) {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${"ledger:" + tenantId}, 0))`);
 }
 
+type PostingSource = {
+  postedDate: string;
+  amountCents: number;
+  merchant: string | null;
+  description: string;
+  bankLedgerId: string | null;
+  catLedgerId: string | null;
+  bookingId: string | null;
+  bookingName: string | null;
+  paymentKind: string | null;
+};
+
+/** What an entry was posted from. The booking is in it, so matching a line reposts it with the booking in its memo. */
+function fingerprintOf(l: PostingSource): string {
+  return `${l.postedDate}|${l.bankLedgerId}|${l.catLedgerId}|${l.amountCents}|${l.bookingId ?? ""}|${l.paymentKind ?? ""}`;
+}
+
+function memoOf(l: PostingSource): string {
+  const base = l.merchant || l.description || "Bank transaction";
+  if (!l.bookingId || !l.bookingName) return base;
+  return `${base} (${l.bookingName}, ${l.paymentKind === "deposit" ? "deposit" : "payment"})`;
+}
+
 /**
  * Bring the journal in line with the bank lines. Voids entries whose bank line
  * no longer qualifies or has changed, posts entries for lines that qualify and
@@ -180,10 +204,14 @@ export async function postBankLedger(tenantId: string): Promise<{ posted: number
         reviewStatus: bankTransactions.reviewStatus,
         bankLedgerId: bankAccounts.ledgerAccountId,
         catLedgerId: ledgerCategories.ledgerAccountId,
+        bookingId: bankTransactions.bookingId,
+        bookingName: weddings.coupleNames,
+        paymentKind: bankTransactions.paymentKind,
       })
       .from(bankTransactions)
       .innerJoin(bankAccounts, eq(bankTransactions.bankAccountId, bankAccounts.id))
       .leftJoin(ledgerCategories, eq(bankTransactions.categoryId, ledgerCategories.id))
+      .leftJoin(weddings, and(eq(bankTransactions.bookingId, weddings.id), eq(weddings.tenantId, tenantId)))
       .where(eq(bankTransactions.tenantId, tenantId));
 
     const live = await tx
@@ -197,7 +225,7 @@ export async function postBankLedger(tenantId: string): Promise<{ posted: number
     for (const l of lines) {
       const qualifies =
         l.reviewStatus === "categorized" && !l.pending && !l.removedAt && l.amountCents !== 0 && !!l.bankLedgerId && !!l.catLedgerId;
-      const fp = qualifies ? `${l.postedDate}|${l.bankLedgerId}|${l.catLedgerId}|${l.amountCents}` : null;
+      const fp = qualifies ? fingerprintOf(l) : null;
       const existing = liveBySource.get(l.id);
       if (existing && existing.fingerprint === fp) continue;
       if (existing) {
@@ -229,10 +257,10 @@ export async function postBankLedger(tenantId: string): Promise<{ posted: number
         tenantId,
         {
           entryDate: l.postedDate,
-          memo: l.merchant || l.description || "Bank transaction",
+          memo: memoOf(l),
           sourceType: "bank_transaction",
           sourceId: l.id,
-          fingerprint: `${l.postedDate}|${l.bankLedgerId}|${l.catLedgerId}|${l.amountCents}`,
+          fingerprint: fingerprintOf(l),
         },
         bankLinePosting(l.amountCents, l.bankLedgerId!, l.catLedgerId!),
       );

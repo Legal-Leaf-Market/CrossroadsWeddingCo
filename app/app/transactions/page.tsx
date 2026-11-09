@@ -5,6 +5,7 @@ import AccountShell from "@/components/account/AccountShell";
 import ReviewQueue from "@/components/account/ReviewQueue";
 import { getCustomerWorkspace } from "@/lib/auth";
 import { REVIEW_STATUSES, type CategoryKind, type ReviewStatus } from "@/lib/books/categories";
+import { openBookings, suggestFor } from "@/lib/books/matching";
 import { ensureDefaultCategories, listCategories, listQueue, queueCounts } from "@/lib/books/review";
 import { PLATFORM_NAME } from "@/lib/tenant-constants";
 
@@ -29,15 +30,17 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     counts: Awaited<ReturnType<typeof queueCounts>>;
     items: Awaited<ReturnType<typeof listQueue>>;
     categories: Awaited<ReturnType<typeof listCategories>>;
+    bookings: Awaited<ReturnType<typeof openBookings>>;
   } | null = null;
   try {
     await ensureDefaultCategories(ws.tenant.id);
-    const [counts, items, categories] = await Promise.all([
+    const [counts, items, categories, bookings] = await Promise.all([
       queueCounts(ws.tenant.id),
       listQueue(ws.tenant.id, view, LIMIT),
       listCategories(ws.tenant.id),
+      view === "unreviewed" ? openBookings(ws.tenant.id) : Promise.resolve([]),
     ]);
-    data = { counts, items, categories };
+    data = { counts, items, categories, bookings };
   } catch (err) {
     console.error("[books] transactions page failed:", err instanceof Error ? err.message : err);
     loadFailed = true;
@@ -104,7 +107,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           <ReviewQueue
             key={view}
             view={view}
-            items={data.items}
+            items={data.items.map((i) => ({ ...i, suggestions: view === "unreviewed" ? suggestFor(i, data.bookings) : [] }))}
+            bookings={data.bookings.map((b) => ({ id: b.id, name: b.name, eventDate: b.eventDate, depositDueCents: b.depositDueCents, balanceDueCents: b.balanceDueCents }))}
             categories={data.categories.map((c) => ({ id: c.id, name: c.name, kind: c.kind as CategoryKind }))}
           />
         </>

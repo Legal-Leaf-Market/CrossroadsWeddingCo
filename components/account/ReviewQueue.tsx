@@ -16,9 +16,14 @@ export type QueueItem = {
   categoryName: string | null;
   note: string | null;
   sortedByRule: boolean;
+  bookingName?: string | null;
+  paymentKind?: string | null;
+  suggestions?: MatchSuggestion[];
   accountName: string;
   mask: string | null;
 };
+export type MatchSuggestion = { bookingId: string; name: string; kind: "deposit" | "balance"; why: string };
+export type MatchBooking = { id: string; name: string; eventDate: string; depositDueCents: number; balanceDueCents: number };
 
 const usd = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const select =
@@ -77,14 +82,82 @@ async function post(body: Record<string, unknown>) {
   return { ok: !!res?.ok, ...json };
 }
 
+/**
+ * Money in can be tied to a booking. Suggestions come first, each with the
+ * reason it was suggested; any open booking can be picked by hand. Nothing is
+ * matched until a person presses Match.
+ */
+function MatchPanel({
+  item,
+  bookings,
+  busy,
+  onMatch,
+}: {
+  item: QueueItem;
+  bookings: MatchBooking[];
+  busy: boolean;
+  onMatch: (bookingId: string, kind: "deposit" | "balance") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [bookingId, setBookingId] = useState("");
+  const [kind, setKind] = useState<"deposit" | "balance">("deposit");
+  const suggestions = item.suggestions ?? [];
+  if (!bookings.length) return null;
+  return (
+    <div className="grid gap-2 sm:pl-7">
+      {suggestions.map((s) => (
+        <div key={s.bookingId} className="flex flex-wrap items-center gap-2 rounded-xl bg-cream/70 px-3 py-2 text-sm">
+          <span className="min-w-0 flex-1 break-words text-charcoal">
+            {s.kind === "deposit" ? "Deposit" : "Payment"} from <strong>{s.name}</strong>?
+            <span className="block text-xs text-ink/55">{s.why}</span>
+          </span>
+          <button type="button" className={primary} disabled={busy} onClick={() => onMatch(s.bookingId, s.kind)}>
+            Match
+          </button>
+        </div>
+      ))}
+      {!open ? (
+        <button type="button" className="justify-self-start text-xs font-semibold text-ink/60 hover:text-terracotta-dark" onClick={() => setOpen(true)}>
+          {suggestions.length ? "A different booking" : "Match to a booking"}
+        </button>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <select aria-label={`Booking for ${item.merchant || item.description}`} className={select} value={bookingId} onChange={(e) => {
+            setBookingId(e.target.value);
+            const b = bookings.find((x) => x.id === e.target.value);
+            if (b) setKind(b.depositDueCents > 0 ? "deposit" : "balance");
+          }}>
+            <option value="">Choose a booking</option>
+            {bookings.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name} · {b.eventDate}
+                {b.balanceDueCents > 0 ? ` · ${usd(b.balanceDueCents)} owed` : " · paid"}
+              </option>
+            ))}
+          </select>
+          <select aria-label="Payment type" className={`${select} sm:w-32`} value={kind} onChange={(e) => setKind(e.target.value as "deposit" | "balance")}>
+            <option value="deposit">Deposit</option>
+            <option value="balance">Balance</option>
+          </select>
+          <button type="button" className={primary} disabled={!bookingId || busy} onClick={() => onMatch(bookingId, kind)}>
+            Match
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ReviewQueue({
   view,
   items,
   categories,
+  bookings = [],
 }: {
   view: "unreviewed" | "categorized" | "excluded";
   items: QueueItem[];
   categories: QueueCategory[];
+  bookings?: MatchBooking[];
 }) {
   const router = useRouter();
   const [gone, setGone] = useState<Set<string>>(new Set());
@@ -136,6 +209,14 @@ export default function ReviewQueue({
     setBusy(item.id);
     setMsg("");
     finish([item.id], await post({ action: "exclude", ids: [item.id], note: notes[item.id], rule: ruleFor(item) }));
+  }
+
+  async function match(item: QueueItem, bookingId: string, kind: "deposit" | "balance") {
+    setBusy(item.id);
+    setMsg("");
+    // A chosen income category is honored; otherwise the server uses Event income.
+    const chosen = categories.find((c) => c.id === choice[item.id] && c.kind === "income");
+    finish([item.id], await post({ action: "match", ids: [item.id], bookingId, kind, ...(chosen ? { categoryId: chosen.id } : {}) }));
   }
 
   async function reopen(item: QueueItem) {
@@ -244,6 +325,11 @@ export default function ReviewQueue({
                   {view !== "unreviewed" && (
                     <p className="mt-1 text-sm text-ink/70">
                       {view === "categorized" ? item.categoryName ?? "Category removed" : "Not business"}
+                      {item.bookingName && (
+                        <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                          {item.paymentKind === "deposit" ? "Deposit" : "Payment"} from {item.bookingName}
+                        </span>
+                      )}
                       {item.sortedByRule && <span className="ml-2 rounded-full bg-parchment/70 px-2 py-0.5 text-xs font-semibold text-ink/60">by a rule</span>}
                       {item.note && <span className="text-ink/55"> · {item.note}</span>}
                     </p>
@@ -288,13 +374,17 @@ export default function ReviewQueue({
                     </label>
                   )}
                 </div>
-              ) : (
+              ) : null}
+              {view === "unreviewed" && item.amountCents > 0 ? (
+                <MatchPanel item={item} bookings={bookings} busy={busy !== ""} onMatch={(b, k) => match(item, b, k)} />
+              ) : null}
+              {view !== "unreviewed" ? (
                 <div>
                   <button type="button" className={btn} disabled={busy !== ""} onClick={() => reopen(item)}>
                     {busy === item.id ? "Moving..." : "Move back to review"}
                   </button>
                 </div>
-              )}
+              ) : null}
             </li>
           );
         })}

@@ -831,6 +831,29 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   accrual and booking deposits as a liability, matching deposits to bookings, split lines,
   manual journal entries, closing periods, sales tax, and the house account.
 
+- **Matching payments to bookings (2026-11-09, Jacob: "yes, start on matching deposits to
+  bookings").** Spec items 12 to 15 in `docs/FINANCIALS_SPEC.md`; code in
+  `lib/books/matching.ts`. A money-in line gets `bank_transactions.booking_id` +
+  `payment_kind` (deposit | balance) AND is sorted into an income category in the same step
+  (chosen, else Event income), so it posts to the ledger as ordinary income; matching is a
+  column, not a review status, and `review_status` 'matched' stays unused. The fingerprint now
+  includes the booking, so a match reposts with the booking's name in the memo. In the queue,
+  money-in rows show up to three suggestions (`suggestFor`, pure): the exact deposit, balance or
+  full amount still owed, or a client name token (3+ letters, stop words dropped) on the line,
+  with a penalty for dates far from the event, each saying why; plus "Match to a booking" for any
+  open booking (not archived, not cancelled). Nothing is matched automatically. Received per
+  booking is the sum of matched, not-withdrawn lines; covering the deposit sets
+  `is_deposit_paid` (and inquiry to deposit_paid), covering the total sets `is_balance_paid`.
+  Flags are only SET, never cleared, because the owner may have marked cash paid by hand; the
+  booking page's "Payments received" section shows the real figure beside them. Sort, set
+  aside or move back clears a match. Verified against a real Postgres and headless Chromium
+  (25 checks plus API and browser: suggestions on amount, on name, on both, none without
+  evidence, never for money out; another tenant's booking refused and not offered; money out
+  and expense categories refused; deposit then balance flags; ledger memo and Event income;
+  no-op repost; moving back clears the match, voids the entry and leaves the flag; a withdrawn
+  line stops counting; Sorted tab shows the booking; no sideways scroll at 390 and 1280). NOT
+  YET: one line paying several bookings, refunds matched back, the house account.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

@@ -75,8 +75,27 @@ And hand its accountant a general ledger at tax time.
 11. **Posting is serialized per tenant** (a transaction-scoped advisory lock), so a webhook sync
     and a person's sort landing in the same second cannot double post or race a void.
 
+## Matching payments to bookings (added 2026-11-09)
+
+12. **A match is a link, not a new kind of posting.** A money-in bank line can be tied to one of
+    the account's bookings as a deposit or a balance payment. Matching also sorts the line into an
+    income category (the one chosen, else Event income), so on cash basis it posts exactly like
+    any other income; the booking's name goes into the entry's memo. Money out is never matched.
+13. **Suggested, never applied.** The queue suggests bookings only on evidence: the exact amount
+    still owed (deposit, balance, or the whole), or a client's name on the bank line, with dates
+    far from the event counting against it. Each suggestion says why. A person presses Match.
+14. **The booking shows what actually came in.** Received is the sum of matched lines the bank has
+    not withdrawn. When it covers the deposit, the booking is marked deposit paid (and moves from
+    inquiry to deposit paid); when it covers the total, balance paid. Those flags are only ever
+    SET by matching, never cleared: the owner may have marked a cash payment paid by hand, and
+    unmatching a bank line must not silently undo that. The received figure sits beside the
+    flags so a stale one is visible.
+15. **Re-sorting a matched line clears the match** (sort, set aside, move back), and its ledger
+    entry is voided and reposted like any other change.
+
 ## Not in v1
 
-Accrual and booking deposits as a liability; matching bank deposits to bookings; split lines;
+Accrual and booking deposits as a liability; one bank line paying several bookings; refunds to a
+client matched back to the booking; split lines;
 manual journal entries; invoices posting receivables; the house account (Crossroads runs from
 `/admin`, which has no bank feed); closing a period (locking months); sales tax.

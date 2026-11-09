@@ -514,6 +514,8 @@ export const bankTransactions = pgTable(
     ruleId: uuid("rule_id").references(() => categorizationRules.id, { onDelete: "set null" }),
     rulesPaused: boolean("rules_paused").notNull().default(false),
     pendingExternalId: varchar("pending_external_id", { length: 200 }),
+    bookingId: uuid("booking_id").references(() => weddings.id, { onDelete: "set null" }),
+    paymentKind: varchar("payment_kind", { length: 20 }),
     removedAt: timestamp("removed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

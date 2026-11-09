@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getCustomerWorkspace, sameOrigin } from "@/lib/auth";
+import { matchLine } from "@/lib/books/matching";
 import { applyReview, createRule } from "@/lib/books/review";
 
 export const runtime = "nodejs";
@@ -23,6 +24,13 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("exclude"), ids, note, rule }),
   z.object({ action: z.literal("reopen"), ids }),
   z.object({ action: z.literal("note"), ids, note: z.string().max(1000) }),
+  z.object({
+    action: z.literal("match"),
+    ids: z.array(z.string().max(40)).length(1),
+    bookingId: z.string().max(40),
+    kind: z.enum(["deposit", "balance"]),
+    categoryId: z.string().max(40).optional(),
+  }),
 ]);
 
 export async function POST(req: NextRequest) {
@@ -33,6 +41,16 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Bad request" }, { status: 400, headers: NO_STORE });
   const input = parsed.data;
   try {
+    if (input.action === "match") {
+      const m = await matchLine(ws.tenant.id, ws.user.id, {
+        transactionId: input.ids[0],
+        bookingId: input.bookingId,
+        kind: input.kind,
+        categoryId: input.categoryId,
+      });
+      if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status, headers: NO_STORE });
+      return NextResponse.json({ ok: true, updated: 1 }, { headers: NO_STORE });
+    }
     const result = await applyReview(ws.tenant.id, ws.user.id, input);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status, headers: NO_STORE });
     // "Always do this": the person's own decision is saved first, so a refused

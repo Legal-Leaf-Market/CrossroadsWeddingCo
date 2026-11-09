@@ -6,6 +6,7 @@ import ArchiveButton from "@/components/account/ArchiveButton";
 import BookingEditor from "@/components/account/BookingEditor";
 import CopyLink from "@/components/account/CopyLink";
 import { getCustomerWorkspace } from "@/lib/auth";
+import { bookingPayments } from "@/lib/books/matching";
 import { formatEventDate } from "@/lib/hub-constants";
 import { SITE_URL } from "@/lib/site";
 import { PLATFORM_NAME, bookingStatusLabel, eventTypeLabel } from "@/lib/tenant-constants";
@@ -20,6 +21,14 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const b = await getBooking(ws.tenant.id, id);
   if (!b) notFound();
+  let paid: Awaited<ReturnType<typeof bookingPayments>> | null = null;
+  try {
+    paid = await bookingPayments(ws.tenant.id, b.id);
+  } catch (err) {
+    console.error("[books] booking payments failed:", err instanceof Error ? err.message : err);
+  }
+  const totalCents = Math.round(Number(b.totalAmount) * 100);
+  const usd = (c: number) => (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 
   const links = [
     {
@@ -71,6 +80,46 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-parchment bg-white p-6">
+        <h2 className="text-xl text-charcoal">Payments received</h2>
+        {!paid ? (
+          <p className="mt-2 text-sm text-ink/65">We couldn&apos;t load payments just now.</p>
+        ) : paid.payments.length === 0 ? (
+          <p className="mt-2 text-sm text-ink/65">
+            None matched yet. When this client&apos;s payment lands in a connected bank account, match it from{" "}
+            <Link href="/app/transactions" className="font-semibold text-terracotta-dark hover:underline">
+              Transactions
+            </Link>
+            . Cash and checks you never deposit won&apos;t show here; mark those paid below.
+          </p>
+        ) : (
+          <>
+            <ul className="mt-3 divide-y divide-parchment text-sm">
+              {paid.payments.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2">
+                  <span className="min-w-0 break-words text-charcoal">
+                    {p.kind === "deposit" ? "Deposit" : "Payment"} · {p.label}
+                    <span className="block text-xs text-ink/55">
+                      {p.postedDate} · {p.accountName}
+                      {p.mask ? ` ····${p.mask}` : ""}
+                    </span>
+                  </span>
+                  <span className="tabular-nums font-semibold text-emerald-800">{usd(p.amountCents)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 border-t border-parchment pt-3 text-sm font-semibold text-charcoal">
+              Received {usd(paid.receivedCents)} of {usd(totalCents)}
+              {totalCents - paid.receivedCents > 0
+                ? ` · ${usd(totalCents - paid.receivedCents)} still owed`
+                : paid.receivedCents > totalCents
+                  ? ` · ${usd(paid.receivedCents - totalCents)} more than the total`
+                  : " · paid in full"}
+            </p>
+          </>
+        )}
       </section>
 
       <section className="mt-6">
