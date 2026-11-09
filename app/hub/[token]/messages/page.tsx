@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ChatThread from "@/components/messages/ChatThread";
 import { getWeddingByToken } from "@/lib/hub";
+import { isHouseTenant } from "@/lib/tenant-constants";
 import { getThread, markThreadRead } from "@/lib/messages";
 import { SITE_NAME } from "@/lib/site";
 
@@ -21,7 +22,8 @@ export default async function HubMessagesPage({
 }) {
   const { token } = await params;
   const wedding = await getWeddingByToken(token);
-  if (!wedding) notFound();
+  // Crossroads-only: its agreement and its team thread. See isHouseTenant.
+  if (!wedding || !isHouseTenant(wedding.tenantId)) notFound();
 
   const messages = await getThread(wedding.id);
   await markThreadRead(wedding.id, "couple");

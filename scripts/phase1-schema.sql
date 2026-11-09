@@ -489,3 +489,295 @@ CREATE TABLE IF NOT EXISTS playbook_bookings (
     data JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Multi-tenant signup, first slice (2026-11-09, Jacob: "start on the
+-- multi-tenant signup"). The platform is being opened to other wedding and
+-- event businesses, so every row needs an owner account. Crossroads itself is
+-- the HOUSE tenant, with a fixed id so code can name it without a lookup.
+--
+-- How the existing app keeps working untouched: tenant_id gets a DEFAULT of
+-- the house id on every table the current code writes to, and NULLs are
+-- backfilled to it. Every insert path that exists today (bookings, calls,
+-- reviews, the playbook) therefore lands in the house account without a code
+-- change, and the /admin/[key] dashboard reads only house rows. A customer
+-- account's rows can never appear on the Crossroads dashboard.
+--
+-- New tenant_id columns use ON DELETE RESTRICT: deleting an account must never
+-- silently take its bookings with it. (weddings and leads keep the FKs they
+-- already had; there is no tenant delete anywhere in the app, on purpose.)
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS kind VARCHAR(20) NOT NULL DEFAULT 'customer';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS business_type VARCHAR(40);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan VARCHAR(20) NOT NULL DEFAULT 'trial';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
+
+INSERT INTO tenants (id, name, slug, domain, kind, plan)
+VALUES ('00000000-0000-4000-8000-000000000001', 'Crossroads Wedding and Event Co.',
+        'crossroads', 'crossroadsweddingco.shop', 'house', 'house')
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE weddings SET tenant_id = '00000000-0000-4000-8000-000000000001' WHERE tenant_id IS NULL;
+ALTER TABLE weddings ALTER COLUMN tenant_id SET DEFAULT '00000000-0000-4000-8000-000000000001';
+UPDATE leads SET tenant_id = '00000000-0000-4000-8000-000000000001' WHERE tenant_id IS NULL;
+ALTER TABLE leads ALTER COLUMN tenant_id SET DEFAULT '00000000-0000-4000-8000-000000000001';
+
+-- Guard for real client records (2026-11-09, Jacob: "these are real weddings and clients"). The
+-- app never wrote tenant_id before accounts existed, but a tenant row inserted by hand would have
+-- become kind 'customer' through the column default above and taken its weddings off the
+-- Crossroads dashboard. A real customer account always has its owner user, created in the same
+-- transaction as the tenant (lib/auth.ts createAccount), so a non-house tenant with NO users is
+-- one that predates accounts: its weddings and leads belong to the house. Idempotent, and a no-op
+-- when nothing matches, which is the expected case.
+UPDATE weddings SET tenant_id = '00000000-0000-4000-8000-000000000001'
+ WHERE tenant_id IN (SELECT t.id FROM tenants t
+                      WHERE t.id <> '00000000-0000-4000-8000-000000000001'
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE u.tenant_id = t.id));
+UPDATE leads SET tenant_id = '00000000-0000-4000-8000-000000000001'
+ WHERE tenant_id IN (SELECT t.id FROM tenants t
+                      WHERE t.id <> '00000000-0000-4000-8000-000000000001'
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE u.tenant_id = t.id));
+
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE office_hours ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE guestbook_entries ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+
+-- Account owners sign in with an emailed link: no passwords. Both tables store
+-- only a SHA-256 of the token, so a database read never yields a working link
+-- or a working session. A login token is single use (used_at) and short lived;
+-- the link opens a page with a button that POSTs, because mail scanners
+-- prefetch GET links and would otherwise burn the token before the person
+-- ever clicks it.
+CREATE TABLE IF NOT EXISTS login_tokens (
+    token_hash CHAR(64) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_login_tokens_user ON login_tokens (user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    token_hash CHAR(64) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id);
+
+-- Integrations groundwork (2026-11-09, Jacob: "start laying the groundwork for
+-- integrating with Plaid and Found"). Bank and card feeds come in through an
+-- aggregator (Plaid first; Found has no public API, so a Found account is
+-- reached through an aggregator if at all). These tables are the raw feed the
+-- general ledger will later sit on: amounts are integer cents, every row
+-- belongs to an account (tenant), and a provider's own ids are kept with a
+-- unique constraint so a re-sync can never double-insert.
+--
+-- secret_ciphertext holds the provider's long-lived access token encrypted
+-- with AES-256-GCM under INTEGRATIONS_KEY (lib/secrets.ts). It is never stored
+-- or logged in plain text, and nothing in the app ever sends it to a browser.
+CREATE TABLE IF NOT EXISTS integration_connections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    provider VARCHAR(30) NOT NULL,              -- 'plaid'
+    external_id VARCHAR(200) NOT NULL,          -- Plaid item_id
+    institution_id VARCHAR(100),
+    institution_name VARCHAR(200),
+    status VARCHAR(30) NOT NULL DEFAULT 'active', -- active | needs_reauth | disconnected | error
+    secret_ciphertext TEXT,
+    sync_cursor TEXT,
+    last_synced_at TIMESTAMPTZ,
+    last_error TEXT,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_integration_external
+    ON integration_connections (provider, external_id);
+CREATE INDEX IF NOT EXISTS idx_integration_tenant ON integration_connections (tenant_id);
+
+CREATE TABLE IF NOT EXISTS bank_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    connection_id UUID NOT NULL REFERENCES integration_connections(id) ON DELETE RESTRICT,
+    external_id VARCHAR(200) NOT NULL,          -- Plaid account_id
+    name VARCHAR(200) NOT NULL,
+    official_name VARCHAR(200),
+    mask VARCHAR(10),
+    type VARCHAR(30),                           -- depository | credit | loan | investment
+    subtype VARCHAR(40),                        -- checking | savings | credit card ...
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    current_balance_cents BIGINT,
+    available_balance_cents BIGINT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_accounts_external ON bank_accounts (connection_id, external_id);
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_tenant ON bank_accounts (tenant_id);
+
+-- amount_cents: POSITIVE = money INTO the account, negative = money out.
+-- Plaid reports the opposite sign (positive = outflow); lib/integrations/plaid.ts
+-- flips it once on the way in so nothing downstream has to remember.
+CREATE TABLE IF NOT EXISTS bank_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    bank_account_id UUID NOT NULL REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+    external_id VARCHAR(200) NOT NULL,          -- Plaid transaction_id
+    posted_date DATE NOT NULL,
+    authorized_date DATE,
+    amount_cents BIGINT NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    merchant VARCHAR(255),
+    description TEXT NOT NULL DEFAULT '',
+    raw_category VARCHAR(120),
+    pending BOOLEAN NOT NULL DEFAULT false,
+    -- Review state for the coming categorization step. Nothing here posts to a
+    -- ledger yet; a bank line only becomes books when a person or a rule says so.
+    review_status VARCHAR(20) NOT NULL DEFAULT 'unreviewed', -- unreviewed | categorized | matched | excluded
+    removed_at TIMESTAMPTZ,                     -- the bank withdrew it (pending that never posted)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_tx_external ON bank_transactions (bank_account_id, external_id);
+CREATE INDEX IF NOT EXISTS idx_bank_tx_tenant_date ON bank_transactions (tenant_id, posted_date DESC);
+
+-- ── Bank transaction review: categories, rules, and who sorted what ──────────
+-- (2026-11-09) The review queue sits on bank_transactions. A category is the
+-- business's own word for a kind of money (Event income, Gear, Fuel); it is
+-- NOT a general-ledger account yet. gl_code is left for the ledger layer to
+-- fill in from the posting rules, so this table can be mapped, not rebuilt.
+CREATE TABLE IF NOT EXISTS ledger_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(80) NOT NULL,
+    kind VARCHAR(20) NOT NULL,                  -- income | expense | transfer | equity
+    tax_line VARCHAR(80),                       -- a Schedule C hint, never a promise
+    gl_code VARCHAR(20),                        -- filled in by the ledger layer
+    sort_order INT NOT NULL DEFAULT 100,
+    is_archived BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_categories_name ON ledger_categories (tenant_id, lower(name));
+
+-- A rule sorts NEW bank lines the way a person already sorted one. It never
+-- touches a row a person has reviewed or reopened (rules_paused).
+CREATE TABLE IF NOT EXISTS categorization_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    match_field VARCHAR(20) NOT NULL,           -- merchant | description
+    match_type VARCHAR(20) NOT NULL,            -- equals | contains
+    pattern VARCHAR(200) NOT NULL,
+    direction VARCHAR(10) NOT NULL DEFAULT 'any', -- any | in | out
+    action VARCHAR(20) NOT NULL,                -- categorize | exclude
+    category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT,
+    applied_count INT NOT NULL DEFAULT 0,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_categorization_rules_tenant ON categorization_rules (tenant_id);
+
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS rule_id UUID REFERENCES categorization_rules(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS rules_paused BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS pending_external_id VARCHAR(200);
+CREATE INDEX IF NOT EXISTS idx_bank_tx_review ON bank_transactions (tenant_id, review_status, posted_date DESC);
+
+-- ── The ledger (docs/FINANCIALS_SPEC.md, 2026-11-09) ─────────────────────────
+-- Double entry, cash basis, append-only. Entries are derived from sorted bank
+-- lines; a change voids the old entry and posts a new one, nothing is edited.
+CREATE TABLE IF NOT EXISTS ledger_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    code VARCHAR(10) NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    type VARCHAR(20) NOT NULL,                  -- asset | liability | equity | income | expense
+    system_key VARCHAR(40),                     -- transfers_clearing | opening_equity
+    is_archived BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_accounts_code ON ledger_accounts (tenant_id, code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_accounts_system ON ledger_accounts (tenant_id, system_key) WHERE system_key IS NOT NULL;
+
+ALTER TABLE ledger_categories ADD COLUMN IF NOT EXISTS ledger_account_id UUID REFERENCES ledger_accounts(id) ON DELETE RESTRICT;
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS ledger_account_id UUID REFERENCES ledger_accounts(id) ON DELETE RESTRICT;
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    entry_date DATE NOT NULL,
+    memo TEXT NOT NULL DEFAULT '',
+    source_type VARCHAR(30) NOT NULL,           -- bank_transaction | opening_balance
+    source_id UUID,                             -- bank_transactions.id or bank_accounts.id
+    status VARCHAR(10) NOT NULL DEFAULT 'posted', -- posted | void
+    voided_at TIMESTAMPTZ,
+    void_reason VARCHAR(200),
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- What the entry was posted from (date, accounts, amount). A source whose
+-- fingerprint no longer matches gets its entry voided and reposted.
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS fingerprint VARCHAR(200);
+-- One live entry per source: the guard against double posting under a race.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_live_source
+    ON journal_entries (tenant_id, source_type, source_id) WHERE status = 'posted';
+CREATE INDEX IF NOT EXISTS idx_journal_tenant_date ON journal_entries (tenant_id, entry_date);
+
+CREATE TABLE IF NOT EXISTS journal_lines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entry_id UUID NOT NULL REFERENCES journal_entries(id) ON DELETE RESTRICT,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    account_id UUID NOT NULL REFERENCES ledger_accounts(id) ON DELETE RESTRICT,
+    debit_cents BIGINT NOT NULL DEFAULT 0,
+    credit_cents BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT journal_line_one_side CHECK (
+        debit_cents >= 0 AND credit_cents >= 0 AND (debit_cents = 0) <> (credit_cents = 0)
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines (entry_id);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_account ON journal_lines (tenant_id, account_id);
+
+-- Checked at COMMIT: every entry touched balances, has at least two lines, and
+-- every line's account and tenant match the entry's tenant. The code checks this
+-- too; the database is the lock that holds when the code is wrong.
+CREATE OR REPLACE FUNCTION journal_entry_check() RETURNS trigger AS $$
+DECLARE
+    eid UUID := COALESCE(NEW.entry_id, OLD.entry_id);
+    d BIGINT; c BIGINT; n INT; bad INT; etenant UUID;
+BEGIN
+    SELECT tenant_id INTO etenant FROM journal_entries WHERE id = eid;
+    SELECT COALESCE(sum(debit_cents),0), COALESCE(sum(credit_cents),0), count(*)
+      INTO d, c, n FROM journal_lines WHERE entry_id = eid;
+    IF n < 2 OR d <> c THEN
+        RAISE EXCEPTION 'journal entry % does not balance (debits %, credits %, lines %)', eid, d, c, n;
+    END IF;
+    SELECT count(*) INTO bad FROM journal_lines l JOIN ledger_accounts a ON a.id = l.account_id
+     WHERE l.entry_id = eid AND (l.tenant_id <> etenant OR a.tenant_id <> etenant);
+    IF bad > 0 THEN
+        RAISE EXCEPTION 'journal entry % mixes tenants', eid;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS journal_lines_balance ON journal_lines;
+CREATE CONSTRAINT TRIGGER journal_lines_balance
+    AFTER INSERT OR UPDATE OR DELETE ON journal_lines
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW EXECUTE FUNCTION journal_entry_check();
+
+-- ── Matching deposits to bookings (2026-11-09) ──────────────────────────────
+-- A money-in bank line can be tied to one of the account's bookings. Matching
+-- is a link on the line, not a review status: a matched line is still a sorted
+-- (categorized) income line and posts to the ledger exactly as before.
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS payment_kind VARCHAR(20); -- deposit | balance
+CREATE INDEX IF NOT EXISTS idx_bank_tx_booking ON bank_transactions (tenant_id, booking_id) WHERE booking_id IS NOT NULL;

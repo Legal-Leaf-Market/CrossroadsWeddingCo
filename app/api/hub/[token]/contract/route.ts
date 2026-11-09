@@ -10,6 +10,7 @@ import {
   servicesFromAddons,
 } from "@/lib/contract";
 import { getWeddingByToken } from "@/lib/hub";
+import { isHouseTenant } from "@/lib/tenant-constants";
 import { formatEventDate } from "@/lib/hub-constants";
 
 export const runtime = "nodejs";
@@ -26,7 +27,7 @@ const schema = z.object({
 export async function POST(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const wedding = await getWeddingByToken(token);
-  if (!wedding) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!wedding || !isHouseTenant(wedding.tenantId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Accepting twice is a no-op, not an overwrite: the first acceptance is the
   // one that happened, and re-signing must never quietly restate the terms.

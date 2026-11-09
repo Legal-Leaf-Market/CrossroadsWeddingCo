@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   customType,
   date,
@@ -15,6 +16,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 
 // Enums (CLAUDE.md §3). Kept in sync with scripts/phase1-schema.sql by hand;
 // migrations in this repo are hand-authored, additive, idempotent SQL.
@@ -54,6 +56,12 @@ export const tenants = pgTable("tenants", {
   stripeAccountId: varchar("stripe_account_id", { length: 255 }),
   royaltyRate: numeric("royalty_rate", { precision: 4, scale: 3 }).default("0.070"),
   isActive: boolean("is_active").default(true),
+  /** "house" for Crossroads itself, "customer" for a business that signed up. */
+  kind: varchar("kind", { length: 20 }).notNull().default("customer"),
+  /** BUSINESS_TYPES key from lib/tenant-constants.ts. */
+  businessType: varchar("business_type", { length: 40 }),
+  plan: varchar("plan", { length: 20 }).notNull().default("trial"),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -349,6 +357,7 @@ export const officeHours = pgTable(
   "office_hours",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().default(HOUSE_TENANT_ID).references(() => tenants.id, { onDelete: "restrict" }),
     personSlug: varchar("person_slug", { length: 40 }).notNull(),
     /** 0 = Sunday, matching Date#getDay. */
     weekday: integer("weekday").notNull(),
@@ -364,6 +373,7 @@ export const appointments = pgTable(
   "appointments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().default(HOUSE_TENANT_ID).references(() => tenants.id, { onDelete: "restrict" }),
     personSlug: varchar("person_slug", { length: 40 }).notNull(),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     durationMinutes: integer("duration_minutes").notNull().default(30),
@@ -393,6 +403,7 @@ export const guestbookEntries = pgTable(
   "guestbook_entries",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().default(HOUSE_TENANT_ID).references(() => tenants.id, { onDelete: "restrict" }),
     name: varchar("name", { length: 80 }).notNull(),
     relation: varchar("relation", { length: 60 }).notNull().default(""),
     message: text("message").notNull(),
@@ -403,3 +414,187 @@ export const guestbookEntries = pgTable(
   },
   (t) => [index("idx_guestbook_created").on(t.createdAt)],
 );
+
+// 14. Account sign-in (multi-tenant signup, 2026-11-09). Emailed links, no
+// passwords. Only SHA-256 hashes of tokens are stored. See lib/auth.ts.
+export const loginTokens = pgTable(
+  "login_tokens",
+  {
+    tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_login_tokens_user").on(t.userId, t.createdAt)],
+);
+
+export const userSessions = pgTable(
+  "user_sessions",
+  {
+    tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_user_sessions_user").on(t.userId)],
+);
+
+export type Tenant = typeof tenants.$inferSelect;
+export type User = typeof users.$inferSelect;
+
+// 15. Integrations groundwork: bank and card feeds (2026-11-09). See
+// scripts/phase1-schema.sql and lib/integrations/.
+export const integrationConnections = pgTable(
+  "integration_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    provider: varchar("provider", { length: 30 }).notNull(),
+    externalId: varchar("external_id", { length: 200 }).notNull(),
+    institutionId: varchar("institution_id", { length: 100 }),
+    institutionName: varchar("institution_name", { length: 200 }),
+    status: varchar("status", { length: 30 }).notNull().default("active"),
+    /** AES-256-GCM, lib/secrets.ts. Never sent to a browser, never logged. */
+    secretCiphertext: text("secret_ciphertext"),
+    syncCursor: text("sync_cursor"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_integration_tenant").on(t.tenantId)],
+);
+
+export const bankAccounts = pgTable(
+  "bank_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    connectionId: uuid("connection_id").notNull().references(() => integrationConnections.id, { onDelete: "restrict" }),
+    externalId: varchar("external_id", { length: 200 }).notNull(),
+    name: varchar("name", { length: 200 }).notNull(),
+    officialName: varchar("official_name", { length: 200 }),
+    mask: varchar("mask", { length: 10 }),
+    type: varchar("type", { length: 30 }),
+    subtype: varchar("subtype", { length: 40 }),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    currentBalanceCents: bigint("current_balance_cents", { mode: "number" }),
+    availableBalanceCents: bigint("available_balance_cents", { mode: "number" }),
+    isActive: boolean("is_active").notNull().default(true),
+    ledgerAccountId: uuid("ledger_account_id").references(() => ledgerAccounts.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_bank_accounts_tenant").on(t.tenantId)],
+);
+
+/** amountCents: positive = money in, negative = money out (Plaid's sign is flipped on the way in). */
+export const bankTransactions = pgTable(
+  "bank_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    bankAccountId: uuid("bank_account_id").notNull().references(() => bankAccounts.id, { onDelete: "restrict" }),
+    externalId: varchar("external_id", { length: 200 }).notNull(),
+    postedDate: date("posted_date").notNull(),
+    authorizedDate: date("authorized_date"),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+    merchant: varchar("merchant", { length: 255 }),
+    description: text("description").notNull().default(""),
+    rawCategory: varchar("raw_category", { length: 120 }),
+    pending: boolean("pending").notNull().default(false),
+    reviewStatus: varchar("review_status", { length: 20 }).notNull().default("unreviewed"),
+    categoryId: uuid("category_id").references(() => ledgerCategories.id, { onDelete: "restrict" }),
+    note: text("note"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    ruleId: uuid("rule_id").references(() => categorizationRules.id, { onDelete: "set null" }),
+    rulesPaused: boolean("rules_paused").notNull().default(false),
+    pendingExternalId: varchar("pending_external_id", { length: 200 }),
+    bookingId: uuid("booking_id").references(() => weddings.id, { onDelete: "set null" }),
+    paymentKind: varchar("payment_kind", { length: 20 }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_bank_tx_tenant_date").on(t.tenantId, t.postedDate)],
+);
+
+/** A business's own name for a kind of money. Not a GL account; gl_code is for the ledger layer. */
+export const ledgerCategories = pgTable(
+  "ledger_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 80 }).notNull(),
+    kind: varchar("kind", { length: 20 }).notNull(),
+    taxLine: varchar("tax_line", { length: 80 }),
+    glCode: varchar("gl_code", { length: 20 }),
+    sortOrder: integer("sort_order").notNull().default(100),
+    isArchived: boolean("is_archived").notNull().default(false),
+    ledgerAccountId: uuid("ledger_account_id").references(() => ledgerAccounts.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+);
+
+export const categorizationRules = pgTable(
+  "categorization_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    matchField: varchar("match_field", { length: 20 }).notNull(),
+    matchType: varchar("match_type", { length: 20 }).notNull(),
+    pattern: varchar("pattern", { length: 200 }).notNull(),
+    direction: varchar("direction", { length: 10 }).notNull().default("any"),
+    action: varchar("action", { length: 20 }).notNull(),
+    categoryId: uuid("category_id").references(() => ledgerCategories.id, { onDelete: "restrict" }),
+    appliedCount: integer("applied_count").notNull().default(0),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_categorization_rules_tenant").on(t.tenantId)],
+);
+export type LedgerCategory = typeof ledgerCategories.$inferSelect;
+export type CategorizationRule = typeof categorizationRules.$inferSelect;
+
+/** Chart of accounts, per tenant (docs/FINANCIALS_SPEC.md). */
+export const ledgerAccounts = pgTable("ledger_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  code: varchar("code", { length: 10 }).notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull(),
+  systemKey: varchar("system_key", { length: 40 }),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const journalEntries = pgTable("journal_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  entryDate: date("entry_date").notNull(),
+  memo: text("memo").notNull().default(""),
+  sourceType: varchar("source_type", { length: 30 }).notNull(),
+  sourceId: uuid("source_id"),
+  status: varchar("status", { length: 10 }).notNull().default("posted"),
+  voidedAt: timestamp("voided_at", { withTimezone: true }),
+  voidReason: varchar("void_reason", { length: 200 }),
+  fingerprint: varchar("fingerprint", { length: 200 }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const journalLines = pgTable("journal_lines", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  entryId: uuid("entry_id").notNull().references(() => journalEntries.id, { onDelete: "restrict" }),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull().references(() => ledgerAccounts.id, { onDelete: "restrict" }),
+  debitCents: bigint("debit_cents", { mode: "number" }).notNull().default(0),
+  creditCents: bigint("credit_cents", { mode: "number" }).notNull().default(0),
+});
+export type LedgerAccount = typeof ledgerAccounts.$inferSelect;

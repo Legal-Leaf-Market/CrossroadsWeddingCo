@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createCallSession, isCallsConfigured } from "@/lib/calls";
 import { getWeddingByToken } from "@/lib/hub";
+import { isHouseTenant } from "@/lib/tenant-constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ token: st
   }
 
   const wedding = await getWeddingByToken(token);
-  if (!wedding) return NextResponse.json({ error: "Not found" }, { status: 404, headers: NO_STORE });
+  if (!wedding || !isHouseTenant(wedding.tenantId)) return NextResponse.json({ error: "Not found" }, { status: 404, headers: NO_STORE });
 
   const session = await createCallSession(wedding.id, wedding.coupleNames, false);
   if (!session) {

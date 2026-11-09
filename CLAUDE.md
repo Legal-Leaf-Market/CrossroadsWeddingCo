@@ -695,6 +695,224 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   mp4 still shows .com and waits on its voiceover re-record (see bar-pricing note);
   printed business cards carrying a .com QR need reprinting.
 
+- **Multi-tenant signup, first slice (2026-11-09, Jacob: "start on the multi-tenant signup in
+  Crossroads", after the EverSet competitor research).** The platform is being opened to other
+  wedding and event businesses (DJs first, then planners, photographers, venues). Crossroads is
+  the **house tenant** with a fixed id (`HOUSE_TENANT_ID`, `lib/tenant-constants.ts`): the
+  migration seeds it, backfills NULL `tenant_id` on `weddings` and `leads`, and sets it as the
+  column DEFAULT there and on new `tenant_id` columns on `appointments`, `office_hours` and
+  `guestbook_entries` (ON DELETE RESTRICT). So every existing write path lands in the house
+  account with no code change. `lib/admin.ts` and the check-in cron are scoped to the house
+  tenant: a customer's booking can never appear on the Crossroads dashboard, and its id 404s
+  there (verified). Accounts: `tenants.kind` ('house' | 'customer'), `business_type`, `plan`,
+  `trial_ends_at` (14 days, no card); the owner is a `users` row with role `franchise_owner`
+  (the existing enum value, read as "account owner"; no enum change, since ADD VALUE cannot be
+  used inside the migration's single transaction). Sign-in is passwordless (`lib/auth.ts`):
+  `login_tokens` (30 minutes, single use) and `user_sessions` (30 days, httpOnly `cw_session`
+  cookie) store only SHA-256 hashes. The emailed link opens `/login/verify`, whose button POSTs,
+  because mail scanners prefetch GET links. Redeeming is one conditional UPDATE (three
+  simultaneous POSTs: one session, two expired). Signup and login answer identically for new and
+  existing emails. **Signups stay closed until `SIGNUP_OPEN=1`**, and all account pages are
+  noindex. `/app` is the workspace: trial days, the account's own bookings (scoped by the
+  session's tenant, never a request parameter) and an honest empty state. NOT YET: customers
+  cannot create bookings, hubs or timelines (every booking route still writes the house
+  tenant), there is no billing, no per-account branding, Stripe Connect or Twilio, and the
+  appointments double-booking index is global on `(person_slug, starts_at)`, which must gain
+  `tenant_id` before customers get calendars. There is deliberately no tenant delete: the
+  `weddings` and `leads` FKs from the original schema still CASCADE.
+
+- **Customer bookings (2026-11-09, Jacob: "yes, start on customer bookings").** A signed-in
+  account adds bookings at `/app/bookings/new` and manages them at `/app/bookings/[id]`
+  (details, money, status, archive). `lib/workspace.ts` takes the tenant id from the session
+  only and puts it in every WHERE, so another account's id and a wrong id both 404 (verified,
+  including a Crossroads booking id from a customer session). Writes also check Origin. A
+  booking mints the same hub and share tokens as a Crossroads one, emails nobody, and its
+  hub, run sheet, live console, vendor view and guest schedule all work unchanged.
+  **Brand on couple-facing pages comes from the booking's account** (`lib/brand.ts`):
+  header, run sheet footer, live pages, guest schedule, PWA manifest, AND the tab title and
+  link-preview metadata (`brandedMetadata`), because the root layout's defaults otherwise put
+  "Crossroads" in the preview a text message shows. Verified: no "Crossroads" anywhere in the
+  HTML of a customer's hub pages; house pages are unchanged. **Crossroads-only, gated on
+  `isHouseTenant`:** the service agreement (`/hub/[token]/contract` + its API), the Messages
+  thread (it emails Jake), and video calls all 404 for customer bookings until each is
+  rebuilt per account. `weddings.package_type` holds `EVENT_TYPES` keys for customer rows.
+
+- **Integrations groundwork: Plaid bank and card feeds (2026-11-09, Jacob: "start laying the
+  groundwork for integrating with Plaid and Found").** Found has no public developer API
+  (checked 2026-11-09; it is a fintech whose accounts sit at Lead Bank), so Found, like any
+  bank, is reached through Plaid if Plaid lists it; do not build a direct Found integration
+  without a published API. Tables: `integration_connections` (one per Plaid item, unique on
+  provider + external id; an item already on another account is refused, never moved),
+  `bank_accounts`, `bank_transactions` (integer cents, POSITIVE = money in; Plaid's sign is
+  flipped once in `plaidAmountToCents`; `review_status` starts `unreviewed`; removals set
+  `removed_at`, nothing is deleted). Access tokens are AES-256-GCM under `INTEGRATIONS_KEY`
+  (`lib/secrets.ts`, `v1:` prefix for future rotation); without the key nothing can be saved.
+  `lib/integrations/plaid-client.ts` is fetch-only (no SDK, no new dependency) and verifies
+  webhooks (ES256 JWT, key by kid from /webhook_verification_key/get, iat within 5 minutes,
+  body SHA-256). `syncConnection` pages to the end, restarts from the original cursor on
+  TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION, and applies every page plus the new cursor in
+  ONE transaction. `PLAID_BASE_URL` points at a stand-in server for local tests and is ignored
+  in production. Verified against a local Plaid stand-in: connect, two-page sync with a forced
+  restart, add/modify/remove, ITEM_LOGIN_REQUIRED to needs_reauth, signed webhooks (tampered,
+  stale and unsigned all 401), cross-account 404s, no token in the DB in clear or in logs.
+  Plaid production pricing is not public; new US teams since 2026-04-15 get a free trial
+  plan capped at 10 production items. NEXT: categorization rules and the ledger
+  (docs from Jacob: "Crossroads Financials" spec, GL posting rules) sit on these rows.
+
+- **Bank review queue and rules (2026-11-09, Jacob: "pick up where this left off").** A
+  signed-in account sorts its bank lines at `/app/transactions` (tabs: To sort, oldest first;
+  Sorted; Not business) and manages categories and rules at `/app/transactions/rules`.
+  `lib/books/review.ts` is server-only; `lib/books/categories.ts` is the client-safe half
+  (§9.3's split). **Sorting is a label, not bookkeeping**: `bank_transactions` gains
+  `category_id`, `note`, `reviewed_at/by`, `rule_id`, `rules_paused`, and nothing writes a
+  debit or credit. `ledger_categories` is per account, seeded once with 25 starter
+  categories for an event business (seeded only when the account has none, so an account
+  that trims its own list keeps it); `kind` is income / expense / transfer / equity,
+  `tax_line` is a Schedule C HINT left blank where the line depends on facts we lack (gear),
+  and `gl_code` is empty on purpose for the ledger layer to map. Categories are hidden,
+  never deleted. Nothing is preselected in the picker: the bank's own guess shows as
+  "Bank says: ..." text only, because a guess that gets saved is a wrong book. **Rules**
+  (`categorization_rules`) come only from "Always do this" on a person's own sort
+  (merchant equals, or description contains, plus money in or out); a person's sort is
+  saved first, so a refused rule never costs it. Rules sort only rows that are unreviewed,
+  not removed and not `rules_paused`, re-checked in the UPDATE's WHERE so a person sorting
+  the same row at the same moment wins; any person action (sort, set aside, move back)
+  pauses rules on that row for good, so a later sync can never undo a decision. Most
+  specific rule wins (exact, then longer, then newest); duplicates are refused; deleting a
+  rule leaves what it sorted. **Pending to posted**: Plaid removes a pending line and adds a
+  posted one carrying `pending_transaction_id` (now stored as `pending_external_id`); a
+  decision made on the pending line carries to the posted one. Both run in `afterSync`,
+  called after the sync transaction commits and caught, so sorting can never fail a sync.
+  `/api/app/transactions/export` is the CSV for the accountant (formula-leading cells
+  neutralized). Verified against a real Postgres and headless Chromium: cross-account ids
+  update 0 rows, another account's category is refused, cross-origin 403, no session 401,
+  rule backfill, duplicate rule refused while the sort saves, a moved-back row survives a
+  re-run, pending carry-over, case-insensitive merchant match, no sideways scroll at 390 and
+  1280. NOT YET: split transactions, matching deposits to bookings (`review_status`
+  'matched' is reserved for it), the house account (Crossroads uses `/admin`, which has no
+  bank feed yet), and the ledger itself, which waits on Jacob's "Crossroads Financials" spec
+  and GL posting rules (they were in the claude.ai chat, not in this repo).
+
+- **The ledger (2026-11-09, Jacob: "do your own financial spec, keep moving").** The spec is
+  `docs/FINANCIALS_SPEC.md`, written by Claude Code because the claude.ai one never reached
+  the repo; if that one turns up and disagrees, the owner decides and the file is corrected.
+  **Double entry, cash basis, append-only.** `ledger_accounts` is a per-account chart
+  (codes by range: assets 1000s, liabilities 2000s, equity 3000s, income 4000s, expenses
+  6000s, steps of 10, never reused), generated by `ensureLedger`: each category gets its own
+  account (`ledger_categories.ledger_account_id`, code mirrored into `gl_code`), every
+  "Moving money" category shares ONE clearing account, 1900 Transfers in transit, and each
+  bank account gets its own (cards and loans are liabilities, `accountTypeForBank`), plus
+  3900 Opening balance equity. `journal_entries` / `journal_lines` hold the books; a
+  DEFERRABLE constraint trigger (`journal_entry_check`) refuses at COMMIT any entry that does
+  not balance, has under two lines, or uses an account from another tenant, so the database
+  holds the rule even when code is wrong (both refusals verified). **Entries are derived**:
+  `postBankLedger` posts every bank line that is categorized, not pending and not removed
+  (money in: debit bank, credit category; money out: the reverse; correct for cards too), and
+  VOIDS the live entry of any line whose `fingerprint` (date, accounts, amount) changed or that
+  no longer qualifies (moved back, set aside, withdrawn), keeping the void with its reason.
+  It is idempotent and serialized per tenant with a transaction advisory lock, and a partial
+  unique index allows one live entry per source (six simultaneous runs: no duplicates). It
+  runs after every sort, rule run and sync (`postBankLedgerQuietly`, which never throws, since
+  the next run heals), and on every `/app/books` load and ledger export. **Opening balances
+  are entered from a statement, never computed** (a set-aside line on a business account
+  still moved cash, and a computed opening would hide that): one entry against 3900, a new one
+  voids the old; for a card it is the amount owed. `/app/books`: profit and loss by period
+  (this month, last month, this year, last year; calendar dates in Indiana time), "Do your
+  books match the bank?" per account (books against Plaid's balance, with the three reasons a
+  difference happens: no opening balance, lines waiting, lines set aside that are really owner
+  draws), a note when Transfers in transit is not zero (a transfer with one side missing), and
+  balances today with earnings to date so the equation visibly balances.
+  `/api/app/books/ledger` is the general ledger CSV. Verified against a real Postgres and
+  headless Chromium (21 checks: no-op repost, pending/removed/unreviewed never post, card
+  charge plus payment nets the card and the clearing account to zero, assets equal liabilities
+  plus equity, re-sort and move-back void, a bank amount change voids and reposts, the two
+  database refusals, opening balances and their tenant check, CSV debits equal credits, another
+  tenant's books stay empty; no sideways scroll at 390 and 1280). NOT YET (spec "Not in v1"):
+  accrual and booking deposits as a liability, matching deposits to bookings, split lines,
+  manual journal entries, closing periods, sales tax, and the house account.
+
+- **Matching payments to bookings (2026-11-09, Jacob: "yes, start on matching deposits to
+  bookings").** Spec items 12 to 15 in `docs/FINANCIALS_SPEC.md`; code in
+  `lib/books/matching.ts`. A money-in line gets `bank_transactions.booking_id` +
+  `payment_kind` (deposit | balance) AND is sorted into an income category in the same step
+  (chosen, else Event income), so it posts to the ledger as ordinary income; matching is a
+  column, not a review status, and `review_status` 'matched' stays unused. The fingerprint now
+  includes the booking, so a match reposts with the booking's name in the memo. In the queue,
+  money-in rows show up to three suggestions (`suggestFor`, pure): the exact deposit, balance or
+  full amount still owed, or a client name token (3+ letters, stop words dropped) on the line,
+  with a penalty for dates far from the event, each saying why; plus "Match to a booking" for any
+  open booking (not archived, not cancelled). Nothing is matched automatically. Received per
+  booking is the sum of matched, not-withdrawn lines; covering the deposit sets
+  `is_deposit_paid` (and inquiry to deposit_paid), covering the total sets `is_balance_paid`.
+  Flags are only SET, never cleared, because the owner may have marked cash paid by hand; the
+  booking page's "Payments received" section shows the real figure beside them. Sort, set
+  aside or move back clears a match. Verified against a real Postgres and headless Chromium
+  (25 checks plus API and browser: suggestions on amount, on name, on both, none without
+  evidence, never for money out; another tenant's booking refused and not offered; money out
+  and expense categories refused; deposit then balance flags; ledger memo and Event income;
+  no-op repost; moving back clears the match, voids the entry and leaves the flag; a withdrawn
+  line stops counting; Sorted tab shows the booking; no sideways scroll at 390 and 1280). NOT
+  YET: one line paying several bookings, refunds matched back, the house account.
+
+- **Real client records survive this branch untouched, and that is proven, not assumed
+  (2026-11-09, Jacob: "make sure and convert over all my current customers and their info
+  flawlessly ... these are real weddings and clients for next year").** `main` never wrote
+  `tenant_id` or created a tenant, so in production every wedding and lead has it NULL and the
+  migration moves them to the house account. One gap was closed: `tenants.kind` defaults to
+  'customer', so a tenant row inserted by hand would have taken its weddings off `/admin`; a
+  guard now moves weddings and leads of any non-house tenant with NO users to the house (a real
+  customer always has its owner, written in the same transaction). Verified on a copy of
+  `main`'s schema seeded across every client table (weddings with a signed and countersigned
+  contract snapshot, a trade deal, corporate, archived, cancelled, one on a hand-made tenant;
+  timeline, music, VIPs, do-not-play, messages, an uploaded file, leads, appointments, office
+  hours, reviews, playbook): an md5 of every row, tenant_id aside, is IDENTICAL before and after
+  three migration runs (62 rows); all six weddings land in the house account (the hand-made one
+  only because of the guard); the dashboard lists every active one and the archive the archived
+  one; every hub, run sheet, vendor live view and guest schedule answers 200; the contract still
+  shows the countersignature; the trade-deal invoice and the message thread are unchanged. Run
+  the same kind of check before any migration that touches existing rows.
+- **The house account keeps its books under /app (2026-11-09).** `HOUSE_BOOKS_EMAILS` (comma
+  separated, read on every request, unset = nobody) lists who may. `/login` creates the house
+  user on first request for a listed email (`findOrCreateHouseUser`; an email already on a
+  customer account is never moved); `getBooksWorkspace` admits a customer or a still-listed
+  house user, and replaced `getCustomerWorkspace` on every money page and API (transactions,
+  rules, categories, integrations, books, ledger). Booking pages and APIs stay customer-only:
+  the house's bookings live in `/admin`. A house user at `/app` lands on `/app/books`, the
+  header drops the Bookings link, and the dashboard header links to Books. Matching runs
+  against the real Crossroads weddings. Verified: listed email gets a link, a stranger gets
+  the same reply and no link; all four money pages 200; customer booking pages and API refuse;
+  removing the email locks a live session out of pages and API at once.
+- **Paid by hand counts (2026-11-09, found on the realistic data).** `creditFor` in
+  `lib/books/logic.ts`: a deposit the owner marked paid with no deposit matched from the bank
+  was paid outside it (cash or check, which is how deposits are taken for now), and a booking
+  marked paid in full owes nothing. Without this a trade deal was suggested as owing $1,000, a
+  cash deposit read as unpaid, and a cash deposit plus a Zelle balance never marked the booking
+  paid. The booking page lists "Deposit, marked paid by hand" beside matched lines. A far-off
+  date now drops a one-piece-of-evidence suggestion (amount OR name), keeping amount AND name.
+- **`lib/books/logic.ts` is the pure core** (no imports): rule matching and order, posting
+  lines, credit, suggestions. `node --experimental-strip-types scripts/verify-books.mjs` checks
+  it (38 cases); five deliberate sabotages (cash deposit ignored, paid-in-full ignored, weak
+  date penalty, money out allowed, stop words dropped) are each caught. Run it after touching
+  any of this.
+- **`/my-wedding`, the one link Jake sends every couple (2026-11-09, Jacob: "make a public site
+  for all my current customers ... I'll send them the link").** A couple types the email on
+  their booking and that address gets their private planning hub link (`sendHubLinks`). No
+  accounts and NO PASSWORDS: Jacob asked to give every couple the password "changme1234"; that
+  was declined, because one shared, guessable password would open every couple's agreement,
+  money and messages to anyone who learns it, and the hub link already does the job privately.
+  `lib/my-wedding.ts` `hubsForEmail`: house-account weddings only (the page is Crossroads
+  branded; a customer account's couple with the same email is never sent anything),
+  cancelled left out, archived kept, matching `contact_email` or any `hub_invite_emails`
+  entry, case-insensitive, at most five. The reply is identical whether or not the email is
+  on file, so the page cannot be used to check who our clients are; rate limited per IP and
+  per email. noindex. A booking with no email on it cannot use this; add one from the hub's
+  Details or the dashboard first. Needs `RESEND_API_KEY` and crossroadsweddingco.shop verified
+  in Resend, or nothing is sent (logged in production, printed locally). Verified on the
+  realistic copy: booking email in capitals and an invited email both get the right hub, the
+  other account's couple and a cancelled booking get nothing, a stranger gets the same reply,
+  the fourth try in an hour is refused, the emailed hub link opens, no sideways scroll at 390
+  and 1280.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:
