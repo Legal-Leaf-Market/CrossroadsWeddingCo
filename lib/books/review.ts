@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bankAccounts, bankTransactions, categorizationRules, ledgerCategories } from "@/lib/db/schema";
+import { postBankLedgerQuietly } from "@/lib/books/ledger";
 import { STARTER_CATEGORIES, normalizeMatchText, type ReviewStatus } from "@/lib/books/categories";
 
 // The bank review queue. Every function takes the tenant id from the session
@@ -148,6 +149,7 @@ export async function applyReview(tenantId: string, userId: string, input: Revie
     .set({ ...set, updatedAt: now })
     .where(scope)
     .returning({ id: bankTransactions.id });
+  if (res.length && input.action !== "note") await postBankLedgerQuietly(tenantId);
   return { ok: true, updated: res.length };
 }
 
@@ -236,6 +238,7 @@ export async function createRule(tenantId: string, userId: string, input: RuleIn
     .values({ tenantId, matchField: input.matchField, matchType: input.matchType, pattern, direction: input.direction, action: input.action, categoryId, createdBy: userId })
     .returning();
   const sorted = await runRules(tenantId);
+  if (sorted) await postBankLedgerQuietly(tenantId);
   return { ok: true as const, rule, sorted };
 }
 
@@ -365,6 +368,9 @@ export async function carryPendingReviews(tenantId: string): Promise<number> {
 export async function afterSync(tenantId: string): Promise<void> {
   await carryPendingReviews(tenantId);
   await runRules(tenantId);
+  // Posting is derived, so it runs after every sync: a bank correcting an
+  // amount or withdrawing a line voids and reposts here.
+  await postBankLedgerQuietly(tenantId);
 }
 
 /** Every reviewed row as CSV for the owner's accountant. Amounts in dollars, money in positive. */

@@ -483,6 +483,7 @@ export const bankAccounts = pgTable(
     currentBalanceCents: bigint("current_balance_cents", { mode: "number" }),
     availableBalanceCents: bigint("available_balance_cents", { mode: "number" }),
     isActive: boolean("is_active").notNull().default(true),
+    ledgerAccountId: uuid("ledger_account_id").references(() => ledgerAccounts.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -532,6 +533,7 @@ export const ledgerCategories = pgTable(
     glCode: varchar("gl_code", { length: 20 }),
     sortOrder: integer("sort_order").notNull().default(100),
     isArchived: boolean("is_archived").notNull().default(false),
+    ledgerAccountId: uuid("ledger_account_id").references(() => ledgerAccounts.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -556,3 +558,41 @@ export const categorizationRules = pgTable(
 );
 export type LedgerCategory = typeof ledgerCategories.$inferSelect;
 export type CategorizationRule = typeof categorizationRules.$inferSelect;
+
+/** Chart of accounts, per tenant (docs/FINANCIALS_SPEC.md). */
+export const ledgerAccounts = pgTable("ledger_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  code: varchar("code", { length: 10 }).notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull(),
+  systemKey: varchar("system_key", { length: 40 }),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const journalEntries = pgTable("journal_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  entryDate: date("entry_date").notNull(),
+  memo: text("memo").notNull().default(""),
+  sourceType: varchar("source_type", { length: 30 }).notNull(),
+  sourceId: uuid("source_id"),
+  status: varchar("status", { length: 10 }).notNull().default("posted"),
+  voidedAt: timestamp("voided_at", { withTimezone: true }),
+  voidReason: varchar("void_reason", { length: 200 }),
+  fingerprint: varchar("fingerprint", { length: 200 }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const journalLines = pgTable("journal_lines", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  entryId: uuid("entry_id").notNull().references(() => journalEntries.id, { onDelete: "restrict" }),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull().references(() => ledgerAccounts.id, { onDelete: "restrict" }),
+  debitCents: bigint("debit_cents", { mode: "number" }).notNull().default(0),
+  creditCents: bigint("credit_cents", { mode: "number" }).notNull().default(0),
+});
+export type LedgerAccount = typeof ledgerAccounts.$inferSelect;

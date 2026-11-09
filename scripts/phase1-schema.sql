@@ -674,3 +674,86 @@ ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS rule_id UUID REFERENCES c
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS rules_paused BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS pending_external_id VARCHAR(200);
 CREATE INDEX IF NOT EXISTS idx_bank_tx_review ON bank_transactions (tenant_id, review_status, posted_date DESC);
+
+-- ── The ledger (docs/FINANCIALS_SPEC.md, 2026-11-09) ─────────────────────────
+-- Double entry, cash basis, append-only. Entries are derived from sorted bank
+-- lines; a change voids the old entry and posts a new one, nothing is edited.
+CREATE TABLE IF NOT EXISTS ledger_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    code VARCHAR(10) NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    type VARCHAR(20) NOT NULL,                  -- asset | liability | equity | income | expense
+    system_key VARCHAR(40),                     -- transfers_clearing | opening_equity
+    is_archived BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_accounts_code ON ledger_accounts (tenant_id, code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_accounts_system ON ledger_accounts (tenant_id, system_key) WHERE system_key IS NOT NULL;
+
+ALTER TABLE ledger_categories ADD COLUMN IF NOT EXISTS ledger_account_id UUID REFERENCES ledger_accounts(id) ON DELETE RESTRICT;
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS ledger_account_id UUID REFERENCES ledger_accounts(id) ON DELETE RESTRICT;
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    entry_date DATE NOT NULL,
+    memo TEXT NOT NULL DEFAULT '',
+    source_type VARCHAR(30) NOT NULL,           -- bank_transaction | opening_balance
+    source_id UUID,                             -- bank_transactions.id or bank_accounts.id
+    status VARCHAR(10) NOT NULL DEFAULT 'posted', -- posted | void
+    voided_at TIMESTAMPTZ,
+    void_reason VARCHAR(200),
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- What the entry was posted from (date, accounts, amount). A source whose
+-- fingerprint no longer matches gets its entry voided and reposted.
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS fingerprint VARCHAR(200);
+-- One live entry per source: the guard against double posting under a race.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_live_source
+    ON journal_entries (tenant_id, source_type, source_id) WHERE status = 'posted';
+CREATE INDEX IF NOT EXISTS idx_journal_tenant_date ON journal_entries (tenant_id, entry_date);
+
+CREATE TABLE IF NOT EXISTS journal_lines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entry_id UUID NOT NULL REFERENCES journal_entries(id) ON DELETE RESTRICT,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    account_id UUID NOT NULL REFERENCES ledger_accounts(id) ON DELETE RESTRICT,
+    debit_cents BIGINT NOT NULL DEFAULT 0,
+    credit_cents BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT journal_line_one_side CHECK (
+        debit_cents >= 0 AND credit_cents >= 0 AND (debit_cents = 0) <> (credit_cents = 0)
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines (entry_id);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_account ON journal_lines (tenant_id, account_id);
+
+-- Checked at COMMIT: every entry touched balances, has at least two lines, and
+-- every line's account and tenant match the entry's tenant. The code checks this
+-- too; the database is the lock that holds when the code is wrong.
+CREATE OR REPLACE FUNCTION journal_entry_check() RETURNS trigger AS $$
+DECLARE
+    eid UUID := COALESCE(NEW.entry_id, OLD.entry_id);
+    d BIGINT; c BIGINT; n INT; bad INT; etenant UUID;
+BEGIN
+    SELECT tenant_id INTO etenant FROM journal_entries WHERE id = eid;
+    SELECT COALESCE(sum(debit_cents),0), COALESCE(sum(credit_cents),0), count(*)
+      INTO d, c, n FROM journal_lines WHERE entry_id = eid;
+    IF n < 2 OR d <> c THEN
+        RAISE EXCEPTION 'journal entry % does not balance (debits %, credits %, lines %)', eid, d, c, n;
+    END IF;
+    SELECT count(*) INTO bad FROM journal_lines l JOIN ledger_accounts a ON a.id = l.account_id
+     WHERE l.entry_id = eid AND (l.tenant_id <> etenant OR a.tenant_id <> etenant);
+    IF bad > 0 THEN
+        RAISE EXCEPTION 'journal entry % mixes tenants', eid;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS journal_lines_balance ON journal_lines;
+CREATE CONSTRAINT TRIGGER journal_lines_balance
+    AFTER INSERT OR UPDATE OR DELETE ON journal_lines
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW EXECUTE FUNCTION journal_entry_check();

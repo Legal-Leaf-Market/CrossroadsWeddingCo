@@ -53,7 +53,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
         <div className="min-w-0">
           <h1 className="text-3xl text-charcoal">Transactions</h1>
           <p className="mt-2 max-w-xl text-ink/70">
-            Sort each bank line into what it is. Sorting is a label, not bookkeeping: nothing here posts to your books yet.
+            Sort each bank line into what it is. Sorted lines post to your Books once the bank clears them.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm font-semibold">

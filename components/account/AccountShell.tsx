@@ -21,6 +21,9 @@ export default function AccountShell({ children, signedIn = false }: { children:
               <Link href="/app/transactions" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Transactions
               </Link>
+              <Link href="/app/books" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Books
+              </Link>
               <Link href="/app/integrations" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Integrations
               </Link>
