@@ -13,7 +13,7 @@ import { getPortalData, isHubToken } from "@/lib/hub";
 import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
 import { listDocuments } from "@/lib/documents";
 import { countUnread } from "@/lib/messages";
-import { SITE_NAME } from "@/lib/site";
+import { brandForTenant, brandForToken, brandedMetadata } from "@/lib/brand";
 import { resolveWeddingArt } from "@/lib/wedding-art-server";
 
 export const dynamic = "force-dynamic";
@@ -24,12 +24,12 @@ export async function generateMetadata({
   params: Promise<{ token: string }>;
 }): Promise<Metadata> {
   const { token } = await params;
-  return {
-    title: "Your planning hub",
-    robots: { index: false, follow: false },
-    // Per-wedding manifest so a pinned home-screen icon opens this hub.
-    ...(isHubToken(token) ? { manifest: `/hub/${token}/manifest.webmanifest` } : {}),
-  };
+  // Per-wedding manifest so a pinned home-screen icon opens this hub.
+  return brandedMetadata(
+    await brandForToken(token, "hub"),
+    "Your planning hub",
+    isHubToken(token) ? { manifest: `/hub/${token}/manifest.webmanifest` } : {},
+  );
 }
 
 
@@ -38,10 +38,15 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   const data = await getPortalData(token);
   if (!data) notFound();
   const { wedding, timeline, cues, vips, playlists } = data;
-  const [unreadMessages, documents] = await Promise.all([
+  const [unreadMessages, documents, brand] = await Promise.all([
     countUnread(wedding.id, "couple"),
     listDocuments(wedding.id),
+    brandForTenant(wedding.tenantId),
   ]);
+  // Crossroads-only pieces: the agreement is Crossroads' terms and prices, the
+  // message thread and video calls reach the Crossroads team. A business on
+  // the platform gets none of them until each is rebuilt per account.
+  const house = brand.isHouse;
   const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
   // The hub-managed playlist links, seeded from the single link captured at
   // booking when the couple hasn't managed the list yet. The playlists route
@@ -71,13 +76,14 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
         )}
         <div className="relative mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-6 py-5">
           <div>
-            <p className="text-sm font-semibold text-terracotta">{SITE_NAME}</p>
+            <p className="text-sm font-semibold text-terracotta">{brand.name}</p>
             <h1 className="text-2xl text-charcoal">{wedding.coupleNames}</h1>
             <p className="text-sm text-ink/60">
               {formatEventDate(wedding.eventDate)} at {wedding.venueName}
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {house && (
             <a
               href={`/hub/${token}/messages`}
               className="rounded-full bg-charcoal px-4 py-1.5 text-sm font-semibold text-cream hover:bg-ink"
@@ -89,6 +95,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
                 </span>
               )}
             </a>
+            )}
             <a
               href={`/hub/${token}/live`}
               className="rounded-full bg-terracotta px-4 py-1.5 text-sm font-semibold text-cream hover:bg-terracotta-dark"
@@ -118,7 +125,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           eventDate={wedding.eventDate}
           startTime={timeline[0]?.scheduledStartTime.slice(0, 5) ?? null}
         />
-        {!wedding.contractAcceptedAt ? (
+        {!house ? null : !wedding.contractAcceptedAt ? (
           <a
             href={`/hub/${token}/contract`}
             className="block rounded-2xl border-2 border-terracotta bg-white p-5 hover:bg-parchment/30"
@@ -143,7 +150,8 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
         )}
         <p className="text-sm text-ink/60">
           Everything here saves as you type and lands directly in front of your crew. Fill in
-          what you know, skip what you don&apos;t, and we walk the rest together on your call.
+          what you know, skip what you don&apos;t,{" "}
+          {house ? "and we walk the rest together on your call." : "and your team fills in the rest with you."}
           Keep this link private: it&apos;s the key to your wedding.
         </p>
         <DetailsSection
@@ -159,7 +167,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             dressCode: wedding.dressCode ?? "",
           }}
         />
-        {isCallsConfigured() && <CallSection token={token} />}
+        {house && isCallsConfigured() && <CallSection token={token} />}
         <AccessSection token={token} initial={wedding.hubInviteEmails ?? []} />
         <DocumentsSection token={token} initial={documents} />
         <TimelineSection
@@ -206,6 +214,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             notes: v.notes ?? "",
           }))}
         />
+        {house && (
         <p className="pb-8 text-center text-xs text-ink/40">
           Questions any time:{" "}
           <a href={`/hub/${token}/messages`} className="underline decoration-parchment underline-offset-2 hover:text-terracotta">
@@ -213,6 +222,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           </a>{" "}
           and the whole team sees it right away.
         </p>
+        )}
       </main>
     </div>
   );

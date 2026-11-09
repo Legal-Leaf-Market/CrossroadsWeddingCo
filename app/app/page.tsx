@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import { getWorkspace } from "@/lib/auth";
-import { getWorkspaceSummary, type WorkspaceSummary } from "@/lib/workspace";
-import { PLATFORM_NAME, businessTypeLabel } from "@/lib/tenant-constants";
+import { listBookings, type BookingListItem } from "@/lib/workspace";
+import Link from "next/link";
+import { PLATFORM_NAME, bookingStatusLabel, businessTypeLabel, eventTypeLabel } from "@/lib/tenant-constants";
 import { VENUE_TIME_ZONE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -28,15 +29,36 @@ function dateLabel(iso: string): string {
   });
 }
 
-export default async function WorkspacePage() {
+function BookingList({ title, items }: { title: string; items: BookingListItem[] }) {
+  return (
+    <div className="mt-5">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-ink/55">{title}</h3>
+      <ul className="mt-2 divide-y divide-parchment">
+        {items.map((w) => (
+          <li key={w.id}>
+            <Link href={`/app/bookings/${w.id}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 hover:bg-cream/50">
+              <span className="min-w-0 break-words font-semibold text-charcoal">{w.clientNames}</span>
+              <span className="text-sm text-ink/60">
+                {dateLabel(w.eventDate)} · {eventTypeLabel(w.eventType)} · {bookingStatusLabel(w.status)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default async function WorkspacePage({ searchParams }: { searchParams: Promise<{ archived?: string }> }) {
+  const showArchived = (await searchParams).archived === "1";
   const ws = await getWorkspace();
   if (!ws) redirect("/login");
   // The house account is run from /admin/[key]; it has no workspace here.
   if (ws.tenant.kind !== "customer") redirect("/login");
 
-  let summary: WorkspaceSummary | null = null;
+  let lists: { upcoming: BookingListItem[]; past: BookingListItem[] } | null = null;
   try {
-    summary = await getWorkspaceSummary(ws.tenant.id);
+    lists = await listBookings(ws.tenant.id, { archived: showArchived });
   } catch (err) {
     console.error("[app] summary failed:", err);
   }
@@ -56,31 +78,32 @@ export default async function WorkspacePage() {
       )}
 
       <section className="mt-10 rounded-2xl border border-parchment bg-white p-6">
-        <h2 className="text-xl text-charcoal">Your bookings</h2>
-        {!summary ? (
-          <p className="mt-2 text-ink/70">We couldn&apos;t load your bookings just now. Refresh in a minute.</p>
-        ) : summary.total === 0 ? (
-          <p className="mt-2 text-ink/70">
-            No bookings yet. Bookings, client planning hubs and the live day-of timeline are being switched on for
-            new accounts next. We&apos;ll email you as each one is ready.
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl text-charcoal">Your bookings</h2>
+          <Link
+            href="/app/bookings/new"
+            className="rounded-full bg-terracotta px-5 py-2 text-sm font-semibold text-cream hover:bg-terracotta-dark"
+          >
+            Add a booking
+          </Link>
+        </div>
+        {!lists ? (
+          <p className="mt-3 text-ink/70">We couldn&apos;t load your bookings just now. Refresh in a minute.</p>
+        ) : lists.upcoming.length + lists.past.length === 0 ? (
+          <p className="mt-3 text-ink/70">
+            No bookings yet. Add one and its client planning hub, run sheet and live timeline are ready right away.
           </p>
         ) : (
           <>
-            <p className="mt-2 text-ink/70">
-              {summary.upcoming} upcoming of {summary.total} total.
-            </p>
-            <ul className="mt-4 divide-y divide-parchment">
-              {summary.next.map((w) => (
-                <li key={w.id} className="flex flex-wrap justify-between gap-2 py-3">
-                  <span className="font-semibold text-charcoal">{w.coupleNames}</span>
-                  <span className="text-sm text-ink/60">
-                    {dateLabel(w.eventDate)} · {w.venueName}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <BookingList title={`Upcoming (${lists.upcoming.length})`} items={lists.upcoming} />
+            {lists.past.length > 0 && <BookingList title={`Past and cancelled (${lists.past.length})`} items={lists.past} />}
           </>
         )}
+        <p className="mt-4 text-sm">
+          <Link href={showArchived ? "/app" : "/app?archived=1"} className="text-ink/55 underline decoration-parchment underline-offset-2 hover:text-terracotta-dark">
+            {showArchived ? "Showing archived bookings. Back to the active list" : "See archived bookings"}
+          </Link>
+        </p>
       </section>
 
       <section className="mt-6 rounded-2xl border border-parchment bg-white p-6">

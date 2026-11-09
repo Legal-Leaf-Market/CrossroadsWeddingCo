@@ -34,3 +34,40 @@ export type BusinessTypeKey = (typeof BUSINESS_TYPES)[number]["key"];
 export function businessTypeLabel(key: string | null | undefined): string {
   return BUSINESS_TYPES.find((t) => t.key === key)?.label ?? "Wedding or event business";
 }
+
+/**
+ * True for Crossroads' own bookings. A NULL tenant predates the column and was
+ * backfilled to the house, so it reads as house too. Features written for
+ * Crossroads alone (its service agreement, the team message thread that emails
+ * Jake, Crossroads video calls, check-in texts) are gated on this.
+ */
+export function isHouseTenant(tenantId: string | null | undefined): boolean {
+  return !tenantId || tenantId === HOUSE_TENANT_ID;
+}
+
+/** Event types a business account can book. Stored in weddings.package_type. Add, never rename. */
+export const EVENT_TYPES = [
+  { key: "wedding", label: "Wedding" },
+  { key: "corporate", label: "Corporate event" },
+  { key: "private_party", label: "Private party" },
+  { key: "other", label: "Other event" },
+] as const;
+
+export function eventTypeLabel(key: string | null | undefined): string {
+  return EVENT_TYPES.find((t) => t.key === key)?.label ?? "Event";
+}
+
+/** Statuses an account owner can set, with plain labels. Values are the event_status enum. */
+export const BOOKING_STATUSES = [
+  { key: "inquiry", label: "Inquiry" },
+  { key: "deposit_paid", label: "Booked (deposit in)" },
+  { key: "planning_locked", label: "Planning locked" },
+  { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
+] as const;
+
+export type BookingStatusKey = (typeof BOOKING_STATUSES)[number]["key"];
+
+export function bookingStatusLabel(key: string): string {
+  return BOOKING_STATUSES.find((s) => s.key === key)?.label ?? key.replace(/_/g, " ");
+}

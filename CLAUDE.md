@@ -721,6 +721,22 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   `tenant_id` before customers get calendars. There is deliberately no tenant delete: the
   `weddings` and `leads` FKs from the original schema still CASCADE.
 
+- **Customer bookings (2026-11-09, Jacob: "yes, start on customer bookings").** A signed-in
+  account adds bookings at `/app/bookings/new` and manages them at `/app/bookings/[id]`
+  (details, money, status, archive). `lib/workspace.ts` takes the tenant id from the session
+  only and puts it in every WHERE, so another account's id and a wrong id both 404 (verified,
+  including a Crossroads booking id from a customer session). Writes also check Origin. A
+  booking mints the same hub and share tokens as a Crossroads one, emails nobody, and its
+  hub, run sheet, live console, vendor view and guest schedule all work unchanged.
+  **Brand on couple-facing pages comes from the booking's account** (`lib/brand.ts`):
+  header, run sheet footer, live pages, guest schedule, PWA manifest, AND the tab title and
+  link-preview metadata (`brandedMetadata`), because the root layout's defaults otherwise put
+  "Crossroads" in the preview a text message shows. Verified: no "Crossroads" anywhere in the
+  HTML of a customer's hub pages; house pages are unchanged. **Crossroads-only, gated on
+  `isHouseTenant`:** the service agreement (`/hub/[token]/contract` + its API), the Messages
+  thread (it emails Jake), and video calls all 404 for customer bookings until each is
+  rebuilt per account. `weddings.package_type` holds `EVENT_TYPES` keys for customer rows.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

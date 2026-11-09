@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { isHubToken } from "@/lib/hub-constants";
+import { getWeddingByToken } from "@/lib/hub";
+import { brandForTenant } from "@/lib/brand";
 import { SITE_NAME } from "@/lib/site";
 
 export const runtime = "nodejs";
@@ -14,10 +16,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
   if (!isHubToken(token)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  // Named for the business that made the booking. An unknown token still
+  // gets a manifest (it reveals nothing), under the house name.
+  const wedding = await getWeddingByToken(token).catch(() => null);
+  const brand = wedding ? await brandForTenant(wedding.tenantId) : null;
+  const name = brand?.name ?? SITE_NAME;
   return NextResponse.json(
     {
-      name: `${SITE_NAME} planning hub`,
-      short_name: "Crossroads",
+      name: `${name} planning hub`,
+      short_name: brand && !brand.isHouse ? name.slice(0, 12) : "Crossroads",
       description: "Your wedding planning hub: timeline, music, and the names we say out loud.",
       id: `/hub/${token}`,
       start_url: `/hub/${token}`,

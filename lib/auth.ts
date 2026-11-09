@@ -204,3 +204,26 @@ export async function endSession(raw: string | undefined): Promise<void> {
   if (!raw || !/^[0-9a-f]{64}$/.test(raw)) return;
   await db.delete(userSessions).where(eq(userSessions.tokenHash, hashToken(raw)));
 }
+
+/**
+ * For workspace API routes: the signed-in customer account, or null. The
+ * house account never uses /app; it has /admin/[key].
+ */
+export async function getCustomerWorkspace(): Promise<Workspace | null> {
+  const ws = await getWorkspace();
+  return ws && ws.tenant.kind === "customer" ? ws : null;
+}
+
+/**
+ * Same-origin check for cookie-authenticated writes. SameSite=Lax already
+ * keeps the cookie off cross-site POSTs; this is the second lock.
+ */
+export function sameOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return true; // same-origin fetches from older browsers, and form posts from our own pages
+  try {
+    return new URL(origin).host === new URL(req.url).host || new URL(origin).host === req.headers.get("host");
+  } catch {
+    return false;
+  }
+}

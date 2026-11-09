@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sendTeamInboxAlert } from "@/lib/email";
 import { hasSpeaker } from "@/lib/hub-access";
 import { getWeddingByToken } from "@/lib/hub";
+import { isHouseTenant } from "@/lib/tenant-constants";
 import { addMessage, getThread, markThreadRead } from "@/lib/messages";
 
 export const runtime = "nodejs";
@@ -13,7 +14,7 @@ const NO_STORE = { "Cache-Control": "no-store" };
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const wedding = await getWeddingByToken(token);
-  if (!wedding) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!wedding || !isHouseTenant(wedding.tenantId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const messages = await getThread(wedding.id);
   // Opening the thread is reading it; last-write-wins, same as the live view.
@@ -31,7 +32,7 @@ const postSchema = z.object({
 export async function POST(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const wedding = await getWeddingByToken(token);
-  if (!wedding) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!wedding || !isHouseTenant(wedding.tenantId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   let raw: unknown;
   try {
