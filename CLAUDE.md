@@ -854,6 +854,47 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   line stops counting; Sorted tab shows the booking; no sideways scroll at 390 and 1280). NOT
   YET: one line paying several bookings, refunds matched back, the house account.
 
+- **Real client records survive this branch untouched, and that is proven, not assumed
+  (2026-11-09, Jacob: "make sure and convert over all my current customers and their info
+  flawlessly ... these are real weddings and clients for next year").** `main` never wrote
+  `tenant_id` or created a tenant, so in production every wedding and lead has it NULL and the
+  migration moves them to the house account. One gap was closed: `tenants.kind` defaults to
+  'customer', so a tenant row inserted by hand would have taken its weddings off `/admin`; a
+  guard now moves weddings and leads of any non-house tenant with NO users to the house (a real
+  customer always has its owner, written in the same transaction). Verified on a copy of
+  `main`'s schema seeded across every client table (weddings with a signed and countersigned
+  contract snapshot, a trade deal, corporate, archived, cancelled, one on a hand-made tenant;
+  timeline, music, VIPs, do-not-play, messages, an uploaded file, leads, appointments, office
+  hours, reviews, playbook): an md5 of every row, tenant_id aside, is IDENTICAL before and after
+  three migration runs (62 rows); all six weddings land in the house account (the hand-made one
+  only because of the guard); the dashboard lists every active one and the archive the archived
+  one; every hub, run sheet, vendor live view and guest schedule answers 200; the contract still
+  shows the countersignature; the trade-deal invoice and the message thread are unchanged. Run
+  the same kind of check before any migration that touches existing rows.
+- **The house account keeps its books under /app (2026-11-09).** `HOUSE_BOOKS_EMAILS` (comma
+  separated, read on every request, unset = nobody) lists who may. `/login` creates the house
+  user on first request for a listed email (`findOrCreateHouseUser`; an email already on a
+  customer account is never moved); `getBooksWorkspace` admits a customer or a still-listed
+  house user, and replaced `getCustomerWorkspace` on every money page and API (transactions,
+  rules, categories, integrations, books, ledger). Booking pages and APIs stay customer-only:
+  the house's bookings live in `/admin`. A house user at `/app` lands on `/app/books`, the
+  header drops the Bookings link, and the dashboard header links to Books. Matching runs
+  against the real Crossroads weddings. Verified: listed email gets a link, a stranger gets
+  the same reply and no link; all four money pages 200; customer booking pages and API refuse;
+  removing the email locks a live session out of pages and API at once.
+- **Paid by hand counts (2026-11-09, found on the realistic data).** `creditFor` in
+  `lib/books/logic.ts`: a deposit the owner marked paid with no deposit matched from the bank
+  was paid outside it (cash or check, which is how deposits are taken for now), and a booking
+  marked paid in full owes nothing. Without this a trade deal was suggested as owing $1,000, a
+  cash deposit read as unpaid, and a cash deposit plus a Zelle balance never marked the booking
+  paid. The booking page lists "Deposit, marked paid by hand" beside matched lines. A far-off
+  date now drops a one-piece-of-evidence suggestion (amount OR name), keeping amount AND name.
+- **`lib/books/logic.ts` is the pure core** (no imports): rule matching and order, posting
+  lines, credit, suggestions. `node --experimental-strip-types scripts/verify-books.mjs` checks
+  it (38 cases); five deliberate sabotages (cash deposit ignored, paid-in-full ignored, weak
+  date penalty, money out allowed, stop words dropped) are each caught. Run it after touching
+  any of this.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

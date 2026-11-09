@@ -520,6 +520,22 @@ ALTER TABLE weddings ALTER COLUMN tenant_id SET DEFAULT '00000000-0000-4000-8000
 UPDATE leads SET tenant_id = '00000000-0000-4000-8000-000000000001' WHERE tenant_id IS NULL;
 ALTER TABLE leads ALTER COLUMN tenant_id SET DEFAULT '00000000-0000-4000-8000-000000000001';
 
+-- Guard for real client records (2026-11-09, Jacob: "these are real weddings and clients"). The
+-- app never wrote tenant_id before accounts existed, but a tenant row inserted by hand would have
+-- become kind 'customer' through the column default above and taken its weddings off the
+-- Crossroads dashboard. A real customer account always has its owner user, created in the same
+-- transaction as the tenant (lib/auth.ts createAccount), so a non-house tenant with NO users is
+-- one that predates accounts: its weddings and leads belong to the house. Idempotent, and a no-op
+-- when nothing matches, which is the expected case.
+UPDATE weddings SET tenant_id = '00000000-0000-4000-8000-000000000001'
+ WHERE tenant_id IN (SELECT t.id FROM tenants t
+                      WHERE t.id <> '00000000-0000-4000-8000-000000000001'
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE u.tenant_id = t.id));
+UPDATE leads SET tenant_id = '00000000-0000-4000-8000-000000000001'
+ WHERE tenant_id IN (SELECT t.id FROM tenants t
+                      WHERE t.id <> '00000000-0000-4000-8000-000000000001'
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE u.tenant_id = t.id));
+
 ALTER TABLE appointments ADD COLUMN IF NOT EXISTS tenant_id UUID
     NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
     REFERENCES tenants(id) ON DELETE RESTRICT;

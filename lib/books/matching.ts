@@ -2,7 +2,8 @@ import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-o
 import { db } from "@/lib/db";
 import { bankAccounts, bankTransactions, ledgerCategories, weddings } from "@/lib/db/schema";
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
-import { normalizeMatchText } from "@/lib/books/categories";
+import { creditFor, type OpenBooking, type PaymentKind } from "@/lib/books/logic";
+export { PAYMENT_KINDS, suggestFor, creditFor, type OpenBooking, type PaymentKind, type Suggestion } from "@/lib/books/logic";
 
 // Matching money that came in to the booking it was for. A match is a link on
 // the bank line (booking_id + payment_kind) and a sort into an income category
@@ -13,27 +14,18 @@ import { normalizeMatchText } from "@/lib/books/categories";
 // for the same reason the category picker preselects nothing.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-export const PAYMENT_KINDS = ["deposit", "balance"] as const;
-export type PaymentKind = (typeof PAYMENT_KINDS)[number];
 
 const toCents = (numeric: string | null | undefined) => Math.round(Number(numeric ?? 0) * 100);
 
-export type OpenBooking = {
-  id: string;
-  name: string;
-  eventDate: string;
-  totalCents: number;
-  depositCents: number;
-  receivedCents: number;
-  /** What is still owed toward the deposit, then toward the whole. */
-  depositDueCents: number;
-  balanceDueCents: number;
-};
 
-/** Received so far per booking: matched, posted money, not withdrawn by the bank. */
+/** Received through the bank per booking: matched lines the bank has not withdrawn. */
 async function receivedByBooking(tenantId: string, ids?: string[]) {
   const rows = await db
-    .select({ bookingId: bankTransactions.bookingId, cents: sql<string>`coalesce(sum(${bankTransactions.amountCents}),0)` })
+    .select({
+      bookingId: bankTransactions.bookingId,
+      cents: sql<string>`coalesce(sum(${bankTransactions.amountCents}),0)`,
+      depositLines: sql<number>`count(*) filter (where ${bankTransactions.paymentKind} = 'deposit')::int`,
+    })
     .from(bankTransactions)
     .where(
       and(
@@ -44,8 +36,9 @@ async function receivedByBooking(tenantId: string, ids?: string[]) {
       ),
     )
     .groupBy(bankTransactions.bookingId);
-  return new Map(rows.map((r) => [r.bookingId!, Number(r.cents)]));
+  return new Map(rows.map((r) => [r.bookingId!, { cents: Number(r.cents), depositLines: r.depositLines }]));
 }
+
 
 /** Bookings that can take a payment: not archived, not cancelled. Soonest event first. */
 export async function openBookings(tenantId: string): Promise<OpenBooking[]> {
@@ -56,6 +49,8 @@ export async function openBookings(tenantId: string): Promise<OpenBooking[]> {
       eventDate: weddings.eventDate,
       total: weddings.totalAmount,
       deposit: weddings.depositAmount,
+      isDepositPaid: weddings.isDepositPaid,
+      isBalancePaid: weddings.isBalancePaid,
     })
     .from(weddings)
     .where(and(eq(weddings.tenantId, tenantId), isNull(weddings.archivedAt), ne(weddings.status, "cancelled")))
@@ -64,71 +59,31 @@ export async function openBookings(tenantId: string): Promise<OpenBooking[]> {
   return rows.map((r) => {
     const totalCents = toCents(r.total);
     const depositCents = toCents(r.deposit);
-    const receivedCents = received.get(r.id) ?? 0;
+    const bank = received.get(r.id) ?? { cents: 0, depositLines: 0 };
+    const c = creditFor({
+      totalCents,
+      depositCents,
+      isDepositPaid: !!r.isDepositPaid,
+      isBalancePaid: !!r.isBalancePaid,
+      bankCents: bank.cents,
+      bankDepositLines: bank.depositLines,
+    });
     return {
       id: r.id,
       name: r.name,
       eventDate: r.eventDate,
       totalCents,
       depositCents,
-      receivedCents,
-      depositDueCents: Math.max(0, depositCents - receivedCents),
-      balanceDueCents: Math.max(0, totalCents - receivedCents),
+      receivedCents: bank.cents,
+      depositOutsideBankCents: c.depositOutsideBankCents,
+      depositDueCents: c.depositDueCents,
+      balanceDueCents: c.balanceDueCents,
     };
   });
 }
 
-export type Suggestion = { bookingId: string; name: string; kind: PaymentKind; why: string };
 
-/** Words in a client name worth looking for on a bank line. "Hayes", not "and". */
-function nameTokens(name: string): string[] {
-  const stop = new Set(["and", "the", "mr", "mrs", "ms", "dr", "wedding", "party", "event", "inc", "llc", "co"]);
-  return [...new Set(normalizeMatchText(name).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !stop.has(w)))];
-}
 
-/**
- * Pure: which bookings this money-in line might be for, best first, at most
- * three. A suggestion needs real evidence: the exact amount still owed, or a
- * client's name on the line. Exported for the verify script.
- */
-export function suggestFor(
-  line: { amountCents: number; merchant: string | null; description: string; postedDate: string },
-  bookings: OpenBooking[],
-): Suggestion[] {
-  if (line.amountCents <= 0) return [];
-  const text = normalizeMatchText(`${line.merchant ?? ""} ${line.description}`);
-  const words = new Set(text.split(/[^a-z0-9]+/));
-  const scored: (Suggestion & { score: number })[] = [];
-  for (const b of bookings) {
-    const reasons: string[] = [];
-    let score = 0;
-    let kind: PaymentKind = b.depositDueCents > 0 ? "deposit" : "balance";
-    if (b.depositDueCents > 0 && line.amountCents === b.depositDueCents) {
-      score += 3;
-      kind = "deposit";
-      reasons.push("the deposit still owed");
-    } else if (b.balanceDueCents > 0 && line.amountCents === b.balanceDueCents) {
-      score += 3;
-      kind = "balance";
-      reasons.push(b.depositDueCents > 0 ? "the full amount still owed" : "the balance still owed");
-    }
-    const hit = nameTokens(b.name).find((t) => words.has(t));
-    if (hit) {
-      score += 2;
-      reasons.push(`"${hit}" is on the bank line`);
-    }
-    if (!score) continue;
-    // A payment usually lands before the event or within a few weeks after it.
-    const days = (Date.parse(b.eventDate) - Date.parse(line.postedDate)) / 86_400_000;
-    if (days < -60 || days > 540) score -= 1;
-    if (score < 2) continue;
-    scored.push({ bookingId: b.id, name: b.name, kind, why: `Matches ${reasons.join(" and ")}`, score });
-  }
-  return scored
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
-    .slice(0, 3)
-    .map(({ score: _s, ...s }) => s);
-}
 
 async function defaultIncomeCategory(tenantId: string): Promise<string | null> {
   const cats = await db
@@ -210,18 +165,32 @@ export async function matchLine(
  */
 export async function markPaidFromReceipts(tenantId: string, bookingId: string) {
   const [b] = await db
-    .select({ total: weddings.totalAmount, deposit: weddings.depositAmount, status: weddings.status })
+    .select({
+      total: weddings.totalAmount,
+      deposit: weddings.depositAmount,
+      status: weddings.status,
+      isDepositPaid: weddings.isDepositPaid,
+      isBalancePaid: weddings.isBalancePaid,
+    })
     .from(weddings)
     .where(and(eq(weddings.id, bookingId), eq(weddings.tenantId, tenantId)))
     .limit(1);
   if (!b) return;
-  const received = (await receivedByBooking(tenantId, [bookingId])).get(bookingId) ?? 0;
+  const bank = (await receivedByBooking(tenantId, [bookingId])).get(bookingId) ?? { cents: 0, depositLines: 0 };
+  const c = creditFor({
+    totalCents: toCents(b.total),
+    depositCents: toCents(b.deposit),
+    isDepositPaid: !!b.isDepositPaid,
+    isBalancePaid: !!b.isBalancePaid,
+    bankCents: bank.cents,
+    bankDepositLines: bank.depositLines,
+  });
   const set: Partial<typeof weddings.$inferInsert> = {};
-  if (received > 0 && received >= toCents(b.deposit)) {
+  if (!b.isDepositPaid && c.creditedCents > 0 && c.creditedCents >= toCents(b.deposit)) {
     set.isDepositPaid = true;
     if (b.status === "inquiry") set.status = "deposit_paid";
   }
-  if (toCents(b.total) > 0 && received >= toCents(b.total)) set.isBalancePaid = true;
+  if (!b.isBalancePaid && toCents(b.total) > 0 && c.creditedCents >= toCents(b.total)) set.isBalancePaid = true;
   if (Object.keys(set).length) {
     await db
       .update(weddings)

@@ -36,6 +36,7 @@ pnpm ig:posts   # regenerate the Instagram images in content/instagram/
 | `PLAID_ENV` | Bank feeds | `sandbox` (default, Plaid's test banks) or `production`. |
 | `PLAID_WEBHOOK_URL` | Bank feeds | Optional. Defaults to `<site>/api/webhooks/plaid`. |
 | `INTEGRATIONS_KEY` | Bank feeds | 64 hex characters (`openssl rand -hex 32`). Encrypts stored bank access tokens; without it nothing can be connected. Losing it means every bank must be reconnected, so keep a copy somewhere safe. |
+| `HOUSE_BOOKS_EMAILS` | Crossroads' own books (`/app/books`, `/app/transactions`, `/app/integrations`) | Comma-separated emails allowed to keep the house account's books, e.g. `jake@crossroadsweddingco.shop`. Sign in at `/login` with an emailed link; there are no passwords. Checked on every request, so removing an email locks that person out at once. Unset means nobody. |
 | `IG_STUDIO_MODEL` | `/ig-studio` | Optional model override. |
 
 `NEXT_PUBLIC_*` variables are inlined at build time, so changing one in Vercel

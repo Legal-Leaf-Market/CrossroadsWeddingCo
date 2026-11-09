@@ -50,7 +50,5 @@ export const STARTER_CATEGORIES: { name: string; kind: CategoryKind; taxLine: st
   { name: "Owner contribution", kind: "equity", taxLine: null },
 ];
 
-/** How a rule sees text: lower case, single spaces, trimmed. */
-export function normalizeMatchText(s: string | null | undefined): string {
-  return (s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
-}
+
+export { normalizeMatchText } from "./logic";

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { getCustomerWorkspace, sameOrigin } from "@/lib/auth";
+import { getBooksWorkspace, sameOrigin } from "@/lib/auth";
 import { matchLine } from "@/lib/books/matching";
 import { applyReview, createRule } from "@/lib/books/review";
 
@@ -35,7 +35,7 @@ const schema = z.discriminatedUnion("action", [
 
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: NO_STORE });
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) return NextResponse.json({ error: "Sign in again." }, { status: 401, headers: NO_STORE });
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Bad request" }, { status: 400, headers: NO_STORE });

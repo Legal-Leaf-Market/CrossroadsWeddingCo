@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import OpeningBalanceForm from "@/components/account/OpeningBalanceForm";
-import { getCustomerWorkspace } from "@/lib/auth";
+import { getBooksWorkspace } from "@/lib/auth";
 import { balances, postBankLedger, profitAndLoss, reconciliation } from "@/lib/books/ledger";
 import { ensureDefaultCategories } from "@/lib/books/review";
 import { PLATFORM_NAME } from "@/lib/tenant-constants";
@@ -59,7 +59,7 @@ function Row({ label, amount, strong = false, code }: { label: string; amount: n
 }
 
 export default async function BooksPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
   const { period: raw } = await searchParams;
   const period: PeriodKey = raw && raw in PERIODS ? (raw as PeriodKey) : "ytd";
@@ -88,10 +88,12 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
   const clearing = data?.bal.assets.find((a) => a.systemKey === "transfers_clearing");
 
   return (
-    <AccountShell signedIn>
-      <Link href="/app" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
-        &larr; Workspace
-      </Link>
+    <AccountShell signedIn house={ws.tenant.kind === "house"}>
+      {ws.tenant.kind !== "house" && (
+        <Link href="/app" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
+          &larr; Workspace
+        </Link>
+      )}
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-3xl text-charcoal">Books</h1>

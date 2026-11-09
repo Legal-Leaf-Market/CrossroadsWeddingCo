@@ -5,7 +5,16 @@ import { PLATFORM_NAME } from "@/lib/tenant-constants";
 // Frame for the business-account pages (/signup, /login, /app). Deliberately
 // not the Crossroads header and footer: these pages belong to the software
 // other businesses sign up for, not to the wedding company.
-export default function AccountShell({ children, signedIn = false }: { children: ReactNode; signedIn?: boolean }) {
+export default function AccountShell({
+  children,
+  signedIn = false,
+  house = false,
+}: {
+  children: ReactNode;
+  signedIn?: boolean;
+  /** The Crossroads house account: its bookings live in /admin, so no Bookings link here. */
+  house?: boolean;
+}) {
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-parchment bg-white">
@@ -15,9 +24,11 @@ export default function AccountShell({ children, signedIn = false }: { children:
           </Link>
           {signedIn ? (
             <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
-              <Link href="/app" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
-                Bookings
-              </Link>
+              {!house && (
+                <Link href="/app" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                  Bookings
+                </Link>
+              )}
               <Link href="/app/transactions" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Transactions
               </Link>

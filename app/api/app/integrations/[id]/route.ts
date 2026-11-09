@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { getCustomerWorkspace, sameOrigin } from "@/lib/auth";
+import { getBooksWorkspace, sameOrigin } from "@/lib/auth";
 import { disconnect, getConnection, syncConnection } from "@/lib/integrations/bank-feed";
 
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ const schema = z.object({ action: z.enum(["sync", "disconnect"]) });
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: NO_STORE });
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) return NextResponse.json({ error: "Sign in again." }, { status: 401, headers: NO_STORE });
   const { id } = await ctx.params;
   const parsed = schema.safeParse(await req.json().catch(() => null));

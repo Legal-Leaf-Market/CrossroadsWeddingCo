@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import { AddCategory, ArchiveCategory, DeleteRule } from "@/components/account/BooksSettings";
-import { getCustomerWorkspace } from "@/lib/auth";
+import { getBooksWorkspace } from "@/lib/auth";
 import { CATEGORY_KINDS, KIND_LABEL, type CategoryKind } from "@/lib/books/categories";
 import { ensureDefaultCategories, listCategories, listRules } from "@/lib/books/review";
 import { PLATFORM_NAME } from "@/lib/tenant-constants";
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: `Categories and rules | ${PLATFORM_NA
 const DIRECTION: Record<string, string> = { any: "", in: " (money in)", out: " (money out)" };
 
 export default async function RulesPage() {
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
   let loadFailed = false;
   let categories: Awaited<ReturnType<typeof listCategories>> = [];
@@ -28,7 +28,7 @@ export default async function RulesPage() {
   }
 
   return (
-    <AccountShell signedIn>
+    <AccountShell signedIn house={ws.tenant.kind === "house"}>
       <Link href="/app/transactions" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
         &larr; Transactions
       </Link>

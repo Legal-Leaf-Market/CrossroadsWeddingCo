@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { bankAccounts, bankTransactions, categorizationRules, ledgerCategories, weddings } from "@/lib/db/schema";
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
 import { STARTER_CATEGORIES, normalizeMatchText, type ReviewStatus } from "@/lib/books/categories";
+import { orderRules, ruleMatches } from "@/lib/books/logic";
+export { orderRules, ruleMatches } from "@/lib/books/logic";
 
 // The bank review queue. Every function takes the tenant id from the session
 // (or, for afterSync, from the connection Plaid signed for) and carries it in
@@ -261,27 +263,7 @@ export async function deleteRule(tenantId: string, id: string): Promise<boolean>
 
 type RuleRow = typeof categorizationRules.$inferSelect;
 
-/** Pure: does this rule match this bank line? Exported for the verify script. */
-export function ruleMatches(
-  rule: Pick<RuleRow, "matchField" | "matchType" | "pattern" | "direction">,
-  tx: { merchant: string | null; description: string; amountCents: number },
-): boolean {
-  if (rule.direction === "in" && tx.amountCents <= 0) return false;
-  if (rule.direction === "out" && tx.amountCents >= 0) return false;
-  const text = normalizeMatchText(rule.matchField === "merchant" ? tx.merchant : tx.description);
-  if (!text) return false;
-  return rule.matchType === "equals" ? text === rule.pattern : text.includes(rule.pattern);
-}
 
-/** Most specific first: exact before contains, longer patterns before shorter, newest breaks ties. */
-export function orderRules<T extends Pick<RuleRow, "matchType" | "pattern" | "createdAt">>(rules: T[]): T[] {
-  return [...rules].sort(
-    (a, b) =>
-      (a.matchType === "equals" ? 0 : 1) - (b.matchType === "equals" ? 0 : 1) ||
-      b.pattern.length - a.pattern.length ||
-      b.createdAt.getTime() - a.createdAt.getTime(),
-  );
-}
 
 /**
  * Sort waiting rows by this account's rules. Touches only rows that are

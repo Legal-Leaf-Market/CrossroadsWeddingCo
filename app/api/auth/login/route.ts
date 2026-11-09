@@ -3,7 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { findOwnerByEmail, normalizeEmail } from "@/lib/auth";
+import { findOrCreateHouseUser, findOwnerByEmail, normalizeEmail } from "@/lib/auth";
 import { loginMailConfigured, mailLoginLink, rateLimited } from "@/lib/auth-mail";
 
 export const runtime = "nodejs";
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many tries. Give it an hour." }, { status: 429, headers: NO_STORE });
   }
   try {
-    const owner = await findOwnerByEmail(email);
+    const owner = (await findOwnerByEmail(email)) ?? (await findOrCreateHouseUser(email));
     if (owner) {
       const [user] = await db
         .select({ id: users.id, email: users.email, fullName: users.fullName })

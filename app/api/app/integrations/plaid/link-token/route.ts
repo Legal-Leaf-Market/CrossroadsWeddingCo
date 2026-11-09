@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCustomerWorkspace, sameOrigin } from "@/lib/auth";
+import { getBooksWorkspace, sameOrigin } from "@/lib/auth";
 import { createLinkToken } from "@/lib/integrations/bank-feed";
 import { PlaidError, plaidConfigured } from "@/lib/integrations/plaid-client";
 import { secretsConfigured } from "@/lib/secrets";
@@ -11,7 +11,7 @@ const NO_STORE = { "Cache-Control": "no-store" };
 /** Body: { repair?: connectionId } to fix a bank login that expired. */
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: NO_STORE });
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) return NextResponse.json({ error: "Sign in again." }, { status: 401, headers: NO_STORE });
   if (!plaidConfigured() || !secretsConfigured()) {
     return NextResponse.json({ error: "Bank connections aren't set up yet." }, { status: 501, headers: NO_STORE });

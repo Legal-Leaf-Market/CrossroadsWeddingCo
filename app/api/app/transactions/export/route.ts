@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getCustomerWorkspace } from "@/lib/auth";
+import { getBooksWorkspace } from "@/lib/auth";
 import { exportCsv } from "@/lib/books/review";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) return NextResponse.json({ error: "Sign in again." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   const csv = await exportCsv(ws.tenant.id);
   const day = new Date().toISOString().slice(0, 10);

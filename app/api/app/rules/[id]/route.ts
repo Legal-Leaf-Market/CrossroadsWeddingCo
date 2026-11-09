@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCustomerWorkspace, sameOrigin } from "@/lib/auth";
+import { getBooksWorkspace, sameOrigin } from "@/lib/auth";
 import { deleteRule } from "@/lib/books/review";
 
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ const NO_STORE = { "Cache-Control": "no-store" };
 
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: NO_STORE });
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) return NextResponse.json({ error: "Sign in again." }, { status: 401, headers: NO_STORE });
   const { id } = await ctx.params;
   const ok = await deleteRule(ws.tenant.id, id);

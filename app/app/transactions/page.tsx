@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import ReviewQueue from "@/components/account/ReviewQueue";
-import { getCustomerWorkspace } from "@/lib/auth";
+import { getBooksWorkspace } from "@/lib/auth";
 import { REVIEW_STATUSES, type CategoryKind, type ReviewStatus } from "@/lib/books/categories";
 import { openBookings, suggestFor } from "@/lib/books/matching";
 import { ensureDefaultCategories, listCategories, listQueue, queueCounts } from "@/lib/books/review";
@@ -20,7 +20,7 @@ const TABS: { key: ReviewStatus; label: string }[] = [
 const LIMIT = 200;
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
   const { view: raw } = await searchParams;
   const view: ReviewStatus = (REVIEW_STATUSES as readonly string[]).includes(raw ?? "") ? (raw as ReviewStatus) : "unreviewed";
@@ -48,9 +48,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const total = data ? data.counts.unreviewed + data.counts.categorized + data.counts.excluded : 0;
 
   return (
-    <AccountShell signedIn>
-      <Link href="/app" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
-        &larr; Workspace
+    <AccountShell signedIn house={ws.tenant.kind === "house"}>
+      <Link href={ws.tenant.kind === "house" ? "/app/books" : "/app"} className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
+        &larr; {ws.tenant.kind === "house" ? "Books" : "Workspace"}
       </Link>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">

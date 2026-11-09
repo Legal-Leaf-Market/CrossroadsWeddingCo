@@ -341,6 +341,13 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
             >
               Lead playbook
             </a>
+            {/* The house books sign in by email (HOUSE_BOOKS_EMAILS), not by this key. */}
+            <a
+              href="/app/books"
+              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
+            >
+              Books
+            </a>
           </div>
         </div>
       </header>

@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { loginTokens, tenants, userSessions, users, type Tenant, type User } from "@/lib/db/schema";
-import { TRIAL_DAYS } from "@/lib/tenant-constants";
+import { HOUSE_TENANT_ID, TRIAL_DAYS } from "@/lib/tenant-constants";
 
 // Account sign-in for businesses using the platform (multi-tenant signup,
 // 2026-11-09). Passwordless: the owner types an email, gets a link, taps a
@@ -212,6 +212,55 @@ export async function endSession(raw: string | undefined): Promise<void> {
 export async function getCustomerWorkspace(): Promise<Workspace | null> {
   const ws = await getWorkspace();
   return ws && ws.tenant.kind === "customer" ? ws : null;
+}
+
+/**
+ * Who may keep the house account's books (Crossroads itself): the emails in
+ * HOUSE_BOOKS_EMAILS, comma separated. Read on every request, so removing an
+ * email from the setting locks that person out at once, session or not.
+ * Unset means nobody: the house books fail closed like every other gated feature.
+ */
+export function houseBooksEmails(): Set<string> {
+  return new Set(
+    (process.env.HOUSE_BOOKS_EMAILS ?? "")
+      .split(",")
+      .map(normalizeEmail)
+      .filter((e) => e.includes("@")),
+  );
+}
+
+/**
+ * For the money pages (transactions, books, integrations): a customer account,
+ * or a house user whose email is still on the list. The house account's
+ * bookings stay in /admin; only its books live under /app.
+ */
+export async function getBooksWorkspace(): Promise<Workspace | null> {
+  const ws = await getWorkspace();
+  if (!ws) return null;
+  if (ws.tenant.kind === "customer") return ws;
+  if (ws.tenant.kind === "house" && houseBooksEmails().has(normalizeEmail(ws.user.email))) return ws;
+  return null;
+}
+
+/**
+ * A sign-in for the house books. Creates the house user the first time a
+ * listed email asks for a link. An email that already belongs to a customer
+ * account is never moved into the house account.
+ */
+export async function findOrCreateHouseUser(email: string): Promise<{ id: string } | null> {
+  const e = normalizeEmail(email);
+  if (!houseBooksEmails().has(e)) return null;
+  const local = e.split("@")[0].replace(/[^a-z0-9]+/g, " ").trim();
+  await db
+    .insert(users)
+    .values({ tenantId: HOUSE_TENANT_ID, email: e, fullName: local ? local[0].toUpperCase() + local.slice(1) : "Owner", role: "franchise_owner" })
+    .onConflictDoNothing();
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.email, e), eq(users.tenantId, HOUSE_TENANT_ID)))
+    .limit(1);
+  return row ?? null;
 }
 
 /**

@@ -11,6 +11,8 @@ import {
   type LedgerAccount,
 } from "@/lib/db/schema";
 import { ACCOUNT_RANGES, accountTypeForBank, type AccountType } from "@/lib/books/ledger-constants";
+import { bankLinePosting, type LineInput } from "@/lib/books/logic";
+export { bankLinePosting } from "@/lib/books/logic";
 
 // The ledger: double entry, cash basis, append-only. The spec is
 // docs/FINANCIALS_SPEC.md; this file is its implementation, and where they
@@ -123,21 +125,7 @@ export async function ensureLedger(ex: Exec, tenantId: string): Promise<void> {
   }
 }
 
-type LineInput = { accountId: string; debitCents: number; creditCents: number };
 
-/** Debit and credit for one bank line, by the spec's posting table. Pure; exported for the verify script. */
-export function bankLinePosting(amountCents: number, bankAccountLedgerId: string, categoryLedgerId: string): LineInput[] {
-  const abs = Math.abs(amountCents);
-  return amountCents > 0
-    ? [
-        { accountId: bankAccountLedgerId, debitCents: abs, creditCents: 0 },
-        { accountId: categoryLedgerId, debitCents: 0, creditCents: abs },
-      ]
-    : [
-        { accountId: categoryLedgerId, debitCents: abs, creditCents: 0 },
-        { accountId: bankAccountLedgerId, debitCents: 0, creditCents: abs },
-      ];
-}
 
 async function insertEntry(
   tx: Tx,

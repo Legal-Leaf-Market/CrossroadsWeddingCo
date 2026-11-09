@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import ConnectionActions from "@/components/account/ConnectionActions";
 import PlaidConnect from "@/components/account/PlaidConnect";
-import { getCustomerWorkspace } from "@/lib/auth";
+import { getBooksWorkspace } from "@/lib/auth";
 import { listConnections, recentTransactions, unreviewedCount, type ConnectionView } from "@/lib/integrations/bank-feed";
 import { providers } from "@/lib/integrations/registry";
 import { PLATFORM_NAME } from "@/lib/tenant-constants";
@@ -23,7 +23,7 @@ const STATUS: Record<string, string> = {
 };
 
 export default async function IntegrationsPage() {
-  const ws = await getCustomerWorkspace();
+  const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
   const list = providers();
   const plaid = list.find((p) => p.key === "plaid")!;
@@ -44,9 +44,9 @@ export default async function IntegrationsPage() {
   }
 
   return (
-    <AccountShell signedIn>
-      <Link href="/app" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
-        &larr; Workspace
+    <AccountShell signedIn house={ws.tenant.kind === "house"}>
+      <Link href={ws.tenant.kind === "house" ? "/app/books" : "/app"} className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
+        &larr; {ws.tenant.kind === "house" ? "Books" : "Workspace"}
       </Link>
       <h1 className="mt-3 text-3xl text-charcoal">Integrations</h1>
       <p className="mt-2 text-ink/70">Connect the services your business already runs on.</p>

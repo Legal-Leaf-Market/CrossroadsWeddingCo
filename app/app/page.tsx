@@ -53,8 +53,8 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
   const showArchived = (await searchParams).archived === "1";
   const ws = await getWorkspace();
   if (!ws) redirect("/login");
-  // The house account is run from /admin/[key]; it has no workspace here.
-  if (ws.tenant.kind !== "customer") redirect("/login");
+  // The house account's bookings are run from /admin/[key]; only its books live here.
+  if (ws.tenant.kind !== "customer") redirect("/app/books");
 
   let lists: { upcoming: BookingListItem[]; past: BookingListItem[] } | null = null;
   try {
