@@ -489,3 +489,66 @@ CREATE TABLE IF NOT EXISTS playbook_bookings (
     data JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Multi-tenant signup, first slice (2026-11-09, Jacob: "start on the
+-- multi-tenant signup"). The platform is being opened to other wedding and
+-- event businesses, so every row needs an owner account. Crossroads itself is
+-- the HOUSE tenant, with a fixed id so code can name it without a lookup.
+--
+-- How the existing app keeps working untouched: tenant_id gets a DEFAULT of
+-- the house id on every table the current code writes to, and NULLs are
+-- backfilled to it. Every insert path that exists today (bookings, calls,
+-- reviews, the playbook) therefore lands in the house account without a code
+-- change, and the /admin/[key] dashboard reads only house rows. A customer
+-- account's rows can never appear on the Crossroads dashboard.
+--
+-- New tenant_id columns use ON DELETE RESTRICT: deleting an account must never
+-- silently take its bookings with it. (weddings and leads keep the FKs they
+-- already had; there is no tenant delete anywhere in the app, on purpose.)
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS kind VARCHAR(20) NOT NULL DEFAULT 'customer';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS business_type VARCHAR(40);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan VARCHAR(20) NOT NULL DEFAULT 'trial';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
+
+INSERT INTO tenants (id, name, slug, domain, kind, plan)
+VALUES ('00000000-0000-4000-8000-000000000001', 'Crossroads Wedding and Event Co.',
+        'crossroads', 'crossroadsweddingco.shop', 'house', 'house')
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE weddings SET tenant_id = '00000000-0000-4000-8000-000000000001' WHERE tenant_id IS NULL;
+ALTER TABLE weddings ALTER COLUMN tenant_id SET DEFAULT '00000000-0000-4000-8000-000000000001';
+UPDATE leads SET tenant_id = '00000000-0000-4000-8000-000000000001' WHERE tenant_id IS NULL;
+ALTER TABLE leads ALTER COLUMN tenant_id SET DEFAULT '00000000-0000-4000-8000-000000000001';
+
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE office_hours ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE guestbook_entries ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+
+-- Account owners sign in with an emailed link: no passwords. Both tables store
+-- only a SHA-256 of the token, so a database read never yields a working link
+-- or a working session. A login token is single use (used_at) and short lived;
+-- the link opens a page with a button that POSTs, because mail scanners
+-- prefetch GET links and would otherwise burn the token before the person
+-- ever clicks it.
+CREATE TABLE IF NOT EXISTS login_tokens (
+    token_hash CHAR(64) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_login_tokens_user ON login_tokens (user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    token_hash CHAR(64) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id);

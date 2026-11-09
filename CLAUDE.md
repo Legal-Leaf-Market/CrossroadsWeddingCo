@@ -695,6 +695,32 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   mp4 still shows .com and waits on its voiceover re-record (see bar-pricing note);
   printed business cards carrying a .com QR need reprinting.
 
+- **Multi-tenant signup, first slice (2026-11-09, Jacob: "start on the multi-tenant signup in
+  Crossroads", after the EverSet competitor research).** The platform is being opened to other
+  wedding and event businesses (DJs first, then planners, photographers, venues). Crossroads is
+  the **house tenant** with a fixed id (`HOUSE_TENANT_ID`, `lib/tenant-constants.ts`): the
+  migration seeds it, backfills NULL `tenant_id` on `weddings` and `leads`, and sets it as the
+  column DEFAULT there and on new `tenant_id` columns on `appointments`, `office_hours` and
+  `guestbook_entries` (ON DELETE RESTRICT). So every existing write path lands in the house
+  account with no code change. `lib/admin.ts` and the check-in cron are scoped to the house
+  tenant: a customer's booking can never appear on the Crossroads dashboard, and its id 404s
+  there (verified). Accounts: `tenants.kind` ('house' | 'customer'), `business_type`, `plan`,
+  `trial_ends_at` (14 days, no card); the owner is a `users` row with role `franchise_owner`
+  (the existing enum value, read as "account owner"; no enum change, since ADD VALUE cannot be
+  used inside the migration's single transaction). Sign-in is passwordless (`lib/auth.ts`):
+  `login_tokens` (30 minutes, single use) and `user_sessions` (30 days, httpOnly `cw_session`
+  cookie) store only SHA-256 hashes. The emailed link opens `/login/verify`, whose button POSTs,
+  because mail scanners prefetch GET links. Redeeming is one conditional UPDATE (three
+  simultaneous POSTs: one session, two expired). Signup and login answer identically for new and
+  existing emails. **Signups stay closed until `SIGNUP_OPEN=1`**, and all account pages are
+  noindex. `/app` is the workspace: trial days, the account's own bookings (scoped by the
+  session's tenant, never a request parameter) and an honest empty state. NOT YET: customers
+  cannot create bookings, hubs or timelines (every booking route still writes the house
+  tenant), there is no billing, no per-account branding, Stripe Connect or Twilio, and the
+  appointments double-booking index is global on `(person_slug, starts_at)`, which must gain
+  `tenant_id` before customers get calendars. There is deliberately no tenant delete: the
+  `weddings` and `leads` FKs from the original schema still CASCADE.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

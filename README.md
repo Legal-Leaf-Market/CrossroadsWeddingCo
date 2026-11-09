@@ -29,6 +29,9 @@ pnpm ig:posts   # regenerate the Instagram images in content/instagram/
 | `IG_STUDIO_TOKEN` | `/ig-studio` | Shared secret. Unset means the API fails closed with a 501. |
 | `ANTHROPIC_API_KEY` | `/ig-studio` | |
 | `UNSPLASH_ACCESS_KEY` | `/ig-studio` | |
+| `SIGNUP_OPEN` | `/signup` | Set to `1` to let other businesses create accounts. Unset means the page says signups aren't open and `/api/signup` answers 403. |
+| `NEXT_PUBLIC_PLATFORM_NAME` | `/signup`, `/login`, `/app`, sign-in emails | Name of the software sold to other businesses. Defaults to the working name "Crossroads Agency OS". |
+| `RESEND_PLATFORM_FROM` | Sign-in emails | Optional. Defaults to `<platform name> <booking@crossroadsweddingco.shop>`. |
 | `IG_STUDIO_MODEL` | `/ig-studio` | Optional model override. |
 
 `NEXT_PUBLIC_*` variables are inlined at build time, so changing one in Vercel
@@ -103,3 +106,15 @@ is disallowed in `robots.ts`; the tokened pages rely on noindex metadata.
 | `lib/email.ts` / `lib/spotify.ts` | Resend + Spotify integrations, both fail closed without keys |
 | `content/instagram/` | Generated post images and their captions |
 | `scripts/` | The leads table DDL and the Instagram image generator |
+
+## Business accounts (multi-tenant signup)
+
+Other wedding and event businesses can sign up for the platform at `/signup`
+once `SIGNUP_OPEN=1` is set. Each signup creates a `tenants` row (their
+account, on a 14-day trial, no card) and a `users` row for the owner. Sign-in
+is an emailed link: `/login` sends it, `/login/verify` holds a button that
+spends it, and `/app` is the signed-in workspace. Crossroads itself is the
+house account (`HOUSE_TENANT_ID` in `lib/tenant-constants.ts`); every existing
+table defaults to it, and `/admin/[key]` reads only house rows. Without
+`RESEND_API_KEY` in production, signup and sign-in refuse with a 503 instead
+of promising an email; in local dev the link is printed to the server log.

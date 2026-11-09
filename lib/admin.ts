@@ -4,6 +4,13 @@ import { db } from "@/lib/db";
 import { appointments, leads, weddingMessages, weddings } from "@/lib/db/schema";
 import { nameSlug } from "@/lib/hub-constants";
 import { CORPORATE_PACKAGE } from "@/lib/invoice";
+import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
+
+// This dashboard is Crossroads' own (the house account). Every query below is
+// scoped to HOUSE_TENANT_ID, so a business that signs up for the platform can
+// never have its bookings, leads or calls show up here, and a wedding id from
+// another account reads as not found.
+const isHouse = eq(weddings.tenantId, HOUSE_TENANT_ID);
 
 /**
  * Gate for everything under /admin/[key]: true only when ADMIN_DASH_KEY is
@@ -135,7 +142,7 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
 /** One wedding for the admin inbox page; null when the id is unknown. */
 export async function getAdminWedding(weddingId: string): Promise<AdminWedding | null> {
   if (!/^[0-9a-f-]{36}$/.test(weddingId)) return null;
-  const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId)).limit(1);
+  const [w] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
   return w ? toAdminWedding(w) : null;
 }
 
@@ -144,7 +151,7 @@ export async function getAdminWeddingRow(
   weddingId: string,
 ): Promise<typeof weddings.$inferSelect | null> {
   if (!/^[0-9a-f-]{36}$/.test(weddingId)) return null;
-  const [w] = await db.select().from(weddings).where(eq(weddings.id, weddingId)).limit(1);
+  const [w] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
   return w ?? null;
 }
 
@@ -170,6 +177,7 @@ export async function countersignContract(
     .where(
       and(
         eq(weddings.id, weddingId),
+        isHouse,
         isNotNull(weddings.contractAcceptedAt),
         isNull(weddings.contractCountersignedAt),
       ),
@@ -184,8 +192,8 @@ export async function countersignContract(
 
 export async function getAdminData(): Promise<AdminData> {
   const [allWeddings, recentLeads, unreadRows, callRows] = await Promise.all([
-    db.select().from(weddings).where(isNull(weddings.archivedAt)).orderBy(weddings.eventDate),
-    db.select().from(leads).orderBy(desc(leads.createdAt)).limit(10),
+    db.select().from(weddings).where(and(isHouse, isNull(weddings.archivedAt))).orderBy(weddings.eventDate),
+    db.select().from(leads).where(eq(leads.tenantId, HOUSE_TENANT_ID)).orderBy(desc(leads.createdAt)).limit(10),
     db
       .select({
         weddingId: weddingMessages.weddingId,
@@ -199,6 +207,7 @@ export async function getAdminData(): Promise<AdminData> {
       .from(appointments)
       .where(
         and(
+          eq(appointments.tenantId, HOUSE_TENANT_ID),
           isNull(appointments.cancelledAt),
           sql`${appointments.startsAt} >= now() - interval '1 day'`,
         ),
@@ -251,7 +260,7 @@ export async function getArchivedWeddings(): Promise<AdminWedding[]> {
   const rows = await db
     .select()
     .from(weddings)
-    .where(isNotNull(weddings.archivedAt))
+    .where(and(isHouse, isNotNull(weddings.archivedAt)))
     .orderBy(desc(weddings.archivedAt));
   return rows.map((w) => toAdminWedding(w));
 }
@@ -268,7 +277,7 @@ export async function setWeddingArchived(weddingId: string, archived: boolean): 
   await db
     .update(weddings)
     .set({ archivedAt: archived ? new Date() : null, updatedAt: new Date() })
-    .where(eq(weddings.id, weddingId));
+    .where(and(eq(weddings.id, weddingId), isHouse));
   return true;
 }
 
@@ -300,7 +309,7 @@ export async function updateAdminWedding(
   if (patch.artTheme !== undefined) set.artTheme = patch.artTheme;
   if (patch.addons !== undefined) set.addons = patch.addons;
   if (patch.status !== undefined) set.status = patch.status;
-  await db.update(weddings).set(set).where(eq(weddings.id, weddingId));
+  await db.update(weddings).set(set).where(and(eq(weddings.id, weddingId), isHouse));
   return true;
 }
 
@@ -330,6 +339,7 @@ export async function createCorporateBooking(input: {
   const [row] = await db
     .insert(weddings)
     .values({
+      tenantId: HOUSE_TENANT_ID,
       accessToken,
       shareToken,
       coupleNames: input.company,

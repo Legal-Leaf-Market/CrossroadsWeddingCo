@@ -323,3 +323,49 @@ export async function sendIntroCallEmails(input: {
     else if (r.value.error) console.error("[email] intro call failed:", r.value.error);
   }
 }
+
+/**
+ * Sign-in link for a business account on the platform (multi-tenant signup).
+ * Returns false when email is not configured or the send failed, so the
+ * caller can say so instead of telling someone to check an inbox that will
+ * stay empty.
+ */
+export async function sendLoginLink(input: {
+  to: string;
+  fullName: string;
+  link: string;
+  isNewAccount: boolean;
+  platformName: string;
+}): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return false;
+  const first = input.fullName.trim().split(/\s+/)[0] || "there";
+  try {
+    const { error } = await new Resend(key).emails.send({
+      from: process.env.RESEND_PLATFORM_FROM ?? `${input.platformName} <${EMAIL_FROM_ADDRESS}>`,
+      to: input.to,
+      subject: input.isNewAccount
+        ? `Your ${input.platformName} account is ready`
+        : `Your ${input.platformName} sign-in link`,
+      text: [
+        `Hi ${first},`,
+        ``,
+        input.isNewAccount
+          ? `Your account is set up. Open this link to sign in for the first time:`
+          : `Here's your sign-in link:`,
+        ``,
+        input.link,
+        ``,
+        `The link works once and expires in 30 minutes. If you didn't ask for it, ignore this email and nothing happens.`,
+      ].join("\n"),
+    });
+    if (error) {
+      console.error("[email] login link failed:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[email] login link failed:", err);
+    return false;
+  }
+}

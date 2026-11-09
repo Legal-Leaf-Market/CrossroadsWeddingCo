@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { and, isNotNull, notInArray, sql } from "drizzle-orm";
+import { and, eq, isNotNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
 import { daysOut } from "@/lib/hub-constants";
 import { isSmsConfigured, sendSms, toE164US } from "@/lib/sms";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 
 // Daily milestone check-in texts (owner request 2026-08-27, CLAUDE.md §9.4):
 // 90, 30, and 14 days out the couple gets a short "checking in" text with
@@ -59,6 +60,8 @@ export async function GET(request: Request) {
     .from(weddings)
     .where(
       and(
+        // Texts go out from Crossroads' number in Crossroads' voice: house bookings only.
+        eq(weddings.tenantId, HOUSE_TENANT_ID),
         isNotNull(weddings.contactPhone),
         notInArray(weddings.status, ["cancelled", "completed"]),
         sql`${weddings.eventDate} > current_date`,

@@ -15,6 +15,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 
 // Enums (CLAUDE.md §3). Kept in sync with scripts/phase1-schema.sql by hand;
 // migrations in this repo are hand-authored, additive, idempotent SQL.
@@ -54,6 +55,12 @@ export const tenants = pgTable("tenants", {
   stripeAccountId: varchar("stripe_account_id", { length: 255 }),
   royaltyRate: numeric("royalty_rate", { precision: 4, scale: 3 }).default("0.070"),
   isActive: boolean("is_active").default(true),
+  /** "house" for Crossroads itself, "customer" for a business that signed up. */
+  kind: varchar("kind", { length: 20 }).notNull().default("customer"),
+  /** BUSINESS_TYPES key from lib/tenant-constants.ts. */
+  businessType: varchar("business_type", { length: 40 }),
+  plan: varchar("plan", { length: 20 }).notNull().default("trial"),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -349,6 +356,7 @@ export const officeHours = pgTable(
   "office_hours",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().default(HOUSE_TENANT_ID).references(() => tenants.id, { onDelete: "restrict" }),
     personSlug: varchar("person_slug", { length: 40 }).notNull(),
     /** 0 = Sunday, matching Date#getDay. */
     weekday: integer("weekday").notNull(),
@@ -364,6 +372,7 @@ export const appointments = pgTable(
   "appointments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().default(HOUSE_TENANT_ID).references(() => tenants.id, { onDelete: "restrict" }),
     personSlug: varchar("person_slug", { length: 40 }).notNull(),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     durationMinutes: integer("duration_minutes").notNull().default(30),
@@ -393,6 +402,7 @@ export const guestbookEntries = pgTable(
   "guestbook_entries",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().default(HOUSE_TENANT_ID).references(() => tenants.id, { onDelete: "restrict" }),
     name: varchar("name", { length: 80 }).notNull(),
     relation: varchar("relation", { length: 60 }).notNull().default(""),
     message: text("message").notNull(),
@@ -403,3 +413,31 @@ export const guestbookEntries = pgTable(
   },
   (t) => [index("idx_guestbook_created").on(t.createdAt)],
 );
+
+// 14. Account sign-in (multi-tenant signup, 2026-11-09). Emailed links, no
+// passwords. Only SHA-256 hashes of tokens are stored. See lib/auth.ts.
+export const loginTokens = pgTable(
+  "login_tokens",
+  {
+    tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_login_tokens_user").on(t.userId, t.createdAt)],
+);
+
+export const userSessions = pgTable(
+  "user_sessions",
+  {
+    tokenHash: varchar("token_hash", { length: 64 }).primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_user_sessions_user").on(t.userId)],
+);
+
+export type Tenant = typeof tenants.$inferSelect;
+export type User = typeof users.$inferSelect;
