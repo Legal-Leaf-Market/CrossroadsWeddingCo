@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { Resend } from "resend";
 import { createEntry } from "@/lib/reviews";
-import { RELATIONS } from "@/lib/review-constants";
+import { RELATIONS, findReviewEvent } from "@/lib/review-constants";
 import { EMAIL_FROM_ADDRESS, OWNER_EMAIL, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const runtime = "nodejs";
@@ -33,6 +33,7 @@ const schema = z.object({
   relation: z.enum(RELATIONS).optional().default("Other"),
   message: z.string().trim().min(2, "Write a few words first").max(2000, "Keep it under 2,000 characters"),
   website: z.string().optional().default(""),
+  eventSlug: z.string().max(80).optional(),
 });
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -54,7 +55,8 @@ export async function POST(req: NextRequest) {
   if (data.website) return NextResponse.json({ ok: true }, { headers: NO_STORE });
 
   try {
-    await createEntry({ name: data.name, relation: data.relation, message: data.message });
+    // Only a real event page slug is kept; anything else is dropped, never refused.
+    await createEntry({ name: data.name, relation: data.relation, message: data.message, eventSlug: findReviewEvent(data.eventSlug)?.slug ?? null });
   } catch (err) {
     console.error("[reviews] insert failed:", err);
     return NextResponse.json(

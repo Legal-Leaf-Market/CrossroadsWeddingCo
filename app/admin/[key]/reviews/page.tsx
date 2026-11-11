@@ -61,6 +61,7 @@ export default async function ReviewModerationPage({ params }: { params: Promise
                       {new Date(e.createdAt).toLocaleString("en-US", { timeZone: VENUE_TIME_ZONE, dateStyle: "medium", timeStyle: "short" })}
                     </span>
                   </p>
+                  {e.source && <p className="mt-1 text-xs text-terracotta-dark">{e.source}</p>}
                   <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-ink/50">
                     {LABEL[e.state]}
                     {e.featured ? " · pinned" : ""}

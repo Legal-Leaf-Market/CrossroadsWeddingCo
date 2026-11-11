@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ReviewForm from "@/components/ReviewForm";
+import EventGallery from "@/components/EventGallery";
 import { getPublicEntries, type PublicEntry } from "@/lib/reviews";
 import { REVIEW_EVENTS } from "@/lib/review-constants";
 import { VENUE_TIME_ZONE } from "@/lib/site";
@@ -75,41 +76,16 @@ export default async function ReviewsPage() {
         </section>
 
         {REVIEW_EVENTS.map((ev) => (
-          <section key={ev.title} className="bg-cream py-12">
+          <section key={ev.slug} className="bg-cream py-12">
             <div className="mx-auto max-w-5xl px-6">
               <h2 className="text-2xl text-charcoal">{ev.title}</h2>
               <p className="mt-1 text-sm text-ink/60">{ev.date}</p>
-              {/* Columns, not a grid: the photos mix portrait and landscape, and
-                  a grid would crop or leave holes. */}
-              <div className="mt-6 columns-1 gap-3 sm:columns-2 lg:columns-3">
-                {ev.media.map((m) => (
-                  <div key={m.src} className="mb-3 break-inside-avoid">
-                    {m.kind === "video" ? (
-                      <video
-                        src={m.src}
-                        poster={m.poster}
-                        controls
-                        playsInline
-                        preload="none"
-                        width={m.width}
-                        height={m.height}
-                        className="h-auto w-full rounded-xl bg-charcoal"
-                        aria-label={m.alt}
-                      />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={m.src}
-                        alt={m.alt}
-                        width={m.width}
-                        height={m.height}
-                        loading="lazy"
-                        className="h-auto w-full rounded-xl"
-                      />
-                    )}
-                  </div>
-                ))}
+              <div className="mt-6">
+                <EventGallery media={ev.media} />
               </div>
+              <a href={`/weddings/${ev.slug}`} className="mt-4 inline-block text-sm font-semibold text-terracotta underline decoration-terracotta/40 underline-offset-2 hover:text-terracotta-dark">
+                {ev.media.length ? "See this event's page" : "Photos coming soon. See this event's page"}
+              </a>
             </div>
           </section>
         ))}

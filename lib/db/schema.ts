@@ -176,6 +176,14 @@ export const weddings = pgTable(
     weddingSiteUrl: varchar("wedding_site_url", { length: 500 }),
     /** What guests were told to wear, in the couple's own words. */
     dressCode: varchar("dress_code", { length: 200 }),
+    /** Public wedding website at /w/<siteSlug>: off until the couple turns it on. */
+    siteEnabled: boolean("site_enabled").notNull().default(false),
+    siteSlug: varchar("site_slug", { length: 90 }),
+    siteStory: text("site_story"),
+    /** [{label, url}] registry, hotel block, their own site. lib/wedding-site-constants.ts */
+    siteLinks: jsonb("site_links").notNull().default([]),
+    /** [{q, a}] answers to guest questions. */
+    siteFaq: jsonb("site_faq").notNull().default([]),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull().default("1000.00"),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),
@@ -410,6 +418,10 @@ export const guestbookEntries = pgTable(
     featured: boolean("featured").notNull().default(false),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    /** Signed on an event page (REVIEW_EVENTS slug). */
+    eventSlug: varchar("event_slug", { length: 80 }),
+    /** Written by the couple from their own hub: that hub's wedding. */
+    weddingId: uuid("wedding_id").references(() => weddings.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("idx_guestbook_created").on(t.createdAt)],
@@ -598,3 +610,21 @@ export const journalLines = pgTable("journal_lines", {
   creditCents: bigint("credit_cents", { mode: "number" }).notNull().default(0),
 });
 export type LedgerAccount = typeof ledgerAccounts.$inferSelect;
+
+// 16. Engagement photos on the wedding website (2026-11-11). lib/site-photos.ts
+export const sitePhotos = pgTable(
+  "site_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+    mimeType: varchar("mime_type", { length: 40 }).notNull(),
+    byteSize: integer("byte_size").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    caption: varchar("caption", { length: 200 }).notNull().default(""),
+    orderIndex: integer("order_index").notNull().default(0),
+    data: customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" })("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_site_photos_wedding").on(t.weddingId, t.orderIndex)],
+);

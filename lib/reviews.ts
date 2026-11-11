@@ -1,6 +1,8 @@
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { guestbookEntries } from "@/lib/db/schema";
+import { guestbookEntries, weddings } from "@/lib/db/schema";
+import { findReviewEvent } from "@/lib/review-constants";
+import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 export { RELATIONS } from "@/lib/review-constants";
 
 // The public notes board at /reviews (2026-11-01, Jacob). Couples, venue
@@ -24,6 +26,8 @@ export type PublicEntry = {
 
 export type ModerationEntry = PublicEntry & {
   state: "waiting" | "approved" | "hidden";
+  /** Where it was written: an event page's title, or the couple's own hub. */
+  source: string | null;
 };
 
 /** Approved and not hidden, featured first, then newest. */
@@ -58,6 +62,11 @@ export async function getModerationEntries(): Promise<ModerationEntry[]> {
     featured: r.featured,
     createdAt: r.createdAt.toISOString(),
     state: r.hiddenAt ? "hidden" : r.approvedAt ? "approved" : "waiting",
+    source: r.weddingId
+      ? "Written by the couple from their planning hub"
+      : r.eventSlug
+        ? `Signed on the ${findReviewEvent(r.eventSlug)?.title ?? r.eventSlug} page`
+        : null,
   }));
 }
 
@@ -65,10 +74,18 @@ export async function createEntry(input: {
   name: string;
   relation: string;
   message: string;
+  eventSlug?: string | null;
+  weddingId?: string | null;
 }): Promise<string> {
   const [row] = await db
     .insert(guestbookEntries)
-    .values({ name: input.name, relation: input.relation, message: input.message })
+    .values({
+      name: input.name,
+      relation: input.relation,
+      message: input.message,
+      eventSlug: input.eventSlug ?? null,
+      weddingId: input.weddingId ?? null,
+    })
     .returning({ id: guestbookEntries.id });
   return row.id;
 }
@@ -92,4 +109,48 @@ export async function moderateEntry(id: string, action: ModerationAction): Promi
     .where(eq(guestbookEntries.id, id))
     .returning({ id: guestbookEntries.id });
   return rows.length > 0;
+}
+
+/**
+ * Approved notes for one event page: signed on that page, or written by the
+ * couple from the hub of a Crossroads wedding held on that date.
+ */
+export async function getEventEntries(slug: string, eventDate: string): Promise<PublicEntry[]> {
+  const rows = await db
+    .select()
+    .from(guestbookEntries)
+    .where(
+      and(
+        isNotNull(guestbookEntries.approvedAt),
+        isNull(guestbookEntries.hiddenAt),
+        or(
+          eq(guestbookEntries.eventSlug, slug),
+          inArray(
+            guestbookEntries.weddingId,
+            db
+              .select({ id: weddings.id })
+              .from(weddings)
+              .where(and(eq(weddings.eventDate, eventDate), eq(weddings.tenantId, HOUSE_TENANT_ID))),
+          ),
+        ),
+      ),
+    )
+    .orderBy(desc(guestbookEntries.featured), desc(guestbookEntries.createdAt));
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    relation: r.relation,
+    message: r.message,
+    featured: r.featured,
+    createdAt: r.createdAt.toISOString(),
+  }));
+}
+
+/** Notes this wedding's hub has sent in the last day, for a gentle limit. */
+export async function hubNotesToday(weddingId: string): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(guestbookEntries)
+    .where(and(eq(guestbookEntries.weddingId, weddingId), sql`${guestbookEntries.createdAt} > now() - interval '1 day'`));
+  return r?.n ?? 0;
 }

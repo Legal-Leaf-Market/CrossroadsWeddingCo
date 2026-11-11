@@ -781,3 +781,48 @@ CREATE CONSTRAINT TRIGGER journal_lines_balance
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS payment_kind VARCHAR(20); -- deposit | balance
 CREATE INDEX IF NOT EXISTS idx_bank_tx_booking ON bank_transactions (tenant_id, booking_id) WHERE booking_id IS NOT NULL;
+
+-- Wedding website (2026-11-11, Jacob: "mock up a public site for Lauren and
+-- Clay"). A public page for guests at /w/<site_slug>, switched on by the couple
+-- from their hub and built from what they already entered there (names, date,
+-- venue, the guest schedule, dress code) plus the few things only a website
+-- needs: their story, links (registry, hotel block) and answers to guest
+-- questions. Off by default: nothing about a wedding is public until the
+-- couple turns it on. The slug carries a six-character random tail, so knowing
+-- a couple's names is not enough to find their page.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_enabled BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_slug VARCHAR(90);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_story TEXT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_links JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_faq JSONB NOT NULL DEFAULT '[]'::jsonb;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_weddings_site_slug ON weddings (site_slug) WHERE site_slug IS NOT NULL;
+
+-- Notes tied to an event (2026-11-11, Jacob: "a page for Kat and Tanis ... and a
+-- place for the bride and groom to comment their experience"). A note signed on
+-- an event page carries that page's slug; a note the couple writes from inside
+-- their own planning hub carries their wedding, which is what proves it is
+-- them. Both still wait for approval like every other note.
+ALTER TABLE guestbook_entries ADD COLUMN IF NOT EXISTS event_slug VARCHAR(80);
+ALTER TABLE guestbook_entries ADD COLUMN IF NOT EXISTS wedding_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_guestbook_event ON guestbook_entries (event_slug);
+CREATE INDEX IF NOT EXISTS idx_guestbook_wedding ON guestbook_entries (wedding_id);
+
+-- Engagement photos for the wedding website (2026-11-11, Jacob: "add any
+-- engagement pictures"). Bytes in Postgres like wedding_documents, for the same
+-- reasons: no blob store, a handful per wedding, and a photo must never outlive
+-- its wedding. The hub resizes each photo in the browser before upload (long
+-- edge 2000px, re-encoded as JPEG), which also drops EXIF and GPS. Served
+-- publicly only while the couple's site is switched on.
+CREATE TABLE IF NOT EXISTS site_photos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wedding_id UUID NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
+    mime_type VARCHAR(40) NOT NULL,
+    byte_size INTEGER NOT NULL,
+    width INTEGER,
+    height INTEGER,
+    caption VARCHAR(200) NOT NULL DEFAULT '',
+    order_index INTEGER NOT NULL DEFAULT 0,
+    data BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_site_photos_wedding ON site_photos (wedding_id, order_index);

@@ -913,6 +913,45 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   the fourth try in an hour is refused, the emailed hub link opens, no sideways scroll at 390
   and 1280.
 
+- **Wedding website, replacing Zola / The Knot / WeddingWire (2026-11-11, Jacob: "mock up a
+  public site for Lauren and Clay ... this would be to replace Zola or Wedding Wire ... not
+  RSVP type ... engagement pictures ... map integration with the venue address ... a checkbox
+  for using internal Crossroads website, and then an optional box for existing Zola, Wedding
+  Wire, the Knot").** `/w/<site_slug>`, switched on from the hub's "Your wedding website"
+  section ("Use the <brand> wedding website?"), which also holds engagement photos, story,
+  links (registry, hotel block), guest Q&A and the optional outside-site link (it edits the
+  same `weddings.wedding_site_url` as Details, and the public page lists it as "Our wedding
+  site"). No RSVP. Columns `site_enabled` (default false), `site_slug` (names + 6 random hex,
+  minted on first switch-on and kept), `site_story`, `site_links`, `site_faq`. **Nothing is
+  public until it is switched on; switched off, the page and every photo URL 404 at once.**
+  Schedule shows times and titles only, never MC notes. Map: Google's keyless embed of
+  venue name + address, plus a directions link; no API key. Never indexed. Branded with the
+  booking's own account. Photos (`site_photos`, bytes in Postgres, max 12, 3 MB): the hub
+  resizes to a 2000px long edge and re-encodes to JPEG in the browser, which strips EXIF and
+  GPS (verified: no Exif in stored bytes); the server trusts magic bytes, not the label
+  (JPEG/PNG/WebP), counts under a row lock, and serves with nosniff + CSP sandbox; the hub
+  reads its own photos even while the site is off. `/w/preview` is the dev-only twin. The
+  Lauren and Clay mockup was rendered from a LOCAL test booking with sample details and
+  placeholder photos; nothing about them is in the repo. Verified against a real Postgres
+  and headless Chromium at 390 and 1280.
+- **Event pages and the couple's own note (2026-11-11, Jacob: "a page up for Kat and Tanis
+  ... like you have for Adam's Valle Vista wedding and a place for the bride and groom to
+  comment their experience").** `REVIEW_EVENTS` entries gain `slug` and `eventDate`; each
+  gets `/weddings/<slug>` (gallery, approved notes, a sign form tagged with the slug) and is
+  in the sitemap; `/reviews` and the homepage gallery link to them. Pages are titled by venue
+  and date, never the couple's names. Kat and Tanis is `forge-on-4th-2026-11-07` with NO
+  its own look (`theme: "goth"`, Jacob 2026-11-11: "emo pop punk Gothic"): black and
+  violet from their day, their own "'Til We Are Ghosts" sign as the headline, and each photo
+  a tarot card (`GothGallery`, after their tarot-named tables) taped at a fixed tilt. Seven
+  photos, prepared like Valle Vista (long edge 1600, EXIF/GPS stripped). Deliberately left
+  out: the seating-chart mirror (about 90 guests' full names legible) and a photo of two
+  guests, who are not covered by the couple's marketing-photo consent. The couple writes from their
+  own hub: a "How was your day?" card appears on house weddings once the event date has
+  come (Indiana time), posts to `/api/hub/[token]/review` (relation "Our wedding",
+  `guestbook_entries.wedding_id`, three a day), emails the owner, and waits for approval like
+  every note; the moderation screen says where each note came from. An event page shows
+  approved notes tagged with its slug or written from a house wedding's hub on its date.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

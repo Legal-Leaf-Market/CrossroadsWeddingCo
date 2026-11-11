@@ -8,6 +8,10 @@ import DocumentsSection from "@/components/hub/DocumentsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
+import WebsiteSection from "@/components/hub/WebsiteSection";
+import ExperienceCard from "@/components/hub/ExperienceCard";
+import { listSitePhotos } from "@/lib/site-photos";
+import { normalizeFaq, normalizeLinks } from "@/lib/wedding-site-constants";
 import { isCallsConfigured } from "@/lib/calls";
 import { getPortalData, isHubToken } from "@/lib/hub";
 import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
@@ -43,10 +47,12 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
     listDocuments(wedding.id),
     brandForTenant(wedding.tenantId),
   ]);
+  const sitePhotoList = await listSitePhotos(wedding.id).catch(() => []);
   // Crossroads-only pieces: the agreement is Crossroads' terms and prices, the
   // message thread and video calls reach the Crossroads team. A business on
   // the platform gets none of them until each is rebuilt per account.
   const house = brand.isHouse;
+  const todayInIndiana = new Date().toLocaleDateString("en-CA", { timeZone: "America/Indiana/Indianapolis" });
   const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
   // The hub-managed playlist links, seeded from the single link captured at
   // booking when the couple hasn't managed the list yet. The playlists route
@@ -121,6 +127,9 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
       </header>
 
       <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+        {house && wedding.eventDate <= todayInIndiana && (
+          <ExperienceCard token={token} coupleNames={wedding.coupleNames} />
+        )}
         <CountdownHero
           eventDate={wedding.eventDate}
           startTime={timeline[0]?.scheduledStartTime.slice(0, 5) ?? null}
@@ -213,6 +222,19 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             entranceSongOverride: v.entranceSongOverride ?? "",
             notes: v.notes ?? "",
           }))}
+        />
+        <WebsiteSection
+          token={token}
+          brandName={brand.name}
+          initial={{
+            photos: sitePhotoList,
+            ownSiteUrl: wedding.weddingSiteUrl ?? "",
+            enabled: wedding.siteEnabled,
+            slug: wedding.siteSlug,
+            story: wedding.siteStory ?? "",
+            links: normalizeLinks(wedding.siteLinks),
+            faq: normalizeFaq(wedding.siteFaq),
+          }}
         />
         {house && (
         <p className="pb-8 text-center text-xs text-ink/40">

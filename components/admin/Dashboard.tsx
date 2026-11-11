@@ -248,6 +248,56 @@ function SourceTally({ weddings }: { weddings: AdminWedding[] }) {
   );
 }
 
+// Readiness for the coming year's weddings (2026-11-11, Jacob: "fully
+// converted over for the 6 next year weddings"). One row per upcoming wedding,
+// one column per thing that has to be true before the day, read straight from
+// the booking. A missing email matters most: without one, /my-wedding cannot
+// send the couple their hub link.
+function Readiness({ weddings }: { weddings: AdminWedding[] }) {
+  const rows = weddings.filter((w) => w.packageType !== "corporate" && w.status !== "cancelled");
+  if (rows.length === 0) return null;
+  const mark = (ok: boolean) => (
+    <span className={ok ? "font-semibold text-charcoal" : "font-semibold text-terracotta-dark"}>{ok ? "Yes" : "No"}</span>
+  );
+  const ready = rows.filter((w) => w.contactEmail && w.contractAcceptedAt && w.contractCountersignedAt && w.isDepositPaid).length;
+  return (
+    <section>
+      <h2 className="mb-1 text-lg font-semibold text-charcoal">Ready for the day?</h2>
+      <p className="mb-3 text-sm text-ink/60">
+        {ready} of {rows.length} upcoming weddings have everything. Email on file is what lets a couple get their hub link
+        themselves at /my-wedding; add it from their hub&apos;s Details if it&apos;s missing.
+      </p>
+      <div className="overflow-x-auto rounded-2xl border border-parchment bg-white p-4">
+        <table className="w-full min-w-[560px] text-sm">
+          <thead>
+            <tr className="text-left text-ink/50">
+              <th className="pb-2 font-medium">Wedding</th>
+              <th className="pb-2 font-medium">Email on file</th>
+              <th className="pb-2 font-medium">They signed</th>
+              <th className="pb-2 font-medium">We signed</th>
+              <th className="pb-2 font-medium">Deposit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((w) => (
+              <tr key={w.id} className="border-t border-parchment">
+                <td className="py-1.5 pr-3">
+                  <span className="font-semibold text-charcoal">{w.coupleNames}</span>
+                  <span className="block text-xs text-ink/55">{formatEventDate(w.eventDate)}</span>
+                </td>
+                <td className="py-1.5">{mark(Boolean(w.contactEmail))}</td>
+                <td className="py-1.5">{mark(Boolean(w.contractAcceptedAt))}</td>
+                <td className="py-1.5">{mark(Boolean(w.contractCountersignedAt))}</td>
+                <td className="py-1.5">{mark(w.isDepositPaid)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 // Intro calls booked from /book?with=<slug>. Corporate inquiries and venue
 // referrals come in here rather than as weddings rows, so this is where a
 // "?src=venue" link shows whether it worked.
@@ -353,6 +403,7 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
       </header>
 
       <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <Readiness weddings={data.upcoming} />
         <CorporateBookingForm basePath={basePath} />
         <SourceTally weddings={[...data.upcoming, ...data.past]} />
         <CallList calls={data.calls} />
