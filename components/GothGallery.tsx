@@ -6,7 +6,6 @@ import type { ReviewMedia } from "@/lib/review-constants";
 // scripts. Tilt and tape vary by position, never by chance, so the server and
 // browser always agree.
 const TILTS = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2", "rotate-0", "-rotate-2", "rotate-1"];
-const NUMERALS = ["XVII", "VI", "II", "X", "X", "XIX", "XXI"];
 
 export default function GothGallery({ media }: { media: ReviewMedia[] }) {
   const cards = media.filter((m) => m.kind === "image");
@@ -26,7 +25,7 @@ export default function GothGallery({ media }: { media: ReviewMedia[] }) {
           <div className="rounded-[18px] border border-violet-300/40 bg-[#120d18] p-2.5 shadow-[0_0_30px_-6px_rgba(167,139,250,0.55)] transition group-hover:shadow-[0_0_44px_-4px_rgba(167,139,250,0.85)]">
             <div className="rounded-[12px] border border-violet-300/25 p-2">
               <p className="pb-2 text-center font-display text-[0.7rem] tracking-[0.4em] text-violet-200/70">
-                {NUMERALS[i % NUMERALS.length]}
+                {m.numeral ?? "\u00a0"}
               </p>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
