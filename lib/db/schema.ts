@@ -176,6 +176,14 @@ export const weddings = pgTable(
     weddingSiteUrl: varchar("wedding_site_url", { length: 500 }),
     /** What guests were told to wear, in the couple's own words. */
     dressCode: varchar("dress_code", { length: 200 }),
+    /** Public wedding website at /w/<siteSlug>: off until the couple turns it on. */
+    siteEnabled: boolean("site_enabled").notNull().default(false),
+    siteSlug: varchar("site_slug", { length: 90 }),
+    siteStory: text("site_story"),
+    /** [{label, url}] registry, hotel block, their own site. lib/wedding-site-constants.ts */
+    siteLinks: jsonb("site_links").notNull().default([]),
+    /** [{q, a}] answers to guest questions. */
+    siteFaq: jsonb("site_faq").notNull().default([]),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull().default("1000.00"),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),

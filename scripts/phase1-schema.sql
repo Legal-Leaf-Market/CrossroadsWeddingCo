@@ -781,3 +781,18 @@ CREATE CONSTRAINT TRIGGER journal_lines_balance
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS payment_kind VARCHAR(20); -- deposit | balance
 CREATE INDEX IF NOT EXISTS idx_bank_tx_booking ON bank_transactions (tenant_id, booking_id) WHERE booking_id IS NOT NULL;
+
+-- Wedding website (2026-11-11, Jacob: "mock up a public site for Lauren and
+-- Clay"). A public page for guests at /w/<site_slug>, switched on by the couple
+-- from their hub and built from what they already entered there (names, date,
+-- venue, the guest schedule, dress code) plus the few things only a website
+-- needs: their story, links (registry, hotel block) and answers to guest
+-- questions. Off by default: nothing about a wedding is public until the
+-- couple turns it on. The slug carries a six-character random tail, so knowing
+-- a couple's names is not enough to find their page.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_enabled BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_slug VARCHAR(90);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_story TEXT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_links JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_faq JSONB NOT NULL DEFAULT '[]'::jsonb;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_weddings_site_slug ON weddings (site_slug) WHERE site_slug IS NOT NULL;

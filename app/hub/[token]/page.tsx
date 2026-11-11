@@ -8,6 +8,8 @@ import DocumentsSection from "@/components/hub/DocumentsSection";
 import MusicSection from "@/components/hub/MusicSection";
 import TimelineSection from "@/components/hub/TimelineSection";
 import VipSection from "@/components/hub/VipSection";
+import WebsiteSection from "@/components/hub/WebsiteSection";
+import { normalizeFaq, normalizeLinks } from "@/lib/wedding-site-constants";
 import { isCallsConfigured } from "@/lib/calls";
 import { getPortalData, isHubToken } from "@/lib/hub";
 import { formatEventDate, normalizePlaylistLinks } from "@/lib/hub-constants";
@@ -213,6 +215,16 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             entranceSongOverride: v.entranceSongOverride ?? "",
             notes: v.notes ?? "",
           }))}
+        />
+        <WebsiteSection
+          token={token}
+          initial={{
+            enabled: wedding.siteEnabled,
+            slug: wedding.siteSlug,
+            story: wedding.siteStory ?? "",
+            links: normalizeLinks(wedding.siteLinks),
+            faq: normalizeFaq(wedding.siteFaq),
+          }}
         />
         {house && (
         <p className="pb-8 text-center text-xs text-ink/40">
