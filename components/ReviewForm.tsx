@@ -7,7 +7,7 @@ const field =
   "w-full rounded-lg border border-parchment bg-white px-4 py-2.5 text-ink placeholder:text-ink/40 focus:border-terracotta focus:outline-none";
 
 /** The public sign-the-board form. Name and a note; no email, no login. */
-export default function ReviewForm() {
+export default function ReviewForm({ eventSlug }: { eventSlug?: string } = {}) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState("");
 
@@ -25,6 +25,7 @@ export default function ReviewForm() {
           relation: String(form.get("relation") ?? "Other"),
           message: String(form.get("message") ?? ""),
           website: String(form.get("website") ?? ""),
+          ...(eventSlug ? { eventSlug } : {}),
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string };

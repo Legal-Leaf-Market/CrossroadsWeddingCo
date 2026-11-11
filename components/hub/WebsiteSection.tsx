@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hubInput, hubSave, SectionCard } from "./shared";
+import SitePhotos from "./SitePhotos";
 import { MAX_SITE_FAQ, MAX_SITE_LINKS, type SiteFaq, type SiteLink } from "@/lib/wedding-site-constants";
 
 // The couple's public wedding website: on/off, their story, links, and answers
@@ -9,10 +10,20 @@ import { MAX_SITE_FAQ, MAX_SITE_LINKS, type SiteFaq, type SiteLink } from "@/lib
 // because turning a public page on is a decision, not a keystroke.
 export default function WebsiteSection({
   token,
+  brandName,
   initial,
 }: {
   token: string;
-  initial: { enabled: boolean; slug: string | null; story: string; links: SiteLink[]; faq: SiteFaq[] };
+  brandName: string;
+  initial: {
+    enabled: boolean;
+    slug: string | null;
+    story: string;
+    links: SiteLink[];
+    faq: SiteFaq[];
+    photos: { id: string }[];
+    ownSiteUrl: string;
+  };
 }) {
   const [enabled, setEnabled] = useState(initial.enabled);
   const [slug, setSlug] = useState(initial.slug);
@@ -22,6 +33,7 @@ export default function WebsiteSection({
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [ownSite, setOwnSite] = useState(initial.ownSiteUrl);
 
   // The origin is only known in the browser; reading it during render would
   // make the server and client HTML disagree.
@@ -33,6 +45,14 @@ export default function WebsiteSection({
     setState("saving");
     setMsg("");
     const r = await hubSave(`/api/hub/${token}/site`, "PUT", { enabled: nextEnabled, story, links, faq });
+    if (r.ok && ownSite.trim() !== initial.ownSiteUrl.trim()) {
+      const d = await hubSave(`/api/hub/${token}/details`, "PATCH", { weddingSiteUrl: ownSite.trim() });
+      if (!d.ok) {
+        setState("error");
+        setMsg(d.message ?? "Saved, but the outside site link didn't. Check the address.");
+        return;
+      }
+    }
     if (!r.ok) {
       setState("error");
       setMsg(r.message ?? "Couldn't save. Check your connection and try again.");
@@ -49,13 +69,13 @@ export default function WebsiteSection({
 
   return (
     <SectionCard
-      title="Your page for guests"
-      subtitle="One link to send guests: your names, date and venue, the schedule you built above, plus your story, registry and answers to the questions everyone asks. Off until you turn it on. Already have a site elsewhere? Keep its link in Details and we point to it here."
+      title="Your wedding website"
+      subtitle={`A free wedding website from ${brandName}, instead of Zola, The Knot or WeddingWire: your engagement photos, names, date, a map to the venue, the schedule you built above, your story, registry and answers to the questions guests ask. Nothing is public until you turn it on.`}
       badge={badge}
     >
       <div className="rounded-xl border border-parchment bg-cream/50 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-charcoal">{enabled ? "Your guest page is on." : "Your guest page is off. Guests can't see anything."}</p>
+          <p className="text-sm font-semibold text-charcoal">{enabled ? `You're using the ${brandName} wedding website. It's live.` : `Use the ${brandName} wedding website? It's off, so guests can't see anything yet.`}</p>
           <button
             type="button"
             onClick={() => save(!enabled)}
@@ -66,7 +86,7 @@ export default function WebsiteSection({
                 : "rounded-full bg-terracotta px-4 py-2 text-sm font-semibold text-cream hover:bg-terracotta-dark disabled:opacity-60"
             }
           >
-            {enabled ? "Turn it off" : "Turn it on"}
+            {enabled ? "Turn it off" : "Yes, turn it on"}
           </button>
         </div>
         {enabled && slug && (
@@ -92,6 +112,8 @@ export default function WebsiteSection({
           </div>
         )}
       </div>
+
+      <SitePhotos token={token} initial={initial.photos} />
 
       <label className="mt-5 grid gap-1 text-sm font-semibold text-charcoal">
         Your story <span className="font-normal text-ink/55">(optional: how you met, the proposal, anything you want guests to know)</span>
@@ -139,6 +161,11 @@ export default function WebsiteSection({
         )}
       </div>
 
+      <label className="mt-5 grid gap-1 text-sm font-semibold text-charcoal">
+        Already have a site on Zola, The Knot or WeddingWire? <span className="font-normal text-ink/55">(optional: we link to it from your page)</span>
+        <input value={ownSite} onChange={(e) => setOwnSite(e.target.value)} maxLength={500} placeholder="https://" className={hubInput} />
+      </label>
+
       {msg && (
         <p className="mt-4 text-sm font-semibold text-terracotta-dark" role="alert">
           {msg}
@@ -150,7 +177,7 @@ export default function WebsiteSection({
         disabled={state === "saving"}
         className="mt-5 rounded-full bg-charcoal px-5 py-2 text-sm font-semibold text-cream hover:bg-ink disabled:opacity-60"
       >
-        Save guest page
+        Save website
       </button>
     </SectionCard>
   );

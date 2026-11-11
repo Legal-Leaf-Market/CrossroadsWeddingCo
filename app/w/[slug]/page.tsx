@@ -46,6 +46,7 @@ export default async function WeddingSitePage({ params }: { params: Promise<{ sl
       faq={site.faq}
       brandName={brand.name}
       art={resolveWeddingArt(w.artTheme, w.shareToken)}
+      photos={site.photos.map((ph) => ({ src: `/w/${slug}/photo/${ph.id}`, width: ph.width, height: ph.height }))}
     />
   );
 }

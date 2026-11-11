@@ -3,6 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { timelineItems, weddings, type Wedding } from "@/lib/db/schema";
 import { nameSlug } from "@/lib/hub-constants";
+import { listSitePhotos, type SitePhotoMeta } from "@/lib/site-photos";
 import { normalizeFaq, normalizeLinks, safeUrl, type SiteFaq, type SiteLink } from "@/lib/wedding-site-constants";
 
 // Public wedding website. Read side: one published wedding by its slug, and
@@ -14,6 +15,7 @@ export type WeddingSite = {
   schedule: { title: string; startTime: string }[];
   links: SiteLink[];
   faq: SiteFaq[];
+  photos: SitePhotoMeta[];
 };
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -37,6 +39,7 @@ export async function getPublishedSite(slug: string): Promise<WeddingSite | null
     schedule: rows.filter((r) => r.title.trim()).map((r) => ({ title: r.title.trim(), startTime: r.start.slice(0, 5) })),
     links: withOwnSite(normalizeLinks(w.siteLinks), w.weddingSiteUrl),
     faq: normalizeFaq(w.siteFaq),
+    photos: await listSitePhotos(w.id),
   };
 }
 

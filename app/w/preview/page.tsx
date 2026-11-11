@@ -37,6 +37,7 @@ export default function WeddingSitePreview() {
       ]}
       brandName={SITE_NAME}
       art={null}
+      photos={[]}
     />
   );
 }

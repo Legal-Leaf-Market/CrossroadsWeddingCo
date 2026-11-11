@@ -18,13 +18,17 @@ export type WeddingSiteProps = {
   faq: SiteFaq[];
   brandName: string;
   art: WeddingArt | null;
+  /** Engagement photos, already URLs; the first leads the page. */
+  photos: { src: string; width: number | null; height: number | null }[];
   sample?: boolean;
 };
 
 export default function WeddingSite(p: WeddingSiteProps) {
-  const mapHref = p.venueAddress?.trim()
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.venueName}, ${p.venueAddress}`)}`
-    : null;
+  const place = p.venueAddress?.trim() ? `${p.venueName}, ${p.venueAddress.trim()}` : null;
+  const mapHref = place ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}` : null;
+  // Google's keyless embed: no API key, and it only loads once scrolled near.
+  const mapEmbed = place ? `https://maps.google.com/maps?q=${encodeURIComponent(place)}&z=15&output=embed` : null;
+  const [lead, ...rest] = p.photos;
   return (
     <div className="min-h-screen bg-cream text-ink">
       {p.sample && (
@@ -55,11 +59,43 @@ export default function WeddingSite(p: WeddingSiteProps) {
         </div>
       </header>
 
+      {lead && (
+        <div className="mx-auto max-w-5xl px-4 pt-10 sm:px-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lead.src}
+            alt={`${p.coupleNames}`}
+            width={lead.width ?? undefined}
+            height={lead.height ?? undefined}
+            className="max-h-[80vh] w-full rounded-3xl object-cover"
+          />
+        </div>
+      )}
+
       <main className="mx-auto max-w-2xl space-y-14 px-6 py-14">
         {p.story?.trim() && (
           <section>
             <h2 className="text-center font-display text-3xl text-charcoal">Our story</h2>
             <p className="mt-5 whitespace-pre-line text-center leading-relaxed text-ink/80">{p.story.trim()}</p>
+          </section>
+        )}
+
+        {rest.length > 0 && (
+          <section>
+            <div className="columns-2 gap-3 sm:columns-3">
+              {rest.map((ph, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={ph.src}
+                  src={ph.src}
+                  alt={`${p.coupleNames}, photo ${i + 2}`}
+                  width={ph.width ?? undefined}
+                  height={ph.height ?? undefined}
+                  loading="lazy"
+                  className="mb-3 h-auto w-full break-inside-avoid rounded-2xl"
+                />
+              ))}
+            </div>
           </section>
         )}
 
@@ -81,6 +117,15 @@ export default function WeddingSite(p: WeddingSiteProps) {
           <h2 className="font-display text-3xl text-charcoal">Where</h2>
           <p className="mt-4 text-lg text-charcoal">{p.venueName}</p>
           {p.venueAddress?.trim() && <p className="text-ink/70">{p.venueAddress.trim()}</p>}
+          {mapEmbed && (
+            <iframe
+              src={mapEmbed}
+              title={`Map of ${p.venueName}`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="mt-5 h-72 w-full rounded-2xl border border-parchment"
+            />
+          )}
           {mapHref && (
             <a href={mapHref} target="_blank" rel="noreferrer" className="mt-4 inline-block rounded-full border border-terracotta px-5 py-2 text-sm font-semibold text-terracotta hover:bg-terracotta hover:text-cream">
               Get directions
