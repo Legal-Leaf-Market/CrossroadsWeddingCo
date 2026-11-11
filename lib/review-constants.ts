@@ -18,6 +18,8 @@ export type ReviewMedia = {
   alt: string;
   width: number;
   height: number;
+  /** Card title for a themed gallery, e.g. "The Lovers". */
+  label?: string;
 };
 
 // Photos and video from real events, shown above the notes on /reviews.
@@ -28,6 +30,7 @@ export type ReviewMedia = {
 // Only media we have permission to post (the agreement's marketing-photo
 // clause covers our own couples, with opt-out by message).
 const VV = "/reviews/valle-vista-2026-10-17";
+const FO = "/reviews/forge-on-4th-2026-11-07";
 
 export type ReviewEvent = {
   /** Page address: /weddings/<slug>. Printed on cards once shared: add, never rename. */
@@ -37,6 +40,10 @@ export type ReviewEvent = {
   /** YYYY-MM-DD. Notes the couple writes from a house wedding's hub on this date land on this page. */
   eventDate: string;
   media: ReviewMedia[];
+  /** A look of the couple's own, drawn from their day. Absent: the site's look. */
+  theme?: "goth";
+  /** A line from the day itself (their own sign), never one we wrote for them. */
+  tagline?: string;
 };
 
 export const REVIEW_EVENTS: ReviewEvent[] = [
@@ -67,7 +74,22 @@ export const REVIEW_EVENTS: ReviewEvent[] = [
     title: "Forge on 4th, Columbus",
     date: "November 7, 2026",
     eventDate: "2026-11-07",
-    media: [],
+    // Their day was black and violet, skeleton hands making a heart, tables
+    // named for tarot cards, and "'Til We Are Ghosts" at the sweetheart table.
+    // The page wears it (Jacob, 2026-11-11: "emo pop punk Gothic"). Left out on
+    // purpose: the seating-chart mirror (about 90 guests' names legible) and a
+    // photo of two guests, who are not covered by the couple's photo consent.
+    theme: "goth",
+    tagline: "'Til We Are Ghosts",
+    media: [
+      { src: `${FO}/welcome-sign.jpg`, kind: "image", label: "The Star", alt: "The welcome sign: black with violet flowers and skeleton hands making a heart around 11.07.2026", width: 1200, height: 1600 },
+      { src: `${FO}/vows.jpg`, kind: "image", label: "The Lovers", alt: "The vows under a black coffin-shaped arch with violet flowers and candles", width: 1200, height: 1600 },
+      { src: `${FO}/first-dance.jpg`, kind: "image", label: "Two of Cups", alt: "The bride and groom in a dramatic dance hold, her gown white with black lace flowers", width: 1200, height: 1600 },
+      { src: `${FO}/table.jpg`, kind: "image", label: "Ten of Pentacles", alt: "A guest table set in black and violet with a lantern centerpiece", width: 1200, height: 1600 },
+      { src: `${FO}/bride-dance.jpg`, kind: "image", label: "Ten of Cups", alt: "The bride sharing a dance, smiling, as the groom watches from the head table", width: 1200, height: 1600 },
+      { src: `${FO}/dance-floor.jpg`, kind: "image", label: "The Sun", alt: "The bride and groom laughing mid-dance on the floor", width: 1200, height: 1600 },
+      { src: `${FO}/family-hug.jpg`, kind: "image", label: "The World", alt: "A big group hug on the dance floor as guests look on", width: 1200, height: 1600 },
+    ],
   },
 ];
 

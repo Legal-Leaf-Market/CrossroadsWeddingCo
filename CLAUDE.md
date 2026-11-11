@@ -940,7 +940,12 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   gets `/weddings/<slug>` (gallery, approved notes, a sign form tagged with the slug) and is
   in the sitemap; `/reviews` and the homepage gallery link to them. Pages are titled by venue
   and date, never the couple's names. Kat and Tanis is `forge-on-4th-2026-11-07` with NO
-  media yet: Jacob sends the photos, prepared like Valle Vista. The couple writes from their
+  its own look (`theme: "goth"`, Jacob 2026-11-11: "emo pop punk Gothic"): black and
+  violet from their day, their own "'Til We Are Ghosts" sign as the headline, and each photo
+  a tarot card (`GothGallery`, after their tarot-named tables) taped at a fixed tilt. Seven
+  photos, prepared like Valle Vista (long edge 1600, EXIF/GPS stripped). Deliberately left
+  out: the seating-chart mirror (about 90 guests' full names legible) and a photo of two
+  guests, who are not covered by the couple's marketing-photo consent. The couple writes from their
   own hub: a "How was your day?" card appears on house weddings once the event date has
   come (Indiana time), posts to `/api/hub/[token]/review` (relation "Our wedding",
   `guestbook_entries.wedding_id`, three a day), emails the owner, and waits for approval like
