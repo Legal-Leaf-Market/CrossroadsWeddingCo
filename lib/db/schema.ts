@@ -652,3 +652,32 @@ export const vendors = pgTable(
   (t) => [index("idx_vendors_tenant").on(t.tenantId)],
 );
 export type Vendor = typeof vendors.$inferSelect;
+
+// Separate agreements in a couple's hub (officiating by Compass Events). See
+// scripts/phase1-schema.sql and lib/compass.ts.
+export const serviceAgreements = pgTable(
+  "service_agreements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 30 }).notNull().default("officiant"),
+    brand: varchar("brand", { length: 30 }).notNull().default("compass"),
+    details: jsonb("details").notNull().default({}),
+    feeUsd: numeric("fee_usd", { precision: 10, scale: 2 }).notNull(),
+    depositUsd: numeric("deposit_usd", { precision: 10, scale: 2 }).notNull(),
+    balanceDueHours: integer("balance_due_hours").notNull().default(48),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    acceptedName: varchar("accepted_name", { length: 255 }),
+    snapshot: jsonb("snapshot"),
+    countersignedAt: timestamp("countersigned_at", { withTimezone: true }),
+    countersignedName: varchar("countersigned_name", { length: 255 }),
+    countersignedTitle: varchar("countersigned_title", { length: 255 }),
+    depositPaidAt: timestamp("deposit_paid_at", { withTimezone: true }),
+    balancePaidAt: timestamp("balance_paid_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_service_agreements_wedding").on(t.weddingId)],
+);
+export type ServiceAgreement = typeof serviceAgreements.$inferSelect;

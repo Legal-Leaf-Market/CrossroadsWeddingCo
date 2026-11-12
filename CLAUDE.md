@@ -987,6 +987,28 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
     pieces with their `?src=` tags, and the don'ts (no invented numbers, testimonials or
     unsourced competitor claims; no em dashes).
 
+- **Compass Events by Crossroads, and officiating (2026-11-12, Jake and Terry).** Compass
+  Events is the event planning and officiating brand of Crossroads Wedding and Event Co.,
+  with Terry Winchester signing as its Chief Executive Officer (`COMPASS_SIGNER_TITLE`) the
+  way Jake signs for Crossroads. First service: officiating, $250 flat, $125 deposit on
+  accepting, $125 balance within 48 hours after the ceremony (Terry's texted terms; note
+  this differs from the DJ rule of 24 hours after start). The agreement is SEPARATE from a
+  couple's Crossroads agreement: its own link inside the same hub (`/hub/<token>/officiant`,
+  404 until set up), its own deposit, invoice (`CE-<date>-<id4>`) and signatures; nothing
+  touches `weddings.contract_*`. Words in `lib/compass.ts` (pure), rows in
+  `service_agreements` (one live per wedding and kind), server code in
+  `lib/service-agreements.ts`. The owner sets it up from the dashboard's "Officiant" button,
+  edits it only until the couple accepts, countersigns once, and marks each payment.
+  Clauses: what the flat fee covers (Zoom call, rehearsal, early arrival, ceremony,
+  license walkthrough, filing), couple responsible for a valid license (IC 31-11-4-10, 60
+  days), filing within 30 days (IC 31-11-4-16) with no liability for postal or clerk delays,
+  substitute officiant or full refund, Indiana law. The officiant's authorization prints
+  only when typed in; until then the owner page warns. Checks are made out to Crossroads,
+  because Compass Events is a brand name, not a separate company: file an Indiana assumed
+  business name for it before it appears on anything else. NOT lawyer-reviewed. First
+  client: Olivia "Liv" Ash. Officiant payments are not in the booking's total or the
+  payment matching yet.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

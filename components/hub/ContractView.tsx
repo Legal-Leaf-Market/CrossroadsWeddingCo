@@ -20,6 +20,8 @@ export default function ContractView({
   countersignedTitle = null,
   version,
   demo = false,
+  companyName,
+  companyShort = "Crossroads",
 }: {
   sections: ContractSection[];
   endpoint: string;
@@ -31,6 +33,10 @@ export default function ContractView({
   countersignedTitle?: string | null;
   version: string;
   demo?: boolean;
+  /** Full name on the signature block; defaults to Crossroads. */
+  companyName?: string;
+  /** Short name in the accepted note. */
+  companyShort?: string;
 }) {
   const [accepted, setAccepted] = useState<{ at: string; name: string } | null>(
     acceptedAt && acceptedName ? { at: acceptedAt, name: acceptedName } : null,
@@ -87,7 +93,7 @@ export default function ContractView({
           <p className="mt-1 text-sm text-ink/70">
             Agreed to by {accepted.name} on {stamp(accepted.at)}.
             {countersigned
-              ? ` Signed for Crossroads by ${countersigned.name} on ${stamp(countersigned.at)}.`
+              ? ` Signed for ${companyShort} by ${countersigned.name} on ${stamp(countersigned.at)}.`
               : " Our signature follows shortly."}{" "}
             This page is your copy; print or save it any time.
           </p>
@@ -115,6 +121,7 @@ export default function ContractView({
         company={countersigned}
         companyTitle={countersignedTitle}
         version={version}
+        companyName={companyName}
       />
 
       {!accepted && (
