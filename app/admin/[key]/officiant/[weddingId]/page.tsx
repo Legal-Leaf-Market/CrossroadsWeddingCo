@@ -16,6 +16,7 @@ import {
   OFFICIANT_USD,
 } from "@/lib/compass";
 import { formatEventDate } from "@/lib/hub-constants";
+import { officiantSignUrl } from "@/lib/officiant-sign";
 import { getOfficiantAgreement, officiantDetails, officiantSections, officiantVersion } from "@/lib/service-agreements";
 import { SITE_URL } from "@/lib/site";
 
@@ -41,6 +42,7 @@ export default async function AdminOfficiantPage({
   const endpoint = `/api/admin/${encodeURIComponent(key)}/officiant/${wedding.id}`;
   const d = a ? officiantDetails(a) : null;
   const hubLink = `${SITE_URL.replace(/\/$/, "")}/hub/${wedding.accessToken}/officiant`;
+  const signLink = officiantSignUrl(wedding.id);
 
   return (
     <div className="min-h-screen bg-cream p-6 text-charcoal print:bg-white print:p-0">
@@ -62,7 +64,7 @@ export default async function AdminOfficiantPage({
 
         {a && (
           <div className="rounded-2xl border border-parchment bg-white p-5 text-sm print:hidden">
-            <p className="font-semibold text-charcoal">Send the couple this link</p>
+            <p className="font-semibold text-charcoal">Send the couple this link (to accept)</p>
             <p className="mt-1 break-all font-mono text-ink/80">{hubLink}</p>
             <p className="mt-2 text-ink/60">
               It opens inside their existing planning hub. It&apos;s their private hub key, so send it only to them.
@@ -79,6 +81,17 @@ export default async function AdminOfficiantPage({
                 solemnize marriages in Indiana (IC 31-11-6-1) and add how, so it prints on the agreement.
               </p>
             )}
+          </div>
+        )}
+
+        {a && signLink && (
+          <div className="rounded-2xl border-2 border-terracotta bg-white p-5 text-sm print:hidden">
+            <p className="font-semibold text-charcoal">Send {d?.officiantName ?? "the officiant"} this link to sign</p>
+            <p className="mt-1 break-all font-mono text-ink/80">{signLink}</p>
+            <p className="mt-2 text-ink/60">
+              It opens only this officiant agreement, with a sign box once the couple has accepted. No dashboard
+              access comes with it. When it is signed, the couple gets an email saying so.
+            </p>
           </div>
         )}
 

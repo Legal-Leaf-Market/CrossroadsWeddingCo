@@ -1030,6 +1030,17 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   offers card when the switch is on (`OFFICIANT_AGREEMENT_VERSION` 2026-11-12b); agreements
   accepted earlier keep their frozen wording.
 
+- **The officiant signs from his own link (2026-11-12, Jake: "a direct link to have Terry
+  sign ... and for Liv to get a ping").** Couples who book DJ and officiant have two
+  agreements, and the only sign box for the officiant one sat behind the whole dashboard key.
+  `/sign/officiant/<weddingId>.<hmac>` (`lib/officiant-sign.ts`) opens ONE wedding's officiant
+  agreement and one action, sign it; the token is an HMAC of the wedding id under
+  `ADMIN_DASH_KEY` (nothing stored, rotating the key retires every link, no key = 404). The
+  owner officiant page prints the link above the couple's. Both signing doors go through
+  `countersignAndNotify`, which emails the couple (contact email + hub invites, owner BCC) a
+  pointer to their signed copy, never the terms. Dashboard buttons now read "DJ agreement" and
+  "Officiant agreement". Verified on a local Postgres: forged token 404, three simultaneous
+  signs give one 200 and two 409, no sideways scroll at 390 and 1280.
 - **Platform billing live on Stripe (2026-11-12, Jake: "get billing live with whatever you
   suggest. Can Found take payments?").** Found has no API and its own invoice card payments
   run through Stripe, so the app uses Stripe directly and Stripe pays out to the Found

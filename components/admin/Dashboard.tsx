@@ -190,7 +190,7 @@ function WeddingCard({
             href={`${basePath}/contract/${wedding.id}`}
             className="rounded-full border border-terracotta px-4 py-1.5 font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
           >
-            Agreement
+            DJ agreement
           </a>
         )}
         {basePath !== "/admin/preview" && wedding.packageType !== "corporate" && (
@@ -198,7 +198,7 @@ function WeddingCard({
             href={`${basePath}/officiant/${wedding.id}`}
             className="rounded-full border border-parchment px-4 py-1.5 font-semibold text-ink/70 hover:border-terracotta hover:text-terracotta"
           >
-            Officiant
+            Officiant agreement
           </a>
         )}
         <BookingEditor

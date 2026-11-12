@@ -225,6 +225,53 @@ export async function sendHubMessagePointer(input: {
   if (error) console.error("[email] hub pointer failed:", error);
 }
 
+/**
+ * The officiant signed the Compass Events agreement. A pointer, like every
+ * other couple email: who signed and a button to their copy in the hub, never
+ * the terms themselves.
+ */
+export async function sendOfficiantSignedEmail(input: {
+  to: string[];
+  coupleNames: string;
+  officiantName: string;
+  hubPath: string;
+}): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  if (!input.to.length) {
+    console.warn("[email] officiant signed, but the booking has no couple email to tell");
+    return;
+  }
+  const resend = new Resend(key);
+  const url = `${SITE_URL}${input.hubPath}`;
+  const who = input.officiantName.trim() || "Your officiant";
+  const whoHtml = who.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: input.to,
+    bcc: NOTIFY_TO,
+    subject: `${who} signed your officiant agreement`,
+    text: [
+      `Good news: ${who} signed your officiant agreement with Compass Events.`,
+      ``,
+      `Both signatures are on it now. Your signed copy is in your planning hub: ${url}`,
+      ``,
+      `This is the officiant agreement only. Your DJ agreement with ${SITE_NAME} is separate and is not affected.`,
+      ``,
+      `Please don't reply to this email; message us in your hub.`,
+    ].join("\n"),
+    html:
+      `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
+      `Good news: <strong>${whoHtml}</strong> signed your officiant agreement with Compass Events.<br>` +
+      `Both signatures are on it now.` +
+      `<div style="margin: 16px 0;"><a href="${url}" style="display: inline-block; background: #c1633d; color: #faf5ec; font-weight: bold; padding: 12px 22px; border-radius: 999px; text-decoration: none;">See your signed agreement</a></div>` +
+      `This is the officiant agreement only. Your DJ agreement with ${SITE_NAME} is separate and is not affected.<br><br>` +
+      `Please don't reply to this email; message us in your hub.` +
+      `</div>`,
+  });
+  if (error) console.error("[email] officiant signed email failed:", error);
+}
+
 // --- Intro-call booking (2026-09-04) --------------------------------------
 // Two emails per booking: the visitor gets the confirmation they are waiting
 // on with the button still under their thumb, and the person being booked gets
