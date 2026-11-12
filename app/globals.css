@@ -35,3 +35,22 @@ h4 {
   font-family: var(--font-display);
   font-weight: 600;
 }
+
+/* Step guide (components/guide/StepGuide.tsx): everything but the current
+   step is softened. Zones opt in with data-zone; a guided page sets
+   data-guide to the current step. Never applied in print. */
+@media screen {
+  [data-guide] [data-zone] {
+    transition: filter 0.3s ease, opacity 0.3s ease;
+  }
+  [data-guide="sign"] [data-zone="invoice"],
+  [data-guide="pay-deposit"] [data-zone="agreement"],
+  [data-guide="pay-deposit"] [data-zone="sign"],
+  [data-guide="pay-balance"] [data-zone="agreement"],
+  [data-guide="pay-balance"] [data-zone="sign"] {
+    filter: blur(3px);
+    opacity: 0.45;
+    pointer-events: none;
+    user-select: none;
+  }
+}

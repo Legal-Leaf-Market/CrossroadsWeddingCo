@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, type ReactNode } from "react";
 import SignatureBlock, { type Signer } from "@/components/contract/SignatureBlock";
 import type { ContractSection } from "@/lib/contract";
 import { VENUE_TIME_ZONE } from "@/lib/site";
@@ -22,6 +23,7 @@ export default function ContractView({
   demo = false,
   companyName,
   companyShort = "Crossroads",
+  beforeAccept,
 }: {
   sections: ContractSection[];
   endpoint: string;
@@ -37,10 +39,13 @@ export default function ContractView({
   companyName?: string;
   /** Short name in the accepted note. */
   companyShort?: string;
+  /** Rendered just above the accept box (the step guide's note). */
+  beforeAccept?: ReactNode;
 }) {
   const [accepted, setAccepted] = useState<{ at: string; name: string } | null>(
     acceptedAt && acceptedName ? { at: acceptedAt, name: acceptedName } : null,
   );
+  const router = useRouter();
   const [name, setName] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -79,6 +84,8 @@ export default function ContractView({
         return;
       }
       setAccepted({ at: json.acceptedAt, name: json.acceptedName });
+      // Server-rendered parts of the page (the card payment button) unlock now.
+      router.refresh();
     } catch {
       setError("No connection. Nothing was submitted; try again.");
     }
@@ -100,7 +107,7 @@ export default function ContractView({
         </div>
       )}
 
-      <article className="space-y-6">
+      <article data-zone="agreement" className="space-y-6">
         {sections.map((section) => (
           <section key={section.heading} className="break-inside-avoid">
             <h2 className="text-lg font-semibold text-charcoal">{section.heading}</h2>
@@ -115,6 +122,7 @@ export default function ContractView({
         ))}
       </article>
 
+      <div data-zone="agreement">
       <SignatureBlock
         coupleNames={coupleNames}
         client={accepted}
@@ -123,9 +131,11 @@ export default function ContractView({
         version={version}
         companyName={companyName}
       />
+      </div>
 
+      {!accepted && beforeAccept}
       {!accepted && (
-        <div className="mt-8 rounded-2xl border-2 border-terracotta bg-white p-6 print:hidden">
+        <div id="accept" data-zone="sign" className="mt-8 scroll-mt-6 rounded-2xl border-2 border-terracotta bg-white p-6 print:hidden">
           <h2 className="text-lg font-semibold text-charcoal">Accept this agreement</h2>
           <label className="mt-4 block">
             <span className="mb-1 block text-sm font-semibold text-charcoal">
