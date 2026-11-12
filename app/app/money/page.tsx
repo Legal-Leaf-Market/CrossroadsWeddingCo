@@ -50,7 +50,7 @@ export default async function MoneyPage() {
         <p className="mt-8 rounded-2xl border border-parchment bg-white p-6 text-ink/70">This didn&apos;t load just now. Refresh in a minute.</p>
       ) : (
         <>
-          {(m.toSort > 0 || m.needsLogin > 0 || m.pastDue.length > 0) && (
+          {(m.toSort > 0 || m.needsLogin > 0 || m.pastDue.length > 0 || m.w9Needed.length > 0) && (
             <section className="mt-8 rounded-2xl border-2 border-terracotta bg-white p-5">
               <h2 className="text-lg font-semibold text-charcoal">Needs you</h2>
               <ul className="mt-3 space-y-2 text-sm">
@@ -70,6 +70,14 @@ export default async function MoneyPage() {
                     <span className="text-ink/60">before they count in your books.</span>
                   </li>
                 )}
+                {m.w9Needed.map((v) => (
+                  <li key={v.id}>
+                    <Link href={`/app/vendors/${v.id}`} className="font-semibold text-terracotta-dark underline underline-offset-2">
+                      Get a W-9 from {v.name}
+                    </Link>{" "}
+                    <span className="text-ink/60">(paid {usd(v.bankPaidCents)} from the bank this year, past the 1099 line).</span>
+                  </li>
+                ))}
                 {m.pastDue.map((p) => (
                   <li key={p.id}>
                     <span className="font-semibold text-charcoal">{p.name}</span>{" "}

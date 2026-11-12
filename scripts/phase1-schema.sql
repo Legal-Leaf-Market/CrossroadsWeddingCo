@@ -826,3 +826,32 @@ CREATE TABLE IF NOT EXISTS site_photos (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_site_photos_wedding ON site_photos (wedding_id, order_index);
+
+-- Vendors (2026-11-11, Jacob: "Vendors", "think wedding ERP"). The people and
+-- companies an account pays: second DJs, techs, rentals, the music pool. A
+-- vendor's payments are FOUND, not typed: money-out bank lines whose merchant
+-- or description contains one of the vendor's match words. Contractors get a
+-- yearly total against the IRS 1099-NEC threshold. Only a "W-9 on file" flag
+-- is stored, never a taxpayer id: this table is not the place for one.
+CREATE TABLE IF NOT EXISTS vendors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(120) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'contractor', -- contractor | supplier | venue | subscription | other
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    match_text VARCHAR(400) NOT NULL DEFAULT '',     -- comma separated words found on bank lines
+    is_1099 BOOLEAN NOT NULL DEFAULT false,
+    w9_on_file BOOLEAN NOT NULL DEFAULT false,
+    notes TEXT NOT NULL DEFAULT '',
+    archived_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_vendors_tenant ON vendors (tenant_id);
+
+-- Where each business account came from (2026-11-11, Jacob: "aggressively
+-- guerilla market in person"). The first-touch ?src= tag the visitor arrived
+-- with (expo QR, DJ meetup card, an ad), so every channel is judged on
+-- signups, not hope. Same tag rules as weddings.lead_src_tag.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS signup_src VARCHAR(40);

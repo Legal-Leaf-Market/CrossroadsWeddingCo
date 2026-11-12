@@ -4,6 +4,7 @@ import { bankAccounts, bankTransactions, integrationConnections } from "@/lib/db
 import { openBookings } from "@/lib/books/matching";
 import { queueCounts } from "@/lib/books/review";
 import { detectRecurring, expectedBetween, type RecurringCharge } from "@/lib/books/recurring";
+import { w9Needed } from "@/lib/vendors";
 
 // The money home screen ("Am I okay?"): one read of everything the account
 // already knows, put in the order an owner asks it. Nothing here is a guess:
@@ -33,6 +34,8 @@ export type MoneyHome = {
   recurring: RecurringCharge[];
   recurringMonthlyCents: number;
   toSort: number;
+  /** Contractors past this year's 1099 line with no W-9 on file. */
+  w9Needed: { id: string; name: string; bankPaidCents: number }[];
   needsLogin: number;
 };
 
@@ -131,5 +134,6 @@ export async function moneyHome(tenantId: string): Promise<MoneyHome> {
     recurringMonthlyCents: recurring.reduce((s, r) => s + r.monthlyCents, 0),
     toSort: counts.unreviewed ?? 0,
     needsLogin: conns.filter((c) => c.status === "needs_reauth").length,
+    w9Needed: await w9Needed(tenantId).catch(() => []),
   };
 }

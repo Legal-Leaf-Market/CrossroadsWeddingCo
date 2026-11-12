@@ -952,6 +952,41 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   every note; the moderation screen says where each note came from. An event page shows
   approved notes tagged with its slug or written from a house wedding's hub on its date.
 
+- **Operations and growth batch (2026-11-11, Jacob: "think wedding ERP", "Accounting",
+  "Vendors", "market heavy", "price it at $50 flat a month").**
+  - **`/venues`**: "Your in-house DJ, without the payroll." Crossroads' own DJ service pitched
+    to venues: published prices from `lib/site.ts`, the live timeline and printed run sheet
+    for the coordinator, real event pages as proof, `/?src=venue` to hand couples. Promises
+    no insurance paperwork, exclusivity or referral fee (none decided). Footer and sitemap.
+  - **Platform price: `PLAN_PRICE_USD = 50`**, one plan, every feature (owner decision). The
+    signup page leads with "Your books are built in. No QuickBooks.", Jake in his own words
+    ("a seasoned accountant, technologist and DJ"; quote: "You don't need anyone but me."),
+    and tax filing "through Smart CFO, under confidentiality" with no price shown. Do not call
+    Jake a CPA. Open item for Jake: paid preparers need an IRS PTIN; Oscar Rodriguez (Smart
+    CFO) is NOT named publicly without his OK. A DJ's books go to an accountant only by that
+    DJ's opt-in (feature not built yet).
+  - **`/app/money`** (`lib/money.ts`): cash and card balances (Plaid's last report), owed to
+    you and past due (`openBookings`/`creditFor`, the matching math), money collected for
+    events still to come (with a "may have to go back on a cancellation" note; deliberately NO
+    "safe to spend"), next 30 days in (balances due) and out (expected repeat charges), and
+    repeat charges from `lib/books/recurring.ts` (evidence only: 3 charges, 2 for yearly,
+    steady cadence and amount, still active; 26 months of history so yearly bills are seen).
+    "Needs you": bank logins to repair, lines to sort, contractors needing a W-9, past due.
+  - **Vendors** (`vendors` table, `lib/vendors.ts`, pure rules `lib/books/vendor-logic.ts`,
+    `/app/vendors`): payments are FOUND on the bank feed by the vendor's match words, never
+    typed. 1099-NEC counts bank payments only (card payments go on a 1099-K); threshold by
+    payment year in `NEC_THRESHOLD_CENTS` ($600 to 2025, $2,000 for 2026, later years say
+    "not published yet" instead of guessing). Only a "W-9 on file" flag is stored, never a
+    tax id. Verify scripts: `verify-money.mjs` (18), `verify-vendors.mjs` (17).
+  - **Signup attribution**: `tenants.signup_src` takes the first-touch `?src=` tag
+    (`SourceCapture`, `cleanSrcTag`, never refused). `/admin/[key]` shows "Platform signups":
+    totals, trials, paying, by source, by business type, latest 15 (`lib/platform-stats.ts`,
+    counts only, no customer's bookings or money).
+  - **`docs/MARKETING_GRAPHICS_BRIEF.md`**: the brief Jake hands a design chat: true messages,
+    real features, exact palette from `app/globals.css`, first batch of graphics, in-person
+    pieces with their `?src=` tags, and the don'ts (no invented numbers, testimonials or
+    unsourced competitor claims; no em dashes).
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

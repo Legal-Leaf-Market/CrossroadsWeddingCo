@@ -6,6 +6,7 @@ import { users } from "@/lib/db/schema";
 import { createAccount, signupOpen } from "@/lib/auth";
 import { loginMailConfigured, mailLoginLink, rateLimited } from "@/lib/auth-mail";
 import { BUSINESS_TYPES } from "@/lib/tenant-constants";
+import { cleanSrcTag } from "@/lib/lead-sources";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ const schema = z.object({
   email: z.string().trim().email("That email doesn't look right").max(255),
   phone: z.string().trim().max(40).optional().default(""),
   website: z.string().optional().default(""), // honeypot
+  // First-touch tag from SourceCapture. Cleaned, never refused: attribution
+  // must never cost a signup.
+  src: z.string().max(80).optional().transform((v) => cleanSrcTag(v) ?? undefined),
 });
 
 // Same answer whether the email was new or already had an account, so the

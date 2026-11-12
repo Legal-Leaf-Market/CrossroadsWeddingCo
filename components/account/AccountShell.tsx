@@ -38,6 +38,9 @@ export default function AccountShell({
               <Link href="/app/books" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Books
               </Link>
+              <Link href="/app/vendors" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Vendors
+              </Link>
               <Link href="/app/integrations" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Integrations
               </Link>
