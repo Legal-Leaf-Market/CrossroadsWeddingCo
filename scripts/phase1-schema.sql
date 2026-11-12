@@ -909,3 +909,14 @@ WITH match AS (
     RETURNING 1
 )
 INSERT INTO schema_seeds (name) SELECT 'officiant_liv_ash_v1' FROM ins ON CONFLICT (name) DO NOTHING;
+
+-- Platform billing, $50 a month through Stripe (2026-11-12, Jake: "get billing
+-- live with whatever you suggest"). Found has no API and routes its own card
+-- payments through Stripe anyway, so the app uses Stripe directly and Stripe
+-- pays out to the Found account. Stripe is the record; these mirror it.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_status VARCHAR(30);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_period_end TIMESTAMPTZ;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_event_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tenants_stripe_customer ON tenants (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;

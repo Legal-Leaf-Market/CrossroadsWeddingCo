@@ -1009,6 +1009,26 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   client: Olivia "Liv" Ash. Officiant payments are not in the booking's total or the
   payment matching yet.
 
+- **Platform billing live on Stripe (2026-11-12, Jake: "get billing live with whatever you
+  suggest. Can Found take payments?").** Found has no API and its own invoice card payments
+  run through Stripe, so the app uses Stripe directly and Stripe pays out to the Found
+  account (set in the Stripe dashboard). `/app/billing` (nav "Billing", customer accounts
+  only): one plan, `PLAN_PRICE_USD` a month, Stripe Checkout (`POST /api/app/billing/checkout`,
+  a 303) and the Stripe customer portal (`/api/app/billing/portal`) for card, invoices and
+  cancelling. Days left on the free trial carry over as the subscription's `trial_end`
+  (only when more than 49 hours remain, Stripe's floor). Price: `STRIPE_PRICE_ID` if set,
+  else inline price data. `lib/billing.ts`: the webhook (`/api/webhooks/stripe`, the one
+  endpoint, now also handling `customer.subscription.*` and subscription checkouts) mirrors
+  status onto `tenants` (`stripe_customer_id`, `stripe_subscription_id`, `billing_status`,
+  `billing_period_end`, `billing_event_at`); an event older than the last applied changes
+  nothing; trialing/active/past_due set `plan = 'standard'`, canceled/unpaid/expired set it
+  back to 'trial'; only `kind = 'customer'` rows, so the house account is never billed.
+  Nothing is locked when a trial ends yet: the page and home screen say so and offer the
+  plan. **Wedding card deposits stay off**: `/api/checkout` now also needs
+  `STRIPE_DEPOSITS_ENABLED=1`, so adding a Stripe key for billing cannot switch them on.
+  Platform scoreboard: "Paying" counts active and past_due. Verified locally with signed
+  test events (19 checks); the first real checkout against Stripe is the remaining proof.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

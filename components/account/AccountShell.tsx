@@ -44,6 +44,11 @@ export default function AccountShell({
               <Link href="/app/integrations" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Integrations
               </Link>
+              {!house && (
+                <Link href="/app/billing" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                  Billing
+                </Link>
+              )}
             <form action="/api/auth/logout" method="post">
               <button type="submit" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Sign out

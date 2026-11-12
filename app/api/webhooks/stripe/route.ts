@@ -3,12 +3,16 @@ import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
+import { applyCheckout, applySubscription } from "@/lib/billing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Marks the deposit paid when Stripe confirms checkout. Signature-verified;
-// fails closed until both Stripe secrets exist (CLAUDE.md §9.4).
+// One Stripe endpoint, signature-verified, failing closed until both Stripe
+// secrets exist (CLAUDE.md §9.4). Two jobs:
+//  - platform billing: the $50 monthly plan (lib/billing.ts), mirrored onto
+//    the account on checkout and every subscription change;
+//  - wedding deposits, only when STRIPE_DEPOSITS_ENABLED=1 opened them.
 export async function POST(req: NextRequest) {
   const key = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -30,21 +34,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // completed can arrive with payment_status "unpaid" for async methods, so
-  // only a paid session locks the date; async success arrives as its own event.
-  if (
-    event.type === "checkout.session.completed" ||
-    event.type === "checkout.session.async_payment_succeeded"
-  ) {
-    const session = event.data.object;
-    const weddingId = session.metadata?.weddingId;
-    if (weddingId && session.payment_status === "paid") {
-      await db
-        .update(weddings)
-        .set({ isDepositPaid: true, status: "deposit_paid", updatedAt: new Date() })
-        .where(eq(weddings.id, weddingId));
-      console.log(`[stripe] deposit recorded for wedding ${weddingId}`);
+  try {
+    if (
+      event.type === "customer.subscription.created" ||
+      event.type === "customer.subscription.updated" ||
+      event.type === "customer.subscription.deleted"
+    ) {
+      const r = await applySubscription(event.data.object, event.created);
+      console.log(`[stripe] ${event.type} ${event.data.object.id}: ${r}`);
+      return NextResponse.json({ received: true });
     }
+
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded"
+    ) {
+      const session = event.data.object;
+      if (session.mode === "subscription") {
+        await applyCheckout(session, event.created);
+        return NextResponse.json({ received: true });
+      }
+      // completed can arrive with payment_status "unpaid" for async methods, so
+      // only a paid session locks the date; async success arrives as its own event.
+      const weddingId = session.metadata?.weddingId;
+      if (weddingId && session.payment_status === "paid") {
+        await db
+          .update(weddings)
+          .set({ isDepositPaid: true, status: "deposit_paid", updatedAt: new Date() })
+          .where(eq(weddings.id, weddingId));
+        console.log(`[stripe] deposit recorded for wedding ${weddingId}`);
+      }
+    }
+  } catch (err) {
+    // A 500 makes Stripe retry, which is what we want after a database blip.
+    console.error(`[stripe] ${event.type} failed:`, (err as Error).message);
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
