@@ -14,6 +14,9 @@ export const HOUSE_TENANT_ID = "00000000-0000-4000-8000-000000000001";
  */
 export const PLATFORM_NAME = process.env.NEXT_PUBLIC_PLATFORM_NAME ?? "Crossroads Agency OS";
 
+/** Owner decision 2026-11-11 (Jacob): one plan, every feature, $50 a month flat. */
+export const PLAN_PRICE_USD = 50;
+
 /** Length of the free trial a new account starts on. No card is asked for. */
 export const TRIAL_DAYS = 14;
 
