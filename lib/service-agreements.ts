@@ -156,3 +156,52 @@ export async function setOfficiantPayment(
     .where(eq(serviceAgreements.id, a.id));
   return true;
 }
+
+/**
+ * Card payments for the officiating invoice (Jake, 2026-11-12: "I want Liv to
+ * be able to pay the $125 deposit to our stripe"). Their own switch, like
+ * STRIPE_DEPOSITS_ENABLED for the DJ deposit, so a Stripe key on its own never
+ * turns them on. Off means the invoice shows cash or check only, no button.
+ */
+export function officiantCardPaymentsOn(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY) && process.env.COMPASS_CARD_PAYMENTS === "1";
+}
+
+/**
+ * Which part the couple can pay by card right now, if any: the deposit once
+ * they have accepted, then the balance once the deposit is in. One at a time,
+ * in order, so a card can never pay the balance ahead of an unpaid deposit.
+ */
+export function officiantPayablePart(a: ServiceAgreement): "deposit" | "balance" | null {
+  if (!a.acceptedAt || a.cancelledAt) return null;
+  if (!a.depositPaidAt) return "deposit";
+  if (!a.balancePaidAt) return "balance";
+  return null;
+}
+
+/**
+ * The Stripe webhook's half: mark a part received after a paid Checkout
+ * session. Keyed by the agreement id Stripe carried in metadata, and only
+ * fills an empty paid-at, so a replayed event never moves a date already set.
+ * "already" on a fresh payment means it was also marked paid by hand: the
+ * webhook logs it so a double payment gets noticed and refunded.
+ */
+export async function markOfficiantPaidByCard(
+  agreementId: string,
+  part: "deposit" | "balance",
+): Promise<"marked" | "already" | "not_found"> {
+  const at = new Date();
+  const col = part === "deposit" ? serviceAgreements.depositPaidAt : serviceAgreements.balancePaidAt;
+  const updated = await db
+    .update(serviceAgreements)
+    .set(part === "deposit" ? { depositPaidAt: at, updatedAt: at } : { balancePaidAt: at, updatedAt: at })
+    .where(and(eq(serviceAgreements.id, agreementId), isNull(col)))
+    .returning({ id: serviceAgreements.id });
+  if (updated.length) return "marked";
+  const [exists] = await db
+    .select({ id: serviceAgreements.id })
+    .from(serviceAgreements)
+    .where(eq(serviceAgreements.id, agreementId))
+    .limit(1);
+  return exists ? "already" : "not_found";
+}

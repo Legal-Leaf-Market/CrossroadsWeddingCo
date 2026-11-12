@@ -23,6 +23,7 @@ export default function OfficiantInvoice({
   depositPaidAt,
   balancePaidAt,
   actions,
+  cardPayments = false,
 }: {
   id: string;
   eventDate: string;
@@ -34,6 +35,8 @@ export default function OfficiantInvoice({
   depositPaidAt: string | null;
   balancePaidAt: string | null;
   actions?: (part: "deposit" | "balance", paid: boolean) => ReactNode;
+  /** Card payments are switched on: the footer offers card beside cash or check. */
+  cardPayments?: boolean;
 }) {
   const inv = officiantInvoiceParts({ feeUsd, depositUsd, balanceHours, depositPaidAt, balancePaidAt });
   return (
@@ -86,7 +89,8 @@ export default function OfficiantInvoice({
         </tbody>
       </table>
       <p className="mt-3 text-xs text-ink/60">
-        Pay by cash or check made out to {SITE_NAME.replace(/\.$/, "")}. This invoice is separate from any{" "}
+        {cardPayments ? "Pay by card above, or by cash or check" : "Pay by cash or check"} made out to{" "}
+        {SITE_NAME.replace(/\.$/, "")}. This invoice is separate from any{" "}
         {SITE_NAME} invoice for DJ, music or bar service.
       </p>
     </section>
