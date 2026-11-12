@@ -1008,6 +1008,21 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   business name for it before it appears on anything else. NOT lawyer-reviewed. First
   client: Olivia "Liv" Ash. Officiant payments are not in the booking's total or the
   payment matching yet.
+- **Officiant invoices take cards (2026-11-12, Jake: "I want Liv to be able to pay the $125
+  deposit to our stripe ASAP and test this out").** The couple's officiant page shows "Pay the
+  $125 deposit by card" once they have accepted, then the balance once the deposit is in, one
+  part at a time (`officiantPayablePart`). `POST /api/hub/[token]/officiant/pay` makes a
+  card-only Stripe Checkout session for exactly that part (idempotency key on agreement, part
+  and amount, so a second tap cannot charge twice) with metadata `kind: "officiant"`,
+  `serviceAgreementId`, `part`. The webhook handles `kind: "officiant"` BEFORE the DJ deposit
+  branch and fills only an empty paid-at (`markOfficiantPaidByCard`); a card payment on a part
+  already marked by hand is logged as a possible double payment. Own switch:
+  `COMPASS_CARD_PAYMENTS=1` plus `STRIPE_SECRET_KEY`; off, the invoice reads cash or check
+  with no control, exactly as before. The DJ deposit stays cash or check
+  (`STRIPE_DEPOSITS_ENABLED` unset). Liv's first deposit went out as a one-off Stripe payment
+  link ($125, one payment) the same night, before this shipped, so mark it received by hand
+  on the owner page if she paid that way. Verified by the Netlify preview build only (this
+  session had no package install); the first real payment is the end-to-end proof.
 
 - **Platform billing live on Stripe (2026-11-12, Jake: "get billing live with whatever you
   suggest. Can Found take payments?").** Found has no API and its own invoice card payments
@@ -1080,7 +1095,7 @@ decisions absorbed from it:
 | --- | --- |
 | Neon Postgres | Wired 2026-08-26 after three rounds: the Vercel variable is named `Database_URL` (mixed case, resolver matches case-insensitively and sanitizes the value), and the first two pastes were not the connection string. The schema self-applies at build; the build log prints the host it dialed. Verify claims like this against build logs, not session lore |
 | Resend | **Live** (2026-08-26). `RESEND_API_KEY` in Vercel; sender is `jake@crossroadsweddingco.shop`, confirmed received by owner. Booking confirmations + notifications flow |
-| Stripe | Not yet created. Checkout + webhook routes fail closed (501) until `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` exist. Connect payouts need business verification |
+| Stripe | **Live** (2026-11-12). Account Crossroads Wedding and Event Co., activated; live restricted key and webhook secret in Netlify. Webhook destination `crossroads-billing` sends checkout.session.completed, checkout.session.async_payment_succeeded and customer.subscription.created/updated/deleted to `/api/webhooks/stripe`. Customer portal saved (cancel at period end). Payout bank (Found) could not be added until 2026-11-14 (Stripe's hold after new security settings); money waits in the Stripe balance until then. Switches: `COMPASS_CARD_PAYMENTS=1` on, `STRIPE_DEPOSITS_ENABLED` off. Connect payouts need business verification |
 | Spotify | **Keys live** (2026-08-28) but playlist reads need one more step: the Feb 2026 API migration (enforced 2026-03-09) moved playlist reads to /playlists/{id}/items and made that endpoint reject client-credentials tokens (401, observed in prod logs). Owner authorizes once at /api/spotify/connect?key=<ADMIN_DASH_KEY> (redirect URI https://crossroadsweddingco.shop/api/spotify/callback is registered on the app), pastes the shown refresh token into Vercel as SPOTIFY_REFRESH_TOKEN, redeploys. Client-credentials keys unlock playlist ingestion + track search (`lib/spotify.ts`, fails closed until then). The hub's playlist unfold + send-to-moment UI shipped 2026-08-28 (`/api/hub/[token]/playlist-tracks`, hub-token gated) and lights up the moment the keys land; note new Spotify dev apps can read user-created playlists but not Spotify-owned editorial ones (API change Nov 2024), which is fine since couples share their own |
 | Twilio | Booking texts wired 2026-08-27, fails closed until keys exist. On the docket once keys exist (Jacob 2026-08-27): milestone check-in texts on a daily cron, e.g. 90 days out "Hey, checking in. Getting close. Let us know if you need anything.", plus similar touches at 30 and 14 days; needs a Vercel cron route guarded by CRON_SECRET. Jacob needs: twilio.com account (paid, not trial), a toll-free number with toll-free verification (simplest US A2P path) or a local number with 10DLC brand+campaign registration, then `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_MESSAGING_SERVICE_SID` (or `TWILIO_FROM_NUMBER`) in Vercel. Optional `TWILIO_NOTIFY_TO` texts the owner on each booking. The dispatch cascade (Phase 3) reuses this |
 | WeddingPro (The Knot / WeddingWire vendor advertising) | Signing 2026-08-27 (quote Q-472003, rep Adam Muir, owner decision): $4,994.40/12 months non-cancellable, ~$416/mo, 4 items (Knot Spotlight Banner Musicians, Knot DJs Platinum, WW DJs regional, WW DJs Indianapolis city). BEFORE CONFIRMING Jacob is fixing: 3 items quoted for the "Indianapolis, Lafayette, Terre Haute Region", the wrong half of the state. The three push markets are Indianapolis, Bloomington, and Louisville (KY, a separate Knot market), per Jacob 2026-08-27. Also the account email is nic@nicotiamarket.com (wrong brand; leads will land there). AUTO-RENEWS annually at up to +50% price; cancel at least 10 days before renewal (calendar reminder late July 2027); bundle discounts are all-or-nothing. Arbitration opt-out available within 30 days of acceptance (by ~2026-09-26) via arbitrationtop@theknotww.com, keeps the contract intact. Once live: build the inbound lead bridge against the first real lead notification email (Jacob forwards it), auto-provisioning a wedding + hub + instant quote email per §6.1 |

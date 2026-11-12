@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
 import { applyCheckout, applySubscription } from "@/lib/billing";
+import { markOfficiantPaidByCard } from "@/lib/service-agreements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,9 @@ export const dynamic = "force-dynamic";
 // secrets exist (CLAUDE.md §9.4). Two jobs:
 //  - platform billing: the $50 monthly plan (lib/billing.ts), mirrored onto
 //    the account on checkout and every subscription change;
-//  - wedding deposits, only when STRIPE_DEPOSITS_ENABLED=1 opened them.
+//  - wedding deposits, only when STRIPE_DEPOSITS_ENABLED=1 opened them;
+//  - Compass Events officiating invoices paid by card from the hub
+//    (metadata kind "officiant", COMPASS_CARD_PAYMENTS=1).
 export async function POST(req: NextRequest) {
   const key = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -52,6 +55,23 @@ export async function POST(req: NextRequest) {
       const session = event.data.object;
       if (session.mode === "subscription") {
         await applyCheckout(session, event.created);
+        return NextResponse.json({ received: true });
+      }
+      // Compass Events officiating invoice, paid from the couple's hub. Handled
+      // and returned before the DJ deposit branch so it can never mark the
+      // Crossroads deposit. Only a paid session counts; async success arrives
+      // as its own event.
+      if (session.metadata?.kind === "officiant") {
+        const agreementId = session.metadata.serviceAgreementId;
+        const part = session.metadata.part;
+        if (agreementId && (part === "deposit" || part === "balance") && session.payment_status === "paid") {
+          const r = await markOfficiantPaidByCard(agreementId, part);
+          if (r === "already") {
+            console.warn(`[stripe] officiant ${part} paid by card but already marked received: ${agreementId} (${session.id}). Check for a double payment.`);
+          } else {
+            console.log(`[stripe] officiant ${part} ${r} for ${agreementId} (${session.id})`);
+          }
+        }
         return NextResponse.json({ received: true });
       }
       // completed can arrive with payment_status "unpaid" for async methods, so
