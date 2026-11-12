@@ -1052,6 +1052,21 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   and the owner page says so. Verified on a local Postgres: officiant signs first (three
   simultaneous: one 200, two 409), edit refused, couple accepts after, both signatures show;
   DJ countersign with no acceptance returns 200.
+- **The couple's officiant page walks them through it (2026-11-12, Jake: Liv "didn't
+  understand the flow"; "blur out everything but the current step ... a handwritten note with
+  an arrow ... think clippy, old school").** Three step cards at the top (sign, deposit,
+  balance; done / do this now / later). `components/guide/StepGuide.tsx` is a reusable guide:
+  `StepGuide step=...` wraps a page, areas opt in with `data-zone`, and globals.css blurs the
+  zones that are not the current step (`[data-guide=...]`, screen only, never print). A
+  `GuideNote` is our own yellow sticky note (Caveat handwriting, a plain paperclip, a drawn
+  arrow; deliberately NOT Microsoft's Clippy character) placed right above the target, and a
+  corner note always says the next step. It is a guide, never a gate: "Show me everything"
+  turns it off, remembered per device (`cw-step-guide-off`). Card buttons are never hidden:
+  until unlocked they show greyed with the reason on hover and as text for phones ("Sign the
+  agreement above first", "Pay the deposit first"); accepting refreshes the page so the
+  deposit button goes live at once. Dashboard cards with an officiant agreement show four
+  pills: DJ deposit, officiant deposit, DJ agreement, officiant agreement (`officiant` on
+  `AdminWedding`). Verified on a local Postgres in headless Chromium at 390 and 1280.
 - **Platform billing live on Stripe (2026-11-12, Jake: "get billing live with whatever you
   suggest. Can Found take payments?").** Found has no API and its own invoice card payments
   run through Stripe, so the app uses Stripe directly and Stripe pays out to the Found

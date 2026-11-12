@@ -1,7 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { appointments, leads, weddingMessages, weddings } from "@/lib/db/schema";
+import { appointments, leads, serviceAgreements, weddingMessages, weddings } from "@/lib/db/schema";
 import { nameSlug } from "@/lib/hub-constants";
 import { CORPORATE_PACKAGE } from "@/lib/invoice";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
@@ -65,6 +65,8 @@ export type AdminWedding = {
   leadSource: string | null;
   leadSourceDetail: string | null;
   leadSrcTag: string | null;
+  /** The separate Compass Events officiant agreement, when one is set up. */
+  officiant?: { acceptedAt: string | null; countersignedAt: string | null; depositPaidAt: string | null } | null;
 };
 
 export type AdminLead = {
@@ -99,7 +101,13 @@ export type AdminData = {
   calls: AdminCall[];
 };
 
-function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): AdminWedding {
+type OfficiantRow = { acceptedAt: Date | null; countersignedAt: Date | null; depositPaidAt: Date | null };
+
+function toAdminWedding(
+  w: typeof weddings.$inferSelect,
+  unreadMessages = 0,
+  officiant: OfficiantRow | null = null,
+): AdminWedding {
   const addons = Array.isArray(w.addons)
     ? (w.addons as { type: string; fee: number | null; minFee?: number }[])
     : [];
@@ -107,6 +115,13 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     ? (w.checkinsSent as unknown[]).filter((m): m is number => typeof m === "number")
     : [];
   return {
+    officiant: officiant
+      ? {
+          acceptedAt: officiant.acceptedAt?.toISOString() ?? null,
+          countersignedAt: officiant.countersignedAt?.toISOString() ?? null,
+          depositPaidAt: officiant.depositPaidAt?.toISOString() ?? null,
+        }
+      : null,
     id: w.id,
     archivedAt: w.archivedAt ? w.archivedAt.toISOString() : null,
     coupleNames: w.coupleNames,
@@ -216,6 +231,16 @@ export async function getAdminData(): Promise<AdminData> {
       .limit(50),
   ]);
   const unreadByWedding = new Map(unreadRows.map((r) => [r.weddingId, r.count]));
+  const officiantRows = await db
+    .select({
+      weddingId: serviceAgreements.weddingId,
+      acceptedAt: serviceAgreements.acceptedAt,
+      countersignedAt: serviceAgreements.countersignedAt,
+      depositPaidAt: serviceAgreements.depositPaidAt,
+    })
+    .from(serviceAgreements)
+    .where(and(eq(serviceAgreements.kind, "officiant"), isNull(serviceAgreements.cancelledAt)));
+  const officiantByWedding = new Map(officiantRows.map((r) => [r.weddingId, r]));
 
   const todayRow = await db.execute(sql`select current_date::text as today`);
   const today = String(todayRow.rows[0]?.today ?? new Date().toISOString().slice(0, 10));
@@ -224,7 +249,7 @@ export async function getAdminData(): Promise<AdminData> {
   const past: AdminWedding[] = [];
   for (const w of allWeddings) {
     const target = w.eventDate >= today && w.status !== "cancelled" ? upcoming : past;
-    target.push(toAdminWedding(w, unreadByWedding.get(w.id) ?? 0));
+    target.push(toAdminWedding(w, unreadByWedding.get(w.id) ?? 0, officiantByWedding.get(w.id) ?? null));
   }
   // Past reads newest-first; upcoming keeps soonest-first from the query.
   past.reverse();

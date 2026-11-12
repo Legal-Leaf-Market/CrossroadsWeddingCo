@@ -98,8 +98,13 @@ function WeddingCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         <span className={wedding.isDepositPaid ? "rounded-full bg-terracotta/15 px-2 py-0.5 font-semibold text-terracotta" : "rounded-full bg-charcoal/5 px-2 py-0.5 text-ink/50"}>
-          deposit {wedding.isDepositPaid ? "received" : "due"}
+          {wedding.officiant ? "DJ deposit" : "deposit"} {wedding.isDepositPaid ? "received" : "due"}
         </span>
+        {wedding.officiant && (
+          <span className={wedding.officiant.depositPaidAt ? "rounded-full bg-terracotta/15 px-2 py-0.5 font-semibold text-terracotta" : "rounded-full bg-charcoal/5 px-2 py-0.5 text-ink/50"}>
+            officiant deposit {wedding.officiant.depositPaidAt ? "received" : "due"}
+          </span>
+        )}
         {wedding.addons.map((a) => (
           <span key={a.type} className="rounded-full bg-charcoal/5 px-2 py-0.5 text-ink/70">
             {ADDON_LABELS[a.type] ?? a.type}
@@ -114,13 +119,20 @@ function WeddingCard({
               : "rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-ink"
           }
         >
-          agreement{" "}
-          {wedding.contractCountersignedAt
-            ? "signed by both"
-            : wedding.contractAcceptedAt
-              ? "needs your signature"
-              : "unsigned"}
+          {wedding.officiant ? "DJ agreement" : "agreement"}{" "}
+          {agreementState(wedding.contractAcceptedAt, wedding.contractCountersignedAt)}
         </span>
+        )}
+        {wedding.officiant && (
+          <span
+            className={
+              wedding.officiant.acceptedAt && wedding.officiant.countersignedAt
+                ? "rounded-full bg-sage/25 px-2 py-0.5 font-semibold text-ink"
+                : "rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-ink"
+            }
+          >
+            officiant agreement {agreementState(wedding.officiant.acceptedAt, wedding.officiant.countersignedAt)}
+          </span>
         )}
         {wedding.checkinsSent.length > 0 && (
           <span className="rounded-full bg-charcoal/5 px-2 py-0.5 text-ink/50">
@@ -476,4 +488,12 @@ export default function Dashboard({ data, basePath, platform = null }: { data: A
       </main>
     </div>
   );
+}
+
+/** One wording for both agreements' pills; either side may sign first. */
+function agreementState(acceptedAt: string | null, countersignedAt: string | null): string {
+  if (acceptedAt && countersignedAt) return "signed by both";
+  if (acceptedAt) return "needs your signature";
+  if (countersignedAt) return "waiting on the couple";
+  return "unsigned";
 }
