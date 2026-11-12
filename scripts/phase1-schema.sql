@@ -855,3 +855,33 @@ CREATE INDEX IF NOT EXISTS idx_vendors_tenant ON vendors (tenant_id);
 -- with (expo QR, DJ meetup card, an ad), so every channel is judged on
 -- signups, not hope. Same tag rules as weddings.lead_src_tag.
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS signup_src VARCHAR(40);
+
+-- Separate service agreements inside a couple's hub (2026-11-12, Jake and
+-- Terry). First kind: officiating, sold as Compass Events by Crossroads
+-- Wedding and Event Co. and signed for Compass Events by Terry Winchester,
+-- its CEO. Own deposit, balance and signatures; the wedding's Crossroads
+-- agreement is untouched. One live agreement per wedding and kind.
+CREATE TABLE IF NOT EXISTS service_agreements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wedding_id UUID NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
+    kind VARCHAR(30) NOT NULL DEFAULT 'officiant',
+    brand VARCHAR(30) NOT NULL DEFAULT 'compass',
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    fee_usd NUMERIC(10, 2) NOT NULL,
+    deposit_usd NUMERIC(10, 2) NOT NULL,
+    balance_due_hours INTEGER NOT NULL DEFAULT 48,
+    accepted_at TIMESTAMPTZ,
+    accepted_name VARCHAR(255),
+    snapshot JSONB,
+    countersigned_at TIMESTAMPTZ,
+    countersigned_name VARCHAR(255),
+    countersigned_title VARCHAR(255),
+    deposit_paid_at TIMESTAMPTZ,
+    balance_paid_at TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_agreements_live
+    ON service_agreements (wedding_id, kind) WHERE cancelled_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_service_agreements_wedding ON service_agreements (wedding_id);

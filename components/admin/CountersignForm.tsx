@@ -8,14 +8,23 @@ import { useState } from "react";
 export default function CountersignForm({
   adminKey,
   weddingId,
+  endpoint,
+  companyName = "Crossroads Wedding and Event Co.",
+  defaultName = "",
+  defaultTitle = "Chief Executive Officer",
 }: {
   /** The secret path segment, not the "/admin/<key>" base path. */
   adminKey: string;
   weddingId: string;
+  /** Where the signature posts; defaults to the Crossroads agreement. */
+  endpoint?: string;
+  companyName?: string;
+  defaultName?: string;
+  defaultTitle?: string;
 }) {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [title, setTitle] = useState("Chief Executive Officer");
+  const [name, setName] = useState(defaultName);
+  const [title, setTitle] = useState(defaultTitle);
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -26,7 +35,7 @@ export default function CountersignForm({
     setError("");
     try {
       const res = await fetch(
-        `/api/admin/${encodeURIComponent(adminKey)}/contract/${weddingId}`,
+        endpoint ?? `/api/admin/${encodeURIComponent(adminKey)}/contract/${weddingId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -48,7 +57,7 @@ export default function CountersignForm({
 
   return (
     <div className="mt-8 rounded-2xl border-2 border-terracotta bg-white p-6 print:hidden">
-      <h2 className="text-lg font-semibold text-charcoal">Sign for Crossroads</h2>
+      <h2 className="text-lg font-semibold text-charcoal">Sign for {companyName.replace(/ by .*/, "")}</h2>
       <p className="mt-1 text-sm text-ink/70">
         Your signature and today&apos;s date go on the signature block above and on the
         couple&apos;s copy in their hub. It can only be done once.
@@ -82,7 +91,7 @@ export default function CountersignForm({
           className="mt-1 accent-terracotta"
         />
         <span>
-          I am signing this agreement on behalf of Crossroads Wedding and Event Co. and I understand that
+          I am signing this agreement on behalf of {companyName} and I understand that
           typing my name here has the same effect as signing it.
         </span>
       </label>

@@ -90,12 +90,15 @@ export default function SignatureBlock({
   company,
   companyTitle,
   version,
+  companyName = SITE_NAME,
 }: {
   coupleNames: string;
   client: Signer | null;
   company: Signer | null;
   companyTitle: string | null;
   version: string;
+  /** The company signing. Crossroads unless a separate agreement says otherwise (Compass Events). */
+  companyName?: string;
 }) {
   const both = client && company;
   return (
@@ -105,13 +108,13 @@ export default function SignatureBlock({
         {both
           ? "Both parties have signed. This agreement is in effect as of the later date below."
           : client
-            ? `Signed by the client. Awaiting signature from ${SITE_NAME}.`
+            ? `Signed by the client. Awaiting signature from ${companyName}.`
             : "Not yet signed."}
       </p>
 
       <div className="mt-5 grid gap-5 sm:grid-cols-2 print:grid-cols-2">
         <Party label="Client" party={coupleNames} signer={client} />
-        <Party label="For the company" party={SITE_NAME} signer={company} role={companyTitle ?? ""} />
+        <Party label="For the company" party={companyName} signer={company} role={companyTitle ?? ""} />
       </div>
 
       <p className="mt-4 text-xs leading-relaxed text-ink/60">

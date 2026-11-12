@@ -19,6 +19,8 @@ import { listDocuments } from "@/lib/documents";
 import { countUnread } from "@/lib/messages";
 import { brandForTenant, brandForToken, brandedMetadata } from "@/lib/brand";
 import { resolveWeddingArt } from "@/lib/wedding-art-server";
+import { getOfficiantAgreement } from "@/lib/service-agreements";
+import { COMPASS_FULL_NAME } from "@/lib/compass";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,8 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   // message thread and video calls reach the Crossroads team. A business on
   // the platform gets none of them until each is rebuilt per account.
   const house = brand.isHouse;
+  // A separate agreement (officiating by Compass Events), shown only when the owner set one up.
+  const officiant = house ? await getOfficiantAgreement(wedding.id) : null;
   const todayInIndiana = new Date().toLocaleDateString("en-CA", { timeZone: "America/Indiana/Indianapolis" });
   const revs = (wedding.hubSectionRevs ?? {}) as Record<string, number>;
   // The hub-managed playlist links, seeded from the single link captured at
@@ -155,6 +159,33 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
           >
             <span className="font-semibold text-charcoal">Agreement accepted.</span> Your copy
             lives here any time you want it.
+          </a>
+        )}
+        {officiant && (
+          <a
+            href={`/hub/${token}/officiant`}
+            className={
+              officiant.acceptedAt
+                ? "block rounded-2xl border border-parchment bg-white px-5 py-3 text-sm text-ink/70 hover:border-terracotta"
+                : "block rounded-2xl border-2 border-terracotta bg-white p-5 hover:bg-parchment/30"
+            }
+          >
+            {officiant.acceptedAt ? (
+              <>
+                <span className="font-semibold text-charcoal">Officiant agreement accepted.</span> Your copy and
+                your officiant invoice live here.
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-bold uppercase tracking-widest text-terracotta">{COMPASS_FULL_NAME}</p>
+                <p className="mt-1 font-semibold text-charcoal">Your officiant agreement is ready to read</p>
+                <p className="mt-1 text-sm text-ink/70">
+                  A separate agreement and invoice for your ceremony officiant. It doesn&apos;t change your
+                  service agreement above.
+                </p>
+                <span className="mt-3 inline-block text-sm font-semibold text-terracotta">Read and accept &rarr;</span>
+              </>
+            )}
           </a>
         )}
         <p className="text-sm text-ink/60">
