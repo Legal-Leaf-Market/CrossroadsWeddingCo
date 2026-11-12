@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
 // UI never renders a payment control while this returns 501.
 export async function POST(req: NextRequest) {
   const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) {
+  // Wedding deposits stay cash or check until the owner says otherwise. Having
+  // a Stripe key for the platform's own billing must not switch this on, so it
+  // needs its own explicit setting too.
+  if (!key || process.env.STRIPE_DEPOSITS_ENABLED !== "1") {
     return NextResponse.json({ error: "Deposit payments are not enabled yet" }, { status: 501 });
   }
 

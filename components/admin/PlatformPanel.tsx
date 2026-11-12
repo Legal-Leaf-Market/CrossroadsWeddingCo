@@ -77,7 +77,17 @@ export default function PlatformPanel({ stats }: { stats: PlatformStats | null }
                     <td className="py-1.5 pr-2">{r.src ?? "none"}</td>
                     <td className="py-1.5 pr-2">{new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: VENUE_TIME_ZONE })}</td>
                     <td className="py-1.5">
-                      {r.plan !== "trial" ? "Paying" : r.trialEndsAt && new Date(r.trialEndsAt) <= new Date() ? "Trial ended" : "On trial"}
+                      {r.billingStatus === "active"
+                        ? "Paying"
+                        : r.billingStatus === "past_due"
+                          ? "Card failed"
+                          : r.billingStatus === "trialing"
+                            ? "On trial, card added"
+                            : r.billingStatus === "canceled" || r.billingStatus === "unpaid"
+                              ? "Cancelled"
+                              : r.trialEndsAt && new Date(r.trialEndsAt) <= new Date()
+                                ? "Trial ended"
+                                : "On trial"}
                     </td>
                   </tr>
                 ))}

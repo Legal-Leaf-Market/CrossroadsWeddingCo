@@ -64,6 +64,14 @@ export const tenants = pgTable("tenants", {
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   /** First-touch ?src= tag the owner arrived with (expo, card, ad). lib/lead-sources.ts cleanSrcTag. */
   signupSrc: varchar("signup_src", { length: 40 }),
+  /** Platform billing (Stripe). See lib/billing.ts. */
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  /** Stripe's subscription status as last reported: trialing, active, past_due, canceled... */
+  billingStatus: varchar("billing_status", { length: 30 }),
+  billingPeriodEnd: timestamp("billing_period_end", { withTimezone: true }),
+  /** Created time of the last Stripe event applied, so an older event never overwrites a newer one. */
+  billingEventAt: timestamp("billing_event_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
