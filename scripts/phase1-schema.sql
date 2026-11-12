@@ -885,3 +885,27 @@ CREATE TABLE IF NOT EXISTS service_agreements (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_service_agreements_live
     ON service_agreements (wedding_id, kind) WHERE cancelled_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_service_agreements_wedding ON service_agreements (wedding_id);
+
+-- Liv Ash's officiant agreement (2026-11-12, Jake: "get them live now ... on
+-- Liv's hub"). Creates the Compass Events agreement on her existing booking so
+-- her hub link works without a dashboard tap. Only when exactly ONE active
+-- house wedding names Ash, Olivia or Liv as a word; otherwise nothing, and the
+-- dashboard's Officiant button does it by hand. Never a second live agreement
+-- (partial unique index), and it records itself so it runs once.
+WITH match AS (
+    SELECT w.id FROM weddings w
+    WHERE w.tenant_id = '00000000-0000-4000-8000-000000000001'
+      AND w.archived_at IS NULL AND w.status <> 'cancelled'
+      AND (w.couple_names ~* '\mash\M' OR w.couple_names ~* '\molivia\M' OR w.couple_names ~* '\mliv\M')
+), ins AS (
+    INSERT INTO service_agreements (wedding_id, kind, brand, details, fee_usd, deposit_usd, balance_due_hours)
+    SELECT id, 'officiant', 'compass',
+           '{"officiantName":"Terry Winchester","credential":"","rehearsal":"","notes":""}'::jsonb,
+           250, 125, 48
+    FROM match
+    WHERE (SELECT count(*) FROM match) = 1
+      AND NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'officiant_liv_ash_v1')
+    ON CONFLICT DO NOTHING
+    RETURNING 1
+)
+INSERT INTO schema_seeds (name) SELECT 'officiant_liv_ash_v1' FROM ins ON CONFLICT (name) DO NOTHING;
