@@ -62,6 +62,8 @@ export const tenants = pgTable("tenants", {
   businessType: varchar("business_type", { length: 40 }),
   plan: varchar("plan", { length: 20 }).notNull().default("trial"),
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  /** First-touch ?src= tag the owner arrived with (expo, card, ad). lib/lead-sources.ts cleanSrcTag. */
+  signupSrc: varchar("signup_src", { length: 40 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -628,3 +630,25 @@ export const sitePhotos = pgTable(
   },
   (t) => [index("idx_site_photos_wedding").on(t.weddingId, t.orderIndex)],
 );
+
+// 17. Vendors (2026-11-11). lib/vendors.ts; pure rules in lib/books/vendor-logic.ts.
+export const vendors = pgTable(
+  "vendors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    kind: varchar("kind", { length: 20 }).notNull().default("contractor"),
+    email: varchar("email", { length: 255 }),
+    phone: varchar("phone", { length: 50 }),
+    matchText: varchar("match_text", { length: 400 }).notNull().default(""),
+    is1099: boolean("is_1099").notNull().default(false),
+    w9OnFile: boolean("w9_on_file").notNull().default(false),
+    notes: text("notes").notNull().default(""),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_vendors_tenant").on(t.tenantId)],
+);
+export type Vendor = typeof vendors.$inferSelect;

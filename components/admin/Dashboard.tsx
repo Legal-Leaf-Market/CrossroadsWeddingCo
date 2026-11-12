@@ -2,6 +2,8 @@ import ArchiveButton from "@/components/admin/ArchiveButton";
 import BookingEditor from "@/components/admin/BookingEditor";
 import type { AdminCall, AdminData, AdminWedding } from "@/lib/admin";
 import CorporateBookingForm from "@/components/admin/CorporateBookingForm";
+import PlatformPanel from "@/components/admin/PlatformPanel";
+import type { PlatformStats } from "@/lib/platform-stats";
 import { findScheduler } from "@/lib/schedulers";
 import { daysOut, formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME, VENUE_TIME_ZONE } from "@/lib/site";
@@ -355,7 +357,7 @@ function CallList({ calls }: { calls: AdminCall[] }) {
   );
 }
 
-export default function Dashboard({ data, basePath }: { data: AdminData; basePath: string }) {
+export default function Dashboard({ data, basePath, platform = null }: { data: AdminData; basePath: string; platform?: PlatformStats | null }) {
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-parchment bg-white">
@@ -404,6 +406,7 @@ export default function Dashboard({ data, basePath }: { data: AdminData; basePat
 
       <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
         <Readiness weddings={data.upcoming} />
+        <PlatformPanel stats={platform} />
         <CorporateBookingForm basePath={basePath} />
         <SourceTally weddings={[...data.upcoming, ...data.past]} />
         <CallList calls={data.calls} />

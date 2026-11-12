@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import SignupForm from "@/components/account/SignupForm";
 import { getWorkspace, signupOpen } from "@/lib/auth";
-import { PLATFORM_NAME, TRIAL_DAYS } from "@/lib/tenant-constants";
+import { PLAN_PRICE_USD, PLATFORM_NAME, TRIAL_DAYS } from "@/lib/tenant-constants";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,26 @@ export default async function SignupPage() {
             Bookings, contracts and invoices, a planning hub your couples fill in from their phones, and a day-of
             timeline that moves for every vendor when the night runs late.
           </p>
-          <p className="mt-4 text-sm text-ink/60">
-            {TRIAL_DAYS} days free. No card. Free for your clients.
+          <ul className="mt-5 space-y-3 text-ink/80">
+            <li>
+              <strong className="text-charcoal">Your books are built in. No QuickBooks.</strong> Bank and card feeds, sorted
+              transactions, profit and loss, and a ledger that is ready at tax time, next to your bookings.
+            </li>
+            <li>
+              <strong className="text-charcoal">An accountant on your side.</strong> Jake Kennedy, our CEO, is a seasoned
+              accountant, technologist and DJ. He runs his own DJ company on this software and helps you with your books.
+            </li>
+            <li>
+              <strong className="text-charcoal">Want your taxes filed too?</strong> Jake files them through Smart CFO, under
+              confidentiality.
+            </li>
+          </ul>
+          <blockquote className="mt-5 border-l-4 border-terracotta pl-4 text-lg text-charcoal">
+            &ldquo;You don&apos;t need anyone but me.&rdquo;
+            <span className="mt-1 block text-sm text-ink/60">Jake Kennedy, CEO</span>
+          </blockquote>
+          <p className="mt-5 text-sm text-ink/60">
+            ${PLAN_PRICE_USD} a month, flat, every feature. {TRIAL_DAYS} days free first. No card. Free for your clients.
           </p>
         </div>
         {open ? (

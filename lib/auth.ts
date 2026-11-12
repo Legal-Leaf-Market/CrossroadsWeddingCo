@@ -68,6 +68,7 @@ export async function createAccount(input: {
   fullName: string;
   email: string;
   phone?: string;
+  src?: string;
 }): Promise<SignupResult> {
   const email = normalizeEmail(input.email);
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
@@ -91,6 +92,7 @@ export async function createAccount(input: {
           businessType: input.businessType,
           plan: "trial",
           trialEndsAt,
+          signupSrc: input.src ?? null,
         })
         .returning({ id: tenants.id });
       const [user] = await tx
