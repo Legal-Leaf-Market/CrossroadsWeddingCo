@@ -29,6 +29,9 @@ export default function AccountShell({
                   Bookings
                 </Link>
               )}
+              <Link href="/app/money" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Money
+              </Link>
               <Link href="/app/transactions" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Transactions
               </Link>
