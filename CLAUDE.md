@@ -1041,6 +1041,17 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   pointer to their signed copy, never the terms. Dashboard buttons now read "DJ agreement" and
   "Officiant agreement". Verified on a local Postgres: forged token 404, three simultaneous
   signs give one 200 and two 409, no sideways scroll at 390 and 1280.
+- **The company can always sign first (2026-11-12, Jake: "on all agreements, the company
+  should be able to sign first, always give us that option").** Both countersign paths drop
+  the "couple accepted" condition; the conditional UPDATE still allows one signature only.
+  Officiant agreement: once either side signs, the terms lock (`saveOfficiantAgreement` also
+  refuses after a countersign), so the couple accepts exactly what the officiant signed, and
+  the couple's email says "read and accept" instead of "both signatures". DJ agreement: the
+  terms come from the wedding row, which the couple and "Edit money" can still change, so
+  signing first does NOT freeze them; the couple's acceptance snapshot is still the record,
+  and the owner page says so. Verified on a local Postgres: officiant signs first (three
+  simultaneous: one 200, two 409), edit refused, couple accepts after, both signatures show;
+  DJ countersign with no acceptance returns 200.
 - **Platform billing live on Stripe (2026-11-12, Jake: "get billing live with whatever you
   suggest. Can Found take payments?").** Found has no API and its own invoice card payments
   run through Stripe, so the app uses Stripe directly and Stripe pays out to the Found

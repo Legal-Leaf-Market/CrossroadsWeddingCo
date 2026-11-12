@@ -86,6 +86,7 @@ export async function countersignAndNotify(
       coupleNames: wedding.coupleNames,
       officiantName: name || (a ? officiantDetails(a).officiantName : ""),
       hubPath: `/hub/${wedding.accessToken}/officiant`,
+      coupleAccepted: Boolean(a?.acceptedAt),
     });
   } catch (err) {
     console.error("[officiant-sign] couple email failed:", err);

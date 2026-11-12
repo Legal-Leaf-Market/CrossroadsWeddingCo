@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // The officiant's signing link posts here. The token in the path is the whole
 // credential and it opens exactly one action on one agreement: sign it, once,
-// after the couple has accepted. Any mismatch is a 404.
+// before or after the couple accepts. Any mismatch is a 404.
 const schema = z.object({
   name: z.string("Type your full name to sign").trim().min(2, "Type your full name to sign").max(255),
   title: z.string().trim().max(255).default(""),
@@ -36,12 +36,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ token: str
 
   const r = await countersignAndNotify(found.wedding, parsed.data.name, parsed.data.title);
   if (r === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404, headers });
-  if (r === "not_accepted") {
-    return NextResponse.json(
-      { error: "The couple hasn't accepted the officiant agreement yet. Once they do, this link will let you sign." },
-      { status: 409, headers },
-    );
-  }
   if (r === "already_signed") {
     return NextResponse.json({ error: "This agreement is already signed. Refresh to see it." }, { status: 409, headers });
   }

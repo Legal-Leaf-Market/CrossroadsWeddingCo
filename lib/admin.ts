@@ -156,15 +156,17 @@ export async function getAdminWeddingRow(
 }
 
 /**
- * Sign the agreement for the company. Only after the couple has accepted,
- * and only once: the WHERE carries both conditions, so two taps from two
- * devices cannot both write, and the second one learns it lost.
+ * Sign the agreement for the company, before or after the couple accepts
+ * (2026-11-12, Jake: "the company should be able to sign first, always"), and
+ * only once: the WHERE carries that condition, so two taps from two devices
+ * cannot both write, and the second one learns it lost. Signing first does not
+ * freeze the terms; the couple's acceptance snapshot does, as it always has.
  */
 export async function countersignContract(
   weddingId: string,
   name: string,
   title: string,
-): Promise<"ok" | "not_accepted" | "already_signed" | "not_found"> {
+): Promise<"ok" | "already_signed" | "not_found"> {
   const at = new Date();
   const updated = await db
     .update(weddings)
@@ -178,7 +180,6 @@ export async function countersignContract(
       and(
         eq(weddings.id, weddingId),
         isHouse,
-        isNotNull(weddings.contractAcceptedAt),
         isNull(weddings.contractCountersignedAt),
       ),
     )
@@ -186,7 +187,6 @@ export async function countersignContract(
   if (updated.length > 0) return "ok";
   const w = await getAdminWeddingRow(weddingId);
   if (!w) return "not_found";
-  if (!w.contractAcceptedAt) return "not_accepted";
   return "already_signed";
 }
 

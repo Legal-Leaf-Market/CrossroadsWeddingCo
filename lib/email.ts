@@ -235,6 +235,8 @@ export async function sendOfficiantSignedEmail(input: {
   coupleNames: string;
   officiantName: string;
   hubPath: string;
+  /** The couple already accepted, so the agreement is now fully signed. */
+  coupleAccepted: boolean;
 }): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return;
@@ -254,7 +256,9 @@ export async function sendOfficiantSignedEmail(input: {
     text: [
       `Good news: ${who} signed your officiant agreement with Compass Events.`,
       ``,
-      `Both signatures are on it now. Your signed copy is in your planning hub: ${url}`,
+      input.coupleAccepted
+        ? `Both signatures are on it now. Your signed copy is in your planning hub: ${url}`
+        : `Your signature is the last one it needs. Read it and accept it in your planning hub: ${url}`,
       ``,
       `This is the officiant agreement only. Your DJ agreement with ${SITE_NAME} is separate and is not affected.`,
       ``,
@@ -263,8 +267,8 @@ export async function sendOfficiantSignedEmail(input: {
     html:
       `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
       `Good news: <strong>${whoHtml}</strong> signed your officiant agreement with Compass Events.<br>` +
-      `Both signatures are on it now.` +
-      `<div style="margin: 16px 0;"><a href="${url}" style="display: inline-block; background: #c1633d; color: #faf5ec; font-weight: bold; padding: 12px 22px; border-radius: 999px; text-decoration: none;">See your signed agreement</a></div>` +
+      (input.coupleAccepted ? `Both signatures are on it now.` : `Your signature is the last one it needs.`) +
+      `<div style="margin: 16px 0;"><a href="${url}" style="display: inline-block; background: #c1633d; color: #faf5ec; font-weight: bold; padding: 12px 22px; border-radius: 999px; text-decoration: none;">${input.coupleAccepted ? "See your signed agreement" : "Read and accept it"}</a></div>` +
       `This is the officiant agreement only. Your DJ agreement with ${SITE_NAME} is separate and is not affected.<br><br>` +
       `Please don't reply to this email; message us in your hub.` +
       `</div>`,
