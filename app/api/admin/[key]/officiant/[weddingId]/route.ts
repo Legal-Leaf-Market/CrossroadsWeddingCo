@@ -1,11 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { adminKeyMatches, getAdminWeddingRow } from "@/lib/admin";
-import {
-  countersignOfficiantAgreement,
-  saveOfficiantAgreement,
-  setOfficiantPayment,
-} from "@/lib/service-agreements";
+import { countersignAndNotify } from "@/lib/officiant-sign";
+import { saveOfficiantAgreement, setOfficiantPayment } from "@/lib/service-agreements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +68,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ key: strin
   }
 
   if (body.action === "countersign") {
-    const r = await countersignOfficiantAgreement(wedding.id, body.name, body.title);
+    const r = await countersignAndNotify(wedding, body.name, body.title);
     if (r === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404, headers });
     if (r === "not_accepted") {
       return NextResponse.json(
