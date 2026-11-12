@@ -44,6 +44,7 @@ function liveSections(a: ServiceAgreement, w: Wedding): ContractSection[] {
     feeUsd: Number(a.feeUsd),
     depositUsd: Number(a.depositUsd),
     balanceHours: a.balanceDueHours,
+    cardPayments: officiantCardPaymentsOn(),
   });
 }
 

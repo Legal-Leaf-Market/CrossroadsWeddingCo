@@ -1023,6 +1023,12 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   link ($125, one payment) the same night, before this shipped, so mark it received by hand
   on the owner page if she paid that way. Verified by the Netlify preview build only (this
   session had no package install); the first real payment is the end-to-end proof.
+  **Proven end to end the same night** with a dummy booking (Dummy & Officiant, $2 fee, $1
+  deposit, archived after): /book, owner set-up, hub accept, $1 deposit by card, webhook 200,
+  countersign, $1 balance by card, PAID stamp. The test showed the agreement's payment clause
+  still said "cash or check for now", so `buildOfficiantAgreement` takes `cardPayments` and
+  offers card when the switch is on (`OFFICIANT_AGREEMENT_VERSION` 2026-11-12b); agreements
+  accepted earlier keep their frozen wording.
 
 - **Platform billing live on Stripe (2026-11-12, Jake: "get billing live with whatever you
   suggest. Can Found take payments?").** Found has no API and its own invoice card payments
