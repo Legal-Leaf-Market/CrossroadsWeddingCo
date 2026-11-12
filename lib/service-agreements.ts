@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { serviceAgreements, type ServiceAgreement, type Wedding } from "@/lib/db/schema";
 import {
@@ -62,7 +62,7 @@ export function officiantVersion(a: ServiceAgreement): string {
 
 export type OfficiantSetup = OfficiantDetails & { feeUsd: number; depositUsd: number; balanceDueHours: number };
 
-/** Create, or edit while it is still unaccepted. */
+/** Create, or edit while nobody has signed it yet (couple or officiant). */
 export async function saveOfficiantAgreement(
   weddingId: string,
   s: OfficiantSetup,
@@ -92,7 +92,7 @@ export async function saveOfficiantAgreement(
   const updated = await db
     .update(serviceAgreements)
     .set(values)
-    .where(and(eq(serviceAgreements.id, existing.id), isNull(serviceAgreements.acceptedAt)))
+    .where(and(eq(serviceAgreements.id, existing.id), isNull(serviceAgreements.acceptedAt), isNull(serviceAgreements.countersignedAt)))
     .returning({ id: serviceAgreements.id });
   return updated.length ? "updated" : "locked";
 }
@@ -129,17 +129,20 @@ export async function countersignOfficiantAgreement(
   weddingId: string,
   name: string,
   title: string,
-): Promise<"ok" | "not_found" | "not_accepted" | "already_signed"> {
+): Promise<"ok" | "not_found" | "already_signed"> {
   const a = await getOfficiantAgreement(weddingId);
   if (!a) return "not_found";
   const at = new Date();
   const updated = await db
     .update(serviceAgreements)
     .set({ countersignedAt: at, countersignedName: name, countersignedTitle: title, updatedAt: at })
-    .where(and(eq(serviceAgreements.id, a.id), isNotNull(serviceAgreements.acceptedAt), isNull(serviceAgreements.countersignedAt)))
+    .where(and(eq(serviceAgreements.id, a.id), isNull(serviceAgreements.cancelledAt), isNull(serviceAgreements.countersignedAt)))
     .returning({ id: serviceAgreements.id });
+  // The officiant may sign before or after the couple (2026-11-12, Jake): once
+  // he signs, the terms are locked (saveOfficiantAgreement refuses), so the
+  // couple accepts exactly what he signed.
   if (updated.length) return "ok";
-  return a.acceptedAt ? "already_signed" : "not_accepted";
+  return "already_signed";
 }
 
 /** Mark a payment received (or undo a mistaken tap). Owner only. */

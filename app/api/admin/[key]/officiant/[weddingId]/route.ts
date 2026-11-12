@@ -60,7 +60,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ key: strin
     const r = await saveOfficiantAgreement(wedding.id, body);
     if (r === "locked") {
       return NextResponse.json(
-        { error: "The couple already accepted this agreement, so its terms can't change." },
+        { error: "This agreement has been signed (by the couple or for Compass Events), so its terms can't change." },
         { status: 409, headers },
       );
     }
@@ -70,12 +70,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ key: strin
   if (body.action === "countersign") {
     const r = await countersignAndNotify(wedding, body.name, body.title);
     if (r === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404, headers });
-    if (r === "not_accepted") {
-      return NextResponse.json(
-        { error: "The couple hasn't accepted this agreement yet, so there is nothing to countersign." },
-        { status: 409, headers },
-      );
-    }
     if (r === "already_signed") {
       return NextResponse.json({ error: "Already signed for Compass Events. Refresh to see it." }, { status: 409, headers });
     }

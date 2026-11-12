@@ -27,7 +27,7 @@ export default async function OfficiantSignPage({ params }: { params: Promise<{ 
   const d = officiantDetails(a);
   const first = d.officiantName.trim().split(/\s+/)[0] || "Officiant";
 
-  const state = a.countersignedAt ? "signed" : a.acceptedAt ? "ready" : "waiting";
+  const state = a.countersignedAt ? "signed" : a.acceptedAt ? "ready" : "first";
 
   return (
     <div className="min-h-screen bg-cream px-4 py-8 text-charcoal sm:px-6">
@@ -44,10 +44,12 @@ export default async function OfficiantSignPage({ params }: { params: Promise<{ 
           </p>
           <p className="mt-3 rounded-lg bg-cream px-3 py-2 text-sm text-ink">
             {state === "signed" &&
-              "Both signatures are on it. The couple gets an email saying you signed, and their copy in the planning hub shows your signature."}
+              (a.acceptedAt
+                ? "Both signatures are on it. The couple got an email saying you signed, and their copy in the planning hub shows your signature."
+                : "Your signature is on it. The couple got an email saying you signed, and they accept it from their planning hub. The terms are locked now.")}
             {state === "ready" && "The couple has accepted. Scroll to the bottom, type your name, tick the box and press Sign agreement."}
-            {state === "waiting" &&
-              "The couple hasn't accepted yet, so there is nothing to sign. Keep this link: once they accept, the sign box appears at the bottom."}
+            {state === "first" &&
+              "The couple hasn't accepted yet, and that's fine: you can sign first. Scroll to the bottom, type your name, tick the box and press Sign agreement. Once you sign, the terms are locked and the couple accepts exactly this."}
           </p>
         </div>
 
@@ -79,7 +81,7 @@ export default async function OfficiantSignPage({ params }: { params: Promise<{ 
           companyName={COMPASS_FULL_NAME}
         />
 
-        {state === "ready" && (
+        {state !== "signed" && (
           <CountersignForm
             adminKey=""
             weddingId={wedding.id}

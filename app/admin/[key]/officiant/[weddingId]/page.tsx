@@ -69,11 +69,13 @@ export default async function AdminOfficiantPage({
             <p className="mt-2 text-ink/60">
               It opens inside their existing planning hub. It&apos;s their private hub key, so send it only to them.
               Status:{" "}
-              {a.countersignedAt
+              {a.countersignedAt && a.acceptedAt
                 ? "signed by both."
-                : a.acceptedAt
-                  ? "accepted by the couple; sign below."
-                  : "waiting for the couple to accept."}
+                : a.countersignedAt
+                  ? "signed for Compass Events; waiting for the couple to accept."
+                  : a.acceptedAt
+                    ? "accepted by the couple; waiting for the officiant to sign."
+                    : "nobody has signed yet. Either side can go first."}
             </p>
             {!d?.credential && (
               <p className="mt-2 rounded-lg bg-gold/15 px-3 py-2 text-ink">
@@ -89,13 +91,13 @@ export default async function AdminOfficiantPage({
             <p className="font-semibold text-charcoal">Send {d?.officiantName ?? "the officiant"} this link to sign</p>
             <p className="mt-1 break-all font-mono text-ink/80">{signLink}</p>
             <p className="mt-2 text-ink/60">
-              It opens only this officiant agreement, with a sign box once the couple has accepted. No dashboard
+              It opens only this officiant agreement with its sign box, and he can sign before or after the couple accepts. No dashboard
               access comes with it. When it is signed, the couple gets an email saying so.
             </p>
           </div>
         )}
 
-        {!a?.acceptedAt && (
+        {!a?.acceptedAt && !a?.countersignedAt && (
           <OfficiantSetupForm
             endpoint={endpoint}
             exists={Boolean(a)}
@@ -141,7 +143,7 @@ export default async function AdminOfficiantPage({
               companyName={COMPASS_FULL_NAME}
             />
 
-            {a.acceptedAt && !a.countersignedAt && (
+            {!a.countersignedAt && (
               <CountersignForm
                 adminKey={key}
                 weddingId={wedding.id}

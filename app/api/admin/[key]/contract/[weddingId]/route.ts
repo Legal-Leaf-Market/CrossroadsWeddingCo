@@ -35,12 +35,6 @@ export async function POST(
   const result = await countersignContract(weddingId, parsed.data.name, parsed.data.title);
   const headers = { "Cache-Control": "no-store" };
   if (result === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404, headers });
-  if (result === "not_accepted") {
-    return NextResponse.json(
-      { error: "The couple hasn't accepted this agreement yet, so there is nothing to countersign." },
-      { status: 409, headers },
-    );
-  }
   if (result === "already_signed") {
     return NextResponse.json(
       { error: "This agreement is already signed for Crossroads. Refresh to see it." },

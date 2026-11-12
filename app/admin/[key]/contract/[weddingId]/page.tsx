@@ -54,8 +54,10 @@ export default async function AdminContractPage({
 
         {!client && (
           <p className="mt-4 rounded-xl bg-gold/15 px-4 py-3 text-sm text-ink print:hidden">
-            The couple hasn&apos;t accepted this agreement in their hub yet. You can print it for
-            pen signatures, or wait for them to accept and then sign here.
+            The couple hasn&apos;t accepted this agreement in their hub yet. You can sign for
+            Crossroads now (below) and they accept after, or print it for pen signatures. What they
+            accept is frozen at that moment, so if the money or services change before then, their
+            copy shows the new terms under your signature.
           </p>
         )}
 
@@ -90,7 +92,7 @@ export default async function AdminContractPage({
           version={contractVersionForWedding(wedding)}
         />
 
-        {client && !company && <CountersignForm adminKey={key} weddingId={wedding.id} />}
+        {!company && <CountersignForm adminKey={key} weddingId={wedding.id} />}
       </div>
     </div>
   );
