@@ -26,7 +26,7 @@ export const OFFICIANT_DEPOSIT_USD = 125;
 export const OFFICIANT_BALANCE_HOURS = 48;
 export const OFFICIANT_DEFAULT_NAME = "Terry Winchester";
 
-export const OFFICIANT_AGREEMENT_VERSION = "2026-11-12";
+export const OFFICIANT_AGREEMENT_VERSION = "2026-11-12b";
 
 /** Indiana: IC 31-11-4-10 (license expires after 60 days) and IC 31-11-4-16 (file within 30 days). */
 export const IN_LICENSE_VALID_DAYS = 60;
@@ -51,6 +51,8 @@ export type OfficiantInput = OfficiantDetails & {
   feeUsd: number;
   depositUsd: number;
   balanceHours: number;
+  /** Card payments are switched on (COMPASS_CARD_PAYMENTS=1): the payment clause offers card too. */
+  cardPayments?: boolean;
 };
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
@@ -88,7 +90,9 @@ export function buildOfficiantAgreement(i: OfficiantInput): ContractSection[] {
         `The fee is ${money(i.feeUsd)}, paid in two parts.`,
         `A deposit of ${money(i.depositUsd)} is due when you accept this agreement. It holds your date and time, pays for the planning time we set aside before the wedding, and comes off the fee. It is non-refundable, except in the one case described under "If your officiant cannot be there".`,
         `The balance of ${money(balance)} is due within ${i.balanceHours} hours after your ceremony is complete.`,
-        `Payments are by cash or check for now. Checks are made out to ${SITE_NAME.replace(/\.$/, "")}, the company behind ${COMPASS_NAME}. Your invoice is below this agreement, and it shows each payment as it is received.`,
+        i.cardPayments
+          ? `You can pay each part by card from the invoice below this agreement, or by cash or check. Checks are made out to ${SITE_NAME.replace(/\.$/, "")}, the company behind ${COMPASS_NAME}. The invoice shows each payment as it is received.`
+          : `Payments are by cash or check for now. Checks are made out to ${SITE_NAME.replace(/\.$/, "")}, the company behind ${COMPASS_NAME}. Your invoice is below this agreement, and it shows each payment as it is received.`,
       ],
     },
     {
