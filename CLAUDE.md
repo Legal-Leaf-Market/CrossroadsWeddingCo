@@ -1096,6 +1096,58 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   approved from `/admin/[key]/reviews` like every note, shown on that page only and
   excluded from `/reviews`. Share uses the Web Share API with a copy-link fallback.
 
+- **Owner dashboard becomes a command center (2026-11-13, Jake: "can we ramp this the hell
+  up?").** `/admin/[key]` now opens on what needs doing instead of a flat list. Four money
+  tiles (booked ahead, still to collect with collected so far, past due, pipeline), a ranked
+  "Do this next" list, a 12-month bar strip (booked solid, inquiries dashed) and the year's
+  pacing against `WEDDINGS_PER_YEAR_CAP` (24, `lib/site.ts`; corporate nights excluded, a
+  pace not a lock). A sticky jump bar (Today, Upcoming, Ready?, Calls, Sources, Past, unread
+  count) and a header row linking the ERP pages (Money, Books, Transactions, Vendors) and the
+  owner tools. Upcoming moved up to sit right under the command center. All logic is pure in
+  `lib/admin-insights.ts` and takes `today` (venue time zone): booked = deposit in or status
+  moved past inquiry; a balance is past due from the day after the event (the 24-hours-after
+  rule); cancelled rows count nowhere. Actions, in order: Now (unread messages, past-due
+  balances, agreements waiting on our signature, deposits within 60 days, unsigned agreement
+  within 30 days), Soon (missing email, far deposits and signatures), Heads up (booked events
+  within 14 days, intro calls today or tomorrow by local date). First 8 show, the rest fold.
+  Verify: `node --experimental-strip-types scripts/verify-admin-insights.mjs` (24 checks).
+  Measured on `/admin/preview` at 360/390/768/1280: no sideways scroll.
+
+- **Job costing, crew pay and materials, accrual basis (2026-11-13, Jake: "project costing
+  and planning for material and hour resources starting with labor for Nic, Terry, and
+  Jake"; "fully customizable"; "force accrual and US GAAP ... we are not a cash basis gl";
+  "we use the matching principle"; "match revenue to expenses by job costing"; "and
+  accruals").** STANDING DIRECTIVE: the books are accrual basis under US GAAP. The GL in
+  `lib/books/ledger.ts` is still cash basis (FINANCIALS_SPEC.md principle 1) and is next to
+  convert; nothing new may be built on the cash-basis assumption.
+  - **Compensation (owner, 2026-11-13):** Jake and Terry are full time and split what the
+    business leaves; Nic keeps his day job and takes small per-event shadowing payouts.
+    Everyone is a 1099 contractor paid through Found. The spec's 75% split and Nic's
+    $2,000/month draw (9.2a) are OUT OF DATE; never use them. No pay amount is seeded.
+  - **Tables** (`scripts/phase1-schema.sql`): `crew_members` (editable crew; pay_method
+    project / hour / percent / owner, cents and basis points, `share_bps` for owners,
+    `vendor_id` to the 1099 vendors row), `resource_items` (the owner's materials list),
+    `event_resources` (one job's labor and material lines; pay terms are COPIED onto the
+    line so editing a default never rewrites a planned job). Seeded once (`crew_members_v1`):
+    Jake and Terry as owners, Nic per project, no amounts.
+  - **Rules** (`lib/costing-logic.ts`, pure): an owner line is never a cost; owners split
+    what a job leaves (unset shares split evenly). A rate not set is reported as missing,
+    never guessed. "Paid" on a line is what went out and wins over the plan. Accrual per job:
+    revenue recognized on the event date (ASC 606, point in time); before it, collected cash
+    is deferred revenue and paid costs are prepaid job costs; on and after it, direct costs
+    are matched to the revenue as cost of revenue, unpaid costs are accrued job costs and
+    uncollected revenue is a receivable.
+  - **Pages:** `/admin/[key]/costing/<id>` (job plan editor with a live summary: left to
+    split, owners' split, per-person pay per hour), `/admin/[key]/crew` (crew and default
+    pay, materials list, planned hours by month, double-booked days, unstaffed events, 1099
+    paid this year per linked vendor), `/admin/[key]/jobs` (accrual balances, earned by event
+    month, backlog, every job). Dashboard: Costing button per card, Job costing and Crew links.
+  - Verify: `node --experimental-strip-types scripts/verify-costing.mjs` (37 checks).
+    Verified on a local Postgres: migration applies twice with one seed, crew/materials/plan
+    saves, bad body 400, wrong key 404, all pages 200, no sideways scroll at 390 and 1280.
+  - Found has no public API; Plaid is the aggregator that lists it, and the Plaid feed in
+    `/app/integrations` is how its transactions arrive (needs PLAID keys in production).
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:
@@ -1169,6 +1221,29 @@ decisions absorbed from it:
   headless Chromium (`/opt/pw-browsers/chromium-1194/...`) at 360/390/768/1280/1440 widths.
 - Layout QA for token-gated pages runs against `/hub/preview` and `/hub/preview/runsheet`:
   dev-only sample-data twins of the portal pages that 404 in production builds.
+
+### 9.5a Finance directives (owner, 2026-11-13; binding)
+- **Accrual basis under US GAAP, the matching principle, job costing, accruals.** The books are
+  NOT cash basis. Get the accounting logic right and tested before coding it. Spec:
+  `docs/FINANCIALS_SPEC.md` ("Accrual basis, live sync and the close").
+- **Nothing that carries money is ever deleted**: modify or void. Enforced by `forbid_delete`
+  triggers; never remove them.
+- **Live sync until a hard cutoff**: entries are derived from sources and follow them while the
+  month is open; the database refuses writes into a closed month; later changes post as dated
+  corrections. **Audit everything** (`lib/audit.ts`, append-only, hash-chained).
+- **Checks and balances**: Jake (CEO, accounting experience) triggers; Terry Winchester II (CBO,
+  acting CFO) approves or vetoes and is where the buck stops; Nic (COO) breaks ties and never
+  triggers cash. Whoever triggers never approves. Expense reports: only Jake approves the report;
+  Terry approves the payout, Nic approves Terry's own. Seats: `finance_roles`.
+- **Logins**: jake@, terry@ and nic@crossroadsweddingco.shop, all with full see/enter/edit access
+  (default `houseBooksEmails`).
+- **ETL first**: every feature has a way in and a way out; non-sync imports go through staging,
+  a cached preview, approval and audit. Mail and calendar: **Proton and Google, not Microsoft**.
+- **Compass Events** is a separate division to be owned solely by Terry Winchester II; book it
+  as its own division with an intercompany account (not built yet).
+- **Cash and check payments are always deposited and matched before a month can close.**
+- Handoff briefs: `docs/handoff/CLAUDE.md` (engineering tasks), `CHATGPT.md` (policies and
+  SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
 - **Phase 3, sixth slice (2026-09-04): native intro-call booking with office hours.**
@@ -1313,3 +1388,67 @@ decisions absorbed from it:
   tap must never be blocked, and the poll reconverges all devices. Still Phase 3 backlog:
   dispatch cascade (needs Twilio), blockout calendar, Music Stand/ChordPro, realtime push
   instead of polling.
+- **Expense capture: staff incidentals and reimbursements (2026-11-13, Jake: "a capture tool
+  like rocket money or expensify or such for staff incidentals and reimbursements").** Built
+  into the books, not beside them.
+  - **Capture link per crew member, no login:** `/expense/<crewId>.<hmac>`
+    (`lib/expense-token.ts`, the officiant-sign pattern: HMAC under `ADMIN_DASH_KEY`, nothing
+    stored, rotating the key retires every link, no key = 404). Phone first: the receipt input
+    opens the camera; amount, date (no future, within a year), where, what for, optional job
+    (house events 30 days back to 60 ahead) and expense category. 20 claims a day per person,
+    $5,000 cap per claim, receipts 4 MB, PNG/JPEG/WEBP/HEIC/PDF only. The page lists the
+    person's own claims and where each stands. Links are on `/admin/[key]/crew` (Expense links).
+  - **Two approvals (owner, 2026-11-13):** (1) the report: ONLY the preparer (Jake) approves
+    or rejects; the ledger recognizes the expense and the amount owed back here. (2) the
+    payout: the approver (Terry Winchester II, CBO acting CFO) approves or vetoes; on Terry's
+    own reports the tiebreaker (Nic, COO) decides. The preparer may escalate a veto to the
+    tiebreaker, whose decision is final, EXCEPT on the tiebreaker's own report, where the
+    approver's veto stands (nobody decides their own money). Nobody approves a payout to
+    themselves; the tiebreaker never initiates cash (no linking payouts, no escalating).
+    Cash is linked only once `payout_status = 'approved'`. Every rule is `decide()` in
+    `lib/expense-logic.ts`; the review page computes its buttons from the same function, so
+    it never offers what the server refuses. Roles come from `rolesFor()` in
+    `lib/finance-roles.ts` (the `finance_roles` table); a claimant's identity is
+    `crew_members.email`, now on the crew editor.
+  - **Review at `/app/books/expenses`** (books sign-in, nav "Expenses"): owed back per person,
+    then reports waiting, payouts waiting, approved to pay (tick the claims one bank payout
+    covered and pick the money-out line; a payout may cover more than the claims, never less),
+    paid back, and declined or voided. Decisions are conditional updates on the old states,
+    so two people acting at once cannot both win. A final payout veto tells the preparer to
+    void the report so it stops counting as owed.
+  - **Card receipts:** money-out lines on `/app/transactions` get "Add receipt"; it creates a
+    `card_receipt` claim (approved, posts nothing; one live per bank line, a second upload
+    replaces the receipt on the same record).
+  - **Tables:** `receipts` (bytes, like wedding documents) and `expense_claims` (status
+    submitted / approved / rejected / void; payout_status none / approved / vetoed /
+    escalated). Nothing is deleted: claims are voided. Receipt files are served with nosniff,
+    a sandbox CSP and no-store, to the tenant's books users or to the claimant's own link.
+  - Every submit, decision, link and receipt goes through `audit()` (`lib/audit.ts`), and
+    every change calls `postBankLedgerQuietly`. Ledger posting of claims is in
+    `lib/books/ledger.ts` (main session).
+  - Verify: `node --experimental-strip-types scripts/verify-expenses.mjs` (33 checks). Run
+    end to end on a local Postgres with three signed-in owners and a capture link (38
+    checks): only Jake approves reports; Terry approves payouts but not his own; Nic decides
+    Terry's; veto, escalate, final veto; Nic can't link cash; payout before approval refused;
+    money-in refused as a payout; wrong token 404; another person's receipt 404; SVG refused;
+    card receipt replace keeps one record. Capture page and review page measured at 390 and
+    1280: no sideways scroll.
+
+- **Accrual ledger, audit log, month-end close, expense reports (2026-11-13, Jake: "do it all
+  simultaneously and knock yourself out").** See 9.5a and `docs/FINANCIALS_SPEC.md`. The GL is
+  converted to accrual: `postLedger` (`lib/books/ledger.ts`) derives every entry from its source
+  (bank lines, job revenue, job cost, approved expense reports) through the pure rules in
+  `lib/books/accrual.ts` and `planPosting` (live while open, dated corrections after the close).
+  `postBankLedger`/`postBankLedgerQuietly` keep their names so every existing caller gets it.
+  New tables/columns: `journal_entries.source_ref`/`adjusts_period`, `weddings.cancelled_at`,
+  `crew_members.email`, `finance_roles` (seeded), `ledger_periods`, `audit_log` (append-only,
+  hash chain computed in the database), `event_resources.voided_at`, `receipts`,
+  `expense_claims`. Pages: `/app/books/close`, `/app/books/audit`, `/app/books/expenses`,
+  `/expense/<token>`. Verify: `verify-accrual.mjs` (53), `verify-expenses.mjs` (33),
+  `verify-costing.mjs` (37). Verified on a local Postgres 16: migration twice, accrual posting
+  (AR/revenue on the event date, cost matched to accrued), plan edit voids and reposts while open,
+  after closing October an edit leaves October untouched and posts a dated correction, closed-month
+  void refused, booking delete refused, audit update/delete/truncate refused, chain verifies.
+  NOT verified in a browser: the close page's buttons with real signed-in sessions (the rules
+  behind them are covered by the verify script). Open items are listed at the end of the spec and
+  in `docs/handoff/CLAUDE.md`.

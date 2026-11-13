@@ -147,6 +147,8 @@ export const weddings = pgTable(
     hubSpeakers: text("hub_speakers").array().notNull().default([]),
     // Set when the wedding is hidden from the dashboard. Never deleted: see
     // the note in phase1-schema.sql.
+    /** When the booking was cancelled; a kept deposit is earned that day (accrual, 2026-11-13). */
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     contactEmail: varchar("contact_email", { length: 255 }),
     contactPhone: varchar("contact_phone", { length: 50 }),
@@ -607,6 +609,8 @@ export const journalEntries = pgTable("journal_entries", {
   voidedAt: timestamp("voided_at", { withTimezone: true }),
   voidReason: varchar("void_reason", { length: 200 }),
   fingerprint: varchar("fingerprint", { length: 200 }),
+  sourceRef: varchar("source_ref", { length: 80 }),
+  adjustsPeriod: date("adjusts_period"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -689,3 +693,179 @@ export const serviceAgreements = pgTable(
   (t) => [index("idx_service_agreements_wedding").on(t.weddingId)],
 );
 export type ServiceAgreement = typeof serviceAgreements.$inferSelect;
+
+// Project costing and resource planning (2026-11-13). See scripts/phase1-schema.sql,
+// lib/costing-logic.ts (pure) and lib/costing.ts (server).
+export const crewMembers = pgTable(
+  "crew_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    defaultRole: varchar("default_role", { length: 80 }).notNull().default(""),
+    payMethod: varchar("pay_method", { length: 10 }).notNull().default("project"),
+    rateCents: integer("rate_cents"),
+    percentBps: integer("percent_bps"),
+    shareBps: integer("share_bps"),
+    vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+    email: varchar("email", { length: 255 }),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_crew_members_tenant").on(t.tenantId)],
+);
+export type CrewMember = typeof crewMembers.$inferSelect;
+
+export const resourceItems = pgTable(
+  "resource_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    category: varchar("category", { length: 60 }).notNull().default(""),
+    unit: varchar("unit", { length: 30 }).notNull().default("each"),
+    unitCostCents: integer("unit_cost_cents"),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_resource_items_tenant").on(t.tenantId)],
+);
+export type ResourceItem = typeof resourceItems.$inferSelect;
+
+export const eventResources = pgTable(
+  "event_resources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 10 }).notNull().default("labor"),
+    crewMemberId: uuid("crew_member_id").references(() => crewMembers.id, { onDelete: "set null" }),
+    resourceItemId: uuid("resource_item_id").references(() => resourceItems.id, { onDelete: "set null" }),
+    label: varchar("label", { length: 160 }).notNull().default(""),
+    role: varchar("role", { length: 80 }).notNull().default(""),
+    payMethod: varchar("pay_method", { length: 10 }),
+    rateCents: integer("rate_cents"),
+    percentBps: integer("percent_bps"),
+    plannedMinutes: integer("planned_minutes"),
+    actualMinutes: integer("actual_minutes"),
+    unit: varchar("unit", { length: 30 }).notNull().default(""),
+    unitCostCents: integer("unit_cost_cents"),
+    plannedQty: numeric("planned_qty", { precision: 10, scale: 2 }),
+    actualQty: numeric("actual_qty", { precision: 10, scale: 2 }),
+    actualCostCents: integer("actual_cost_cents"),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_event_resources_wedding").on(t.weddingId), index("idx_event_resources_crew").on(t.crewMemberId)],
+);
+export type EventResource = typeof eventResources.$inferSelect;
+
+// Accrual basis, audit log and period close (2026-11-13). scripts/phase1-schema.sql
+// carries the triggers that make the close a hard cutoff and the log append-only.
+export const financeRoles = pgTable("finance_roles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  email: varchar("email", { length: 255 }).notNull(),
+  name: varchar("name", { length: 120 }).notNull().default(""),
+  role: varchar("role", { length: 12 }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ledgerPeriods = pgTable("ledger_periods", {
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  periodStart: date("period_start").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("open"),
+  preparedBy: varchar("prepared_by", { length: 255 }),
+  preparedAt: timestamp("prepared_at", { withTimezone: true }),
+  preparedHash: varchar("prepared_hash", { length: 64 }),
+  preparedNote: text("prepared_note").notNull().default(""),
+  acknowledged: jsonb("acknowledged").notNull().default([]),
+  decidedBy: varchar("decided_by", { length: 255 }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  decisionNote: text("decision_note").notNull().default(""),
+  closedHash: varchar("closed_hash", { length: 64 }),
+  closedSnapshot: jsonb("closed_snapshot"),
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+  reopenRequestedBy: varchar("reopen_requested_by", { length: 255 }),
+  reopenRequestedAt: timestamp("reopen_requested_at", { withTimezone: true }),
+  reopenReason: text("reopen_reason").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type LedgerPeriod = typeof ledgerPeriods.$inferSelect;
+
+export const auditLog = pgTable("audit_log", {
+  id: bigint("id", { mode: "number" }).primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  actor: varchar("actor", { length: 255 }).notNull(),
+  action: varchar("action", { length: 60 }).notNull(),
+  entityType: varchar("entity_type", { length: 40 }).notNull(),
+  entityId: varchar("entity_id", { length: 80 }),
+  before: jsonb("before"),
+  after: jsonb("after"),
+  reason: text("reason"),
+  cause: text("cause"),
+  prevHash: varchar("prev_hash", { length: 64 }),
+  hash: varchar("hash", { length: 64 }).notNull(),
+});
+export type AuditRow = typeof auditLog.$inferSelect;
+
+// Expense capture (2026-11-13). See scripts/phase1-schema.sql, lib/expense-logic.ts
+// (pure) and lib/expenses.ts (server).
+export const receipts = pgTable(
+  "receipts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    fileName: varchar("file_name", { length: 255 }).notNull().default(""),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    byteSize: integer("byte_size").notNull(),
+    data: customType<{ data: Buffer; driverData: Buffer }>({
+      dataType: () => "bytea",
+    })("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_receipts_tenant").on(t.tenantId)],
+);
+
+export const expenseClaims = pgTable(
+  "expense_claims",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    crewMemberId: uuid("crew_member_id").references(() => crewMembers.id, { onDelete: "set null" }),
+    claimantName: varchar("claimant_name", { length: 120 }).notNull(),
+    kind: varchar("kind", { length: 20 }).notNull().default("reimbursement"),
+    bankTransactionId: uuid("bank_transaction_id").references(() => bankTransactions.id, { onDelete: "set null" }),
+    merchant: varchar("merchant", { length: 160 }).notNull().default(""),
+    description: text("description").notNull().default(""),
+    amountCents: integer("amount_cents").notNull(),
+    spentOn: date("spent_on").notNull(),
+    categoryId: uuid("category_id").references(() => ledgerCategories.id, { onDelete: "restrict" }),
+    weddingId: uuid("wedding_id").references(() => weddings.id, { onDelete: "set null" }),
+    receiptId: uuid("receipt_id").references(() => receipts.id, { onDelete: "set null" }),
+    status: varchar("status", { length: 12 }).notNull().default("submitted"),
+    decidedBy: varchar("decided_by", { length: 255 }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note").notNull().default(""),
+    reimbursedBankTransactionId: uuid("reimbursed_bank_transaction_id").references(() => bankTransactions.id, { onDelete: "set null" }),
+    payoutStatus: varchar("payout_status", { length: 12 }).notNull().default("none"),
+    payoutDecidedBy: varchar("payout_decided_by", { length: 255 }),
+    payoutDecidedAt: timestamp("payout_decided_at", { withTimezone: true }),
+    payoutNote: text("payout_note").notNull().default(""),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_expense_claims_status").on(t.tenantId, t.status), index("idx_expense_claims_wedding").on(t.weddingId)],
+);
+export type ExpenseClaim = typeof expenseClaims.$inferSelect;

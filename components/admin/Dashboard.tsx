@@ -1,12 +1,14 @@
 import ArchiveButton from "@/components/admin/ArchiveButton";
 import BookingEditor from "@/components/admin/BookingEditor";
 import type { AdminCall, AdminData, AdminWedding } from "@/lib/admin";
+import CommandCenter from "@/components/admin/CommandCenter";
 import CorporateBookingForm from "@/components/admin/CorporateBookingForm";
 import PlatformPanel from "@/components/admin/PlatformPanel";
 import type { PlatformStats } from "@/lib/platform-stats";
 import { findScheduler } from "@/lib/schedulers";
 import { daysOut, formatEventDate } from "@/lib/hub-constants";
-import { SITE_NAME, VENUE_TIME_ZONE } from "@/lib/site";
+import { SITE_NAME, VENUE_TIME_ZONE, WEDDINGS_PER_YEAR_CAP } from "@/lib/site";
+import { buildInsights } from "@/lib/admin-insights";
 import { leadSourceLabel, sourceForTag } from "@/lib/lead-sources";
 
 // Presentational owner dashboard, rendered by /admin/[key] with live data and
@@ -190,6 +192,14 @@ function WeddingCard({
         )}
         {basePath !== "/admin/preview" && (
           <a
+            href={`${basePath}/costing/${wedding.id}`}
+            className="rounded-full border border-terracotta px-4 py-1.5 font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
+          >
+            Costing
+          </a>
+        )}
+        {basePath !== "/admin/preview" && (
+          <a
             href={`${basePath}/invoice/${wedding.id}`}
             className="rounded-full border border-terracotta px-4 py-1.5 font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
           >
@@ -241,7 +251,7 @@ function SourceTally({ weddings }: { weddings: AdminWedding[] }) {
   const rows = [...counts.entries()].sort((a, b) => b[1].total - a[1].total);
   if (rows.length === 0) return null;
   return (
-    <section>
+    <section id="sources" className="scroll-mt-24">
       <h2 className="mb-3 text-lg font-semibold text-charcoal">Where couples found us</h2>
       <div className="rounded-2xl border border-parchment bg-white p-5">
         <table className="w-full text-sm">
@@ -283,7 +293,7 @@ function Readiness({ weddings }: { weddings: AdminWedding[] }) {
   );
   const ready = rows.filter((w) => w.contactEmail && w.contractAcceptedAt && w.contractCountersignedAt && w.isDepositPaid).length;
   return (
-    <section>
+    <section id="ready" className="scroll-mt-24">
       <h2 className="mb-1 text-lg font-semibold text-charcoal">Ready for the day?</h2>
       <p className="mb-3 text-sm text-ink/60">
         {ready} of {rows.length} upcoming weddings have everything. Email on file is what lets a couple get their hub link
@@ -325,7 +335,7 @@ function Readiness({ weddings }: { weddings: AdminWedding[] }) {
 // "?src=venue" link shows whether it worked.
 function CallList({ calls }: { calls: AdminCall[] }) {
   return (
-    <section>
+    <section id="calls" className="scroll-mt-24">
       <h2 className="mb-3 text-lg font-semibold text-charcoal">Booked intro calls</h2>
       {calls.length === 0 ? (
         <p className="rounded-2xl border border-parchment bg-white p-5 text-sm text-ink/60">
@@ -377,60 +387,96 @@ function CallList({ calls }: { calls: AdminCall[] }) {
   );
 }
 
+/** YYYY-MM-DD for an instant, on the venue's wall clock. */
+function localDate(at: Date): string {
+  return at.toLocaleDateString("en-CA", { timeZone: VENUE_TIME_ZONE });
+}
+
+const linkClass = "whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium text-ink/75 hover:bg-cream hover:text-terracotta";
+
 export default function Dashboard({ data, basePath, platform = null }: { data: AdminData; basePath: string; platform?: PlatformStats | null }) {
+  const today = localDate(new Date());
+  const insights = buildInsights({
+    weddings: [...data.upcoming, ...data.past],
+    calls: data.calls,
+    callDates: Object.fromEntries(data.calls.map((c) => [c.id, localDate(new Date(c.startsAt))])),
+    today,
+    yearCap: WEDDINGS_PER_YEAR_CAP,
+  });
+  const jump = [
+    { href: "#today", label: "Today" },
+    { href: "#upcoming", label: `Upcoming (${data.upcoming.length})` },
+    ...(data.upcoming.some((w) => w.packageType !== "corporate" && w.status !== "cancelled") ? [{ href: "#ready", label: "Ready?" }] : []),
+    { href: "#calls", label: `Calls (${data.calls.length})` },
+    ...(data.upcoming.length + data.past.length > 0 ? [{ href: "#sources", label: "Sources" }] : []),
+    ...(data.past.length > 0 ? [{ href: "#past", label: "Past" }] : []),
+  ];
+  // The house books sign in by email (HOUSE_BOOKS_EMAILS), not by this key.
+  const erp = [
+    { href: "/app/money", label: "Money" },
+    { href: "/app/books", label: "Books" },
+    { href: "/app/transactions", label: "Transactions" },
+    { href: "/app/vendors", label: "Vendors" },
+  ];
+  const tools = [
+    { href: `${basePath}/jobs`, label: "Job costing" },
+    { href: `${basePath}/crew`, label: "Crew and materials" },
+    { href: `${basePath}/hours`, label: "Call times" },
+    { href: `${basePath}/reviews`, label: "Reviews to approve" },
+    { href: `${basePath}/playbook`, label: "Lead playbook" },
+    { href: `${basePath}/archived`, label: "Archived bookings" },
+  ];
   return (
     <div className="min-h-screen bg-cream">
       <header className="border-b border-parchment bg-white">
-        <div className="mx-auto max-w-4xl px-6 py-5">
+        <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
           <p className="text-sm font-semibold text-terracotta">{SITE_NAME}</p>
-          <h1 className="text-2xl text-charcoal">Bookings</h1>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+            <h1 className="text-2xl text-charcoal">Command center</h1>
+            <p className="text-sm text-ink/60">
+              {new Date(`${today}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })}
+            </p>
+          </div>
           <p className="text-sm text-ink/60">
-            {data.upcoming.length} upcoming · {data.past.length} past or cancelled. This page is
-            read-only and this link is the key: don&apos;t share it.
+            {data.upcoming.length} upcoming · {data.past.length} past or cancelled. This link is the key: don&apos;t share it.
           </p>
-          <div className="mt-2 flex flex-wrap gap-4">
-            <a
-              href={`${basePath}/hours`}
-              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
-            >
-              Call times
-            </a>
-            <a
-              href={`${basePath}/archived`}
-              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
-            >
-              Archived bookings
-            </a>
-            <a
-              href={`${basePath}/reviews`}
-              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
-            >
-              Reviews to approve
-            </a>
-            <a
-              href={`${basePath}/playbook`}
-              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
-            >
-              Lead playbook
-            </a>
-            {/* The house books sign in by email (HOUSE_BOOKS_EMAILS), not by this key. */}
-            <a
-              href="/app/books"
-              className="text-sm font-medium text-terracotta underline decoration-parchment underline-offset-2"
-            >
-              Books
-            </a>
+          <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1">
+            <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-ink/45">Books</span>
+            {erp.map((l) => (
+              <a key={l.href} href={l.href} className={linkClass}>
+                {l.label}
+              </a>
+            ))}
+            <span className="mx-1 hidden h-4 w-px bg-parchment sm:inline-block" aria-hidden />
+            <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-ink/45">Tools</span>
+            {tools.map((l) => (
+              <a key={l.href} href={l.href} className={linkClass}>
+                {l.label}
+              </a>
+            ))}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-        <Readiness weddings={data.upcoming} />
-        <PlatformPanel stats={platform} />
-        <CorporateBookingForm basePath={basePath} />
-        <SourceTally weddings={[...data.upcoming, ...data.past]} />
-        <CallList calls={data.calls} />
-        <section>
+      <nav aria-label="Sections" className="sticky top-0 z-20 border-b border-parchment bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 py-2 sm:px-6">
+          {jump.map((l) => (
+            <a key={l.href} href={l.href} className={linkClass}>
+              {l.label}
+            </a>
+          ))}
+          {insights.unreadMessages > 0 && (
+            <a href="#today" className="ml-auto whitespace-nowrap rounded-full bg-terracotta px-3 py-1 text-sm font-semibold text-cream">
+              {insights.unreadMessages} unread
+            </a>
+          )}
+        </div>
+      </nav>
+
+      <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
+        <CommandCenter insights={insights} basePath={basePath} />
+
+        <section id="upcoming" className="scroll-mt-24">
           <h2 className="mb-3 text-lg font-semibold text-charcoal">Upcoming</h2>
           {data.upcoming.length === 0 ? (
             <p className="rounded-2xl border border-parchment bg-white p-5 text-sm text-ink/60">
@@ -444,6 +490,12 @@ export default function Dashboard({ data, basePath, platform = null }: { data: A
             </div>
           )}
         </section>
+
+        <Readiness weddings={data.upcoming} />
+        <CallList calls={data.calls} />
+        <CorporateBookingForm basePath={basePath} />
+        <SourceTally weddings={[...data.upcoming, ...data.past]} />
+        <PlatformPanel stats={platform} />
 
         {data.leads.length > 0 && (
           <section>
@@ -476,7 +528,7 @@ export default function Dashboard({ data, basePath, platform = null }: { data: A
         )}
 
         {data.past.length > 0 && (
-          <section>
+          <section id="past" className="scroll-mt-24">
             <h2 className="mb-3 text-lg font-semibold text-charcoal">Past and cancelled</h2>
             <div className="space-y-4">
               {data.past.map((w) => (

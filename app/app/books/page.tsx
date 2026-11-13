@@ -89,6 +89,11 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
 
   return (
     <AccountShell signedIn house={ws.tenant.kind === "house"}>
+      <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <span className="font-semibold text-charcoal">Accrual basis, US GAAP</span>
+        <Link href="/app/books/close" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Close the books</Link>
+        <Link href="/app/books/audit" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Audit log</Link>
+      </p>
       {ws.tenant.kind !== "house" && (
         <Link href="/app" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
           &larr; Workspace

@@ -47,6 +47,11 @@ export const CORPORATE_DEPOSIT_USD = 1000;
 // comments-and-concerns period. See CLAUDE.md 9.2.
 export const DEPOSIT_USD = 500;
 
+// 2027 pacing (docs/MASTER_SPEC_AND_STRATEGY.md, CLAUDE.md 9.2a): about two
+// weddings a month. Business policy, shown on the owner dashboard against what
+// is booked; nothing refuses a booking over it.
+export const WEDDINGS_PER_YEAR_CAP = 24;
+
 // Add-on pricing (owner-confirmed 2026-08-27, raised from 400 the same day
 // after the WeddingPro meeting): acoustic is flat.
 export const ACOUSTIC_ADDON_USD = 500;

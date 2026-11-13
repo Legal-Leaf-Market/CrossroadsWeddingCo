@@ -18,7 +18,10 @@ And hand its accountant a general ledger at tax time.
 
 ## Decisions
 
-1. **Double entry, cash basis.** Every posting is a balanced journal entry (debits equal credits,
+1. **Double entry. SUPERSEDED 2026-11-13: the books are ACCRUAL basis under US GAAP** (owner:
+   "force accrual and US GAAP in the software ... we are not a cash basis gl"). See "Accrual
+   basis, live sync and the close" below. The original cash-basis reasoning is kept for history:
+   **Double entry, cash basis.** Every posting is a balanced journal entry (debits equal credits,
    checked by the database, not only by the code). Cash basis because that is how almost every
    small event business files Schedule C, and because accrual needs invoices and booking
    deposits matched to bank lines, which is not built yet. Accrual (client deposits held as a
@@ -99,3 +102,86 @@ Accrual and booking deposits as a liability; one bank line paying several bookin
 client matched back to the booking; split lines;
 manual journal entries; invoices posting receivables; the house account (Crossroads runs from
 `/admin`, which has no bank feed); closing a period (locking months); sales tax.
+
+
+## Accrual basis, live sync and the close (2026-11-13)
+
+Owner directives: accrual under US GAAP, the matching principle, job costing, accruals; every
+entry linked to its source and updating live "until things are finalized and fully approved in
+the proper workflow", then a hard cutoff; "a damn good audit log before and after the cutoff,
+and damn good controls on that cutoff"; "no one can delete, only modify or void". Pure rules:
+`lib/books/accrual.ts` (checked by `scripts/verify-accrual.mjs`). Engine: `postLedger` in
+`lib/books/ledger.ts`. Close: `lib/books/close.ts`. Audit: `lib/audit.ts`.
+
+### Accounts added (system accounts, per tenant)
+1100 Accounts receivable, 1300 Prepaid job costs, 2300 Deferred revenue (client deposits),
+2400 Accrued job costs, 2500 Reimbursements payable, 4500 Event revenue, 5000 Cost of revenue:
+job costs, 6990 Uncategorized expense (receipts).
+
+### Posting rules (one booking = one job)
+| Event | Debit | Credit |
+|---|---|---|
+| 1. Client pays on or before the event date (matched bank line) | Cash | Deferred revenue |
+| 2. Event date (ASC 606, point in time) | Deferred revenue (collected by then), Accounts receivable (rest) | Event revenue (whole contract) |
+| 3. Client pays after the event | Cash | Accounts receivable |
+| 4. Job cost paid on or before the event (matched money out) | Prepaid job costs | Cash |
+| 5. Event date, matching | Cost of revenue (job cost) | Prepaid job costs (paid by then), Accrued job costs (rest) |
+| 6. Job cost paid after the event | Accrued job costs | Cash |
+| 7. Expense report approved (Jake) | The expense; or Prepaid job costs (job, before the event); or Cost of revenue (job, after) | Reimbursements payable |
+| 8. Reimbursement paid (after payout approval) | Reimbursements payable | Cash |
+| 9. Job cancelled | Deferred revenue (payments kept) / Cost of revenue (prepaid written off) | Event revenue / Prepaid job costs |
+| 10. Anything not tied to a job | As before: the bank line against its category | |
+
+Job cost = each cost-plan line's paid (actual) amount, else its planned cost (an estimate,
+trued up as a change in estimate), plus job-linked receipts dated on or before the event.
+Owners' split is never a job cost. Card and Stripe payments: see open items.
+
+### Live sync and the hard cutoff
+Every journal entry names its source (`source_ref`: `bank_transaction:<id>`, `job_revenue:<id>`,
+`job_cost:<id>`, `expense_claim:<id>`). `postLedger` recomputes what every source should post
+and calls `planPosting`: while all of a source's entries sit in open months, the entry follows
+the source (void and repost). Once any is in a locked month, that history is never touched; the
+difference posts as ONE correcting entry dated today with `adjusts_period` naming the closed
+month (a change in estimate per ASC 250; a material error is handled by reopening). A source
+first seen with a date inside a locked month posts today, saying so. The database enforces the
+cutoff itself (`ledger_period_locked`, `journal_entry_period_guard`, `journal_line_guard`): no
+insert, void or edit dated in a locked month, entries' money fields never change, lines are
+append-only, nothing is ever deleted.
+
+### The close (who does what)
+Jake (CEO) prepares and triggers; Terry Winchester II (CBO, acting CFO, where the buck stops)
+approves or vetoes; Nic (COO) breaks a tie only after Jake escalates a veto, and can never
+trigger. Seats live in `finance_roles`; whoever triggers a step can never approve it. Months
+close in order, only after they end. Hard blockers: unbalanced entries, unsorted bank lines,
+expense reports awaiting approval, held jobs with an unset cost, bookings marked paid by hand
+without a deposited and matched bank line ("always deposit and match before close"). Soft
+blockers must each be acknowledged in writing: jobs with no cost plan, pending lines, transfers
+in transit, bank-vs-books differences. Preparing freezes the month's activity with a SHA-256 of
+its trial balance and entry ids; approval is refused if the hash moved. Reopen: Jake requests
+with a reason, Terry approves or vetoes, Nic breaks ties; only the latest closed month reopens.
+
+### Audit log
+`audit_log` is append-only (UPDATE, DELETE and TRUNCATE refused by triggers) and hash-chained per
+account: each row's hash covers its content and the previous row's hash, computed in the
+database. `/app/books/audit` re-walks the chain on every visit. Written for every journal post,
+void and correction (with the source and cause), every close step, cost-plan saves, crew and
+materials saves, booking money edits, bank-to-job matches, and every expense report step.
+
+### Expense reports (Expensify-style)
+Capture link per crew member (`/expense/<id>.<hmac>`), receipts stored in `receipts`. Jake alone
+approves reports; Terry approves payouts except his own, which Nic approves; vetoes escalate from
+Jake to Nic. Posting: rules 7 and 8.
+
+### Data in and out (owner principle: ETL first)
+Every feature has a way in and a way out. A live sync (Plaid) may post on its own. Anything that
+is NOT a sync (a spreadsheet, a PDF, an email, a Rocket Money or QuickBooks export) lands in a
+staging area first, gets a cached preview report of exactly what would post, needs an approval,
+and is audited. Not built yet; see docs/handoff.
+
+### Open items
+Stripe clearing account (card payments arrive net of fees); customer credits for overpayment;
+Compass Events as its own division owned by Terry Winchester II, with an intercompany due
+to/from account while its money lands in Crossroads; materiality threshold for reopen vs
+correction; subledger drill-down pages and the control-account tie-out report as a hard blocker;
+the job costing page (`/admin/[key]/jobs`) still computes prepaid/accrued from the "Paid" box
+and must be switched to read the ledger's facts so it ties.
