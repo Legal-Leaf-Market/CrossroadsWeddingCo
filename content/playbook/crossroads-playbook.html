@@ -149,6 +149,7 @@ a{color:var(--accent)}
       <label class="f" for="gDate">Event date<input type="date" id="gDate"></label>
       <button class="btn" type="submit">Log booking</button>
     </form>
+    <p id="goalNext" hidden></p>
     <ul class="glist" id="goalList"></ul>
   </section>
 
@@ -787,8 +788,14 @@ function card(l){
     <label class="f" for="sy-${l.id}">Why this rating<input id="sy-${l.id}" data-f="starWhy" value="${esc(st.mine?st.why:"")}" placeholder="Confirmed no DJ, saw a Craigslist post, budget set..."${canWrite?"":" disabled"}></label>
     <label class="f" for="nt-${l.id}">Notes from the call<textarea id="nt-${l.id}" data-f="note" placeholder="${l.li?"What they said, next step":"Who you talked to, what they said, next step"}"${canWrite?"":" disabled"}>${esc(e.note||"")}</textarea></label>
     <span class="stamp">${when?"Updated "+(e.by?"by "+esc(e.by)+", ":"")+when:"No calls logged"}</span>
+    ${window.CR_PLAYBOOK_API?`<a class="btn" href="${esc(salesUrl(l))}">Make a sales order</a>`:""}
    </div>
   </article>`;
+}
+// A deal from this lead: the sales order page with the lead as its account (site copy only).
+function salesUrl(l){
+  const q=new URLSearchParams({lead:l.id,account:l.name,by:($("#meName")&&$("#meName").value)||"Jake"});
+  return location.pathname.replace(/\/playbook\/?$/,"/sales")+"?"+q.toString()+"#new";
 }
 function matches(l){
   const list=$("#fList").value, st=$("#fStatus").value, q=$("#fQ").value.trim().toLowerCase(), s=statusOf(l.id);
@@ -881,9 +888,19 @@ $("#goalForm").addEventListener("submit",async e=>{
   const type=$("#gType").value, name=$("#gName").value.trim().slice(0,120), date=$("#gDate").value, by=$("#meName").value||"Jake";
   if(!name)return;
   if(!db){bookings.push({id:"local"+Date.now(),type,name,date,by,local:true});renderGoal();e.target.reset();toast("Shown here only. The shared log isn't connected");return}
-  try{await db.collection("booked").add({type,name,date,by,at:Date.now()});e.target.reset();toast("Booked. Keep going")}
+  try{await db.collection("booked").add({type,name,date,by,at:Date.now()});e.target.reset();toast("Booked. Keep going");offerSalesOrder({type,name,date,by})}
   catch(err){toast("Didn't save: "+(err&&err.message?err.message:"try again"))}
 });
+// The pipeline (2026-11-13): on the site copy, a booked deal becomes a sales
+// order (booking, invoice, commissions) in one click, with the details filled
+// in. The claude.ai copy has no dashboard behind it, so it shows nothing.
+function offerSalesOrder(d){
+  const el=$("#goalNext");if(!el||!window.CR_PLAYBOOK_API)return;
+  const base=location.pathname.replace(/\/playbook\/?$/,"/sales");
+  const q=new URLSearchParams({type:d.type,name:d.name,by:d.by});if(d.date)q.set("date",d.date);
+  el.innerHTML=`Next: <a href="${esc(base+"?"+q.toString())}#new">make the sales order for ${esc(d.name)}</a> (invoice and commission in one step).`;
+  el.hidden=false;
+}
 $("#goalList").addEventListener("click",async e=>{
   const b=e.target.closest("[data-gdel]");if(!b||!db)return;
   try{await db.collection("booked").doc(b.dataset.gdel).delete()}catch(err){toast("Couldn't remove that booking")}

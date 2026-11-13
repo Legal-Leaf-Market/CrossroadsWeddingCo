@@ -1452,3 +1452,53 @@ decisions absorbed from it:
   NOT verified in a browser: the close page's buttons with real signed-in sessions (the rules
   behind them are covered by the verify script). Open items are listed at the end of the spec and
   in `docs/handoff/CLAUDE.md`.
+- **True subledgers, the tie-out, and the jobs page on the ledger (2026-11-13, docs/handoff
+  tasks 2 and 3).** Every journal line on a control account names whose it is
+  (`journal_lines.sub_ref`: `job:<booking id>` on 1100/1300/2300/2400 and the job's 4500/5000,
+  `crew:<crew member id>` on 2500); netting, fingerprints and closed-month corrections work per
+  account and key. `/app/books/tie-out` ties each control account to its subledger and any
+  difference is a HARD close blocker (`tie_out` in `closeBlockers`, as of the month's end).
+  Drill-down: `/app/books` lines -> `/app/books/accounts/<id>` (register, running balance,
+  subledger, `?sub=`) -> `/app/books/entries/<id>` (lines, every version, source record, audit
+  history); trial balance at `/app/books/accounts`; vendor payments link to their entries; CSV
+  out at `/api/app/books/export` (trial balance, subledgers, audit log). `/admin/[key]/jobs` now
+  reads every balance from the ledger by key (archived and cancelled jobs with a balance are
+  listed so the totals ARE the GL) and says whether it ties. Pure rules in
+  `lib/books/subledger-logic.ts`; `node --experimental-strip-types scripts/verify-subledger.mjs`
+  (43 checks, including the handoff's "page totals equal the GL balances of 1100, 1300, 2300,
+  2400" and two sabotages). Existing books convert themselves: open-month job entries repost once
+  with keys, a closed month gets one dated reclassification, untagged bank entries keep their old
+  fingerprint (no churn). Fingerprints over 200 characters are now hashed, never cut off.
+  Migration verified twice on a local Postgres 16; this session had no package install, so the
+  Netlify deploy preview build is the type-check.
+- **Site email was down from the .com to .shop move until 2026-11-13.** Resend refused every
+  send ("The crossroadsweddingco.shop domain is not verified"), so sign-in links, booking
+  confirmations, hub links and message pointers all failed. Fixed: crossroadsweddingco.shop added
+  in Resend (account jacobkennedy.47201), and Netlify DNS gained `resend._domainkey` (TXT, DKIM)
+  plus `send` and `rsend` CNAMEs to `*.forge.rmta.net`. Proton's MX, SPF and DMARC are untouched.
+- **Bookings convert into the books correctly (2026-11-13, Jake: "make sure our bookings convert
+  over correctly").** The first production sync recognized every past booking, test bookings
+  included ($13,900 of receivables, mostly tests), and left out every deposit marked paid by hand
+  (no bank is connected). Now a hand-paid deposit or balance posts to 1050 Undeposited funds
+  against the job (rule 11 in FINANCIALS_SPEC), dated the day the box is ticked
+  (`deposit_paid_on`/`balance_paid_on`) or on a stated assumed date for older flags, and gives way
+  to the bank line once the deposit is matched. Test bookings are left out with "Not a real job?"
+  on `/admin/[key]/jobs` (reason, audit, put back any time; refused while real money is tied to
+  the booking). Excluded bookings also drop out of Money and the close blockers. The close page
+  now opens on the oldest open month. `verify-subledger.mjs` grew to 54 checks.
+- **Sales pipeline, CRM accounts and commissions (2026-11-13, Jake: "can the playbook play into
+  like sales orders and such and be a direct pipeline into invoicing and CRM"; "commissions per
+  playbook deal per event commission direct and account management commissions ongoing").**
+  Terms (asked and answered): $100 flat to the closer per event, 5% ongoing to the account manager
+  on every later event from an account, earned on the event day and paid once the client has paid
+  in full, nothing on a cancellation. **Jake, Terry and Nic all earn commissions; they are all
+  owners** ("we need paychecks for living, and it is good incentive"; this replaced a first answer
+  of "owners split profit only" the same morning). Steven is benched: not on the crew, so he can't
+  be a closer. `/admin/[key]/sales`: the order form (account or a new one, closer, deposit), the
+  pipeline with stage, invoice and job plan links, commissions per person (owed in the books,
+  ready to pay, still ahead) and accounts with their manager. `crm_accounts` (no delete), and
+  sales fields on `weddings` that COPY the terms at sale time. The playbook (site copy) offers
+  "Make a sales order" on every lead card and after logging a booked deal, opening the form
+  filled in. Posting: rule 12 in FINANCIALS_SPEC (Dr 5100 / Cr 2600 by person on the event day).
+  NOT YET: paying commissions out from the bank (needs cash payout requests, handoff task 9).
+  `node --experimental-strip-types scripts/verify-sales.mjs` (20 checks).

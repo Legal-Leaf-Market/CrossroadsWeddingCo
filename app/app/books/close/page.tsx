@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import CloseActions from "@/components/account/CloseActions";
 import { getBooksWorkspace } from "@/lib/auth";
-import { availableActions, LOCKED_STATUSES } from "@/lib/books/accrual";
+import { availableActions, LOCKED_STATUSES, periodEnd } from "@/lib/books/accrual";
 import { listPeriods, periodBlockers } from "@/lib/books/close";
 import { postLedger } from "@/lib/books/ledger";
 import { listRoles, rolesFor } from "@/lib/finance-roles";
@@ -43,7 +43,12 @@ export default async function ClosePage({ searchParams }: { searchParams: Promis
   }
   const { m } = await searchParams;
   const [periods, roles, seats] = await Promise.all([listPeriods(ws.tenant.id), rolesFor(ws.tenant.id, ws.user.email), listRoles(ws.tenant.id)]);
-  const selected = periods.find((p) => p.periodStart === m) ?? periods.find((p) => !LOCKED_STATUSES.includes(p.status) && p.periodStart < periods[0]?.periodStart) ?? periods[0];
+  // Months close in order, so open on the OLDEST month still open that has ended
+  // and has entries (the list is newest first). It used to open the newest.
+  const selected =
+    periods.find((p) => p.periodStart === m) ??
+    [...periods].reverse().find((p) => !LOCKED_STATUSES.includes(p.status) && p.entries > 0 && p.periodStart < periods[0]?.periodStart) ??
+    periods[0];
   const blockers = selected ? await periodBlockers(ws.tenant.id, selected.periodStart) : [];
   const actions = selected ? availableActions(selected.status, roles) : [];
   const r = selected?.row;
@@ -125,7 +130,13 @@ export default async function ClosePage({ searchParams }: { searchParams: Promis
                       <li key={b.key} className="flex justify-between gap-3">
                         <span className={b.hard ? "text-terracotta-dark" : "text-ink/80"}>
                           {b.hard ? "Must fix: " : "Acknowledge: "}
-                          {b.label}
+                          {b.key === "tie_out" ? (
+                            <Link href={`/app/books/tie-out?asof=${periodEnd(selected.periodStart)}`} className="underline">
+                              {b.label}
+                            </Link>
+                          ) : (
+                            b.label
+                          )}
                         </span>
                         <span className="tabular-nums text-ink/60">{b.count}</span>
                       </li>

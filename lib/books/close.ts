@@ -18,6 +18,8 @@ import {
 } from "@/lib/books/accrual";
 import { ledgerToday, postLedger, reconciliation } from "@/lib/books/ledger";
 import { rolesFor } from "@/lib/finance-roles";
+import { tieOutReport } from "@/lib/books/subledger";
+import { tieOutDifferences } from "@/lib/books/subledger-logic";
 import { isPayMethod, lineCost } from "@/lib/costing-logic";
 
 // The month-end close (2026-11-13). Jake prepares, Terry approves or vetoes,
@@ -111,7 +113,7 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
       select w.id, w.total_amount::text as total,
         (select count(*) from event_resources r where r.wedding_id = w.id and r.voided_at is null)::int as lines
       from weddings w
-      where w.tenant_id = ${tenantId} and w.status <> 'cancelled' and w.event_date between ${periodStart} and ${end}`)
+      where w.tenant_id = ${tenantId} and w.status <> 'cancelled' and w.books_excluded_at is null and w.event_date between ${periodStart} and ${end}`)
   ).rows as { id: string; total: string; lines: number }[];
   let uncosted = 0;
   let noPlan = 0;
@@ -149,7 +151,7 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
   // must have the bank money matched to it.
   const hand = await one<{ n: number }>(sql`
     select count(*)::int as n from weddings w
-    where w.tenant_id = ${tenantId} and w.status <> 'cancelled' and w.created_at::date <= ${end}
+    where w.tenant_id = ${tenantId} and w.status <> 'cancelled' and w.books_excluded_at is null and w.created_at::date <= ${end}
       and (coalesce(w.is_deposit_paid,false) or coalesce(w.is_balance_paid,false))
       and coalesce((select sum(t.amount_cents) from bank_transactions t
                     where t.booking_id = w.id and t.amount_cents > 0 and t.removed_at is null and not t.pending), 0)
@@ -159,6 +161,8 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
     from journal_lines l join journal_entries e on e.id = l.entry_id join ledger_accounts a on a.id = l.account_id
     where e.tenant_id = ${tenantId} and e.status = 'posted' and e.entry_date <= ${end} and a.system_key = 'transfers_clearing'`);
   const recon = await reconciliation(tenantId);
+  // Every control account must equal the sum of its subledger at the month's end.
+  const tie = await tieOutReport(tenantId, end);
   return closeBlockers({
     unbalancedEntries: unbalanced.n ?? 0,
     unreviewedLines: lines.unreviewed ?? 0,
@@ -169,6 +173,7 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
     unmatchedHandPayments: hand.n ?? 0,
     transfersInTransitCents: Number(clearing.bal ?? 0),
     bankDifferences: recon.filter((r) => r.difference !== null && r.difference !== 0).length,
+    subledgerDifferences: tieOutDifferences(tie.rows),
   });
 }
 

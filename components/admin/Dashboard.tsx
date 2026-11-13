@@ -419,6 +419,7 @@ export default function Dashboard({ data, basePath, platform = null }: { data: A
     { href: "/app/vendors", label: "Vendors" },
   ];
   const tools = [
+    { href: `${basePath}/sales`, label: "Sales" },
     { href: `${basePath}/jobs`, label: "Job costing" },
     { href: `${basePath}/crew`, label: "Crew and materials" },
     { href: `${basePath}/hours`, label: "Call times" },
