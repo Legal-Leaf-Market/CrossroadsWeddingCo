@@ -1305,3 +1305,14 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS audit_log_no_truncate ON audit_log;
 CREATE TRIGGER audit_log_no_truncate BEFORE TRUNCATE ON audit_log
     FOR EACH STATEMENT EXECUTE FUNCTION audit_log_no_truncate();
+
+-- ── True subledgers and the tie-out (2026-11-13, docs/handoff task 3) ──────
+-- Every journal line on a control account names whose it is: job:<booking id>
+-- on 1100, 1300, 2300, 2400 (and the job's 4500 and 5000 lines),
+-- crew:<crew member id> on 2500. A control account's balance must equal the
+-- sum of its subledger; a line with no key is a tie-out difference and a hard
+-- close blocker (lib/books/subledger-logic.ts). Lines stay append-only: the
+-- live sync voids and reposts open-month entries with their keys, and a
+-- closed month gets a dated reclassification instead.
+ALTER TABLE journal_lines ADD COLUMN IF NOT EXISTS sub_ref VARCHAR(80);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_sub ON journal_lines (tenant_id, account_id, sub_ref);

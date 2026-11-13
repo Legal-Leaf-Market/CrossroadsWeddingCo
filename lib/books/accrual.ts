@@ -26,7 +26,32 @@ export const ACCRUAL_ACCOUNTS = {
 } as const;
 export type AccrualKey = keyof typeof ACCRUAL_ACCOUNTS;
 
-export type Line = { accountId: string; debitCents: number; creditCents: number };
+/**
+ * One journal line. `sub` is its subledger key (2026-11-13, true subledgers):
+ * `job:<booking id>` on the job accounts (1100, 1300, 2300, 2400, 4500, 5000),
+ * `crew:<crew member id>` on reimbursements payable (2500). A control
+ * account's balance must equal the sum of its lines' keys; any amount without
+ * a key is a tie-out difference and stops the close.
+ */
+export type Line = { accountId: string; debitCents: number; creditCents: number; sub?: string | null };
+
+/** The accounts whose lines carry the job's key: the four control accounts plus its revenue and direct cost. */
+export const JOB_DIMENSION: AccrualKey[] = ["accounts_receivable", "prepaid_job_costs", "deferred_revenue", "accrued_job_costs", "job_revenue", "job_costs"];
+
+export const jobSub = (bookingId: string) => `job:${bookingId}`;
+export const crewSub = (crewMemberId: string) => `crew:${crewMemberId}`;
+
+/** Give every line on one of `accounts` the subledger key `sub` (lines that already have one keep it). */
+export function withSub(d: Desired, accounts: Iterable<string>, sub: string): Desired {
+  if (!d) return d;
+  const set = new Set(accounts);
+  return { ...d, lines: d.lines.map((l) => (set.has(l.accountId) && !l.sub ? { ...l, sub } : l)) };
+}
+
+/** The ids of the job-dimension accounts. */
+export function jobAccounts(acct: Record<AccrualKey, string>): string[] {
+  return JOB_DIMENSION.map((k) => acct[k]);
+}
 
 /** "2026-11-01" for any date in November 2026. */
 export function periodOf(date: string): string {
@@ -59,13 +84,26 @@ function pair(debitId: string, creditId: string, cents: number): Line[] {
       ];
 }
 
-/** Collapse lines to one per account and side; drops zero lines. */
+/** Collapse lines to one per account, subledger key and side; drops zero lines. */
 export function tidy(lines: Line[]): Line[] {
   const net = netOf(lines);
   return linesFromNet(net);
 }
 
+// A line's netting key: the account id alone when it has no subledger key
+// (so untagged books net exactly as they always did), else account + key.
+const SEP = "\u0001";
+const keyOf = (l: Line) => (l.sub ? `${l.accountId}${SEP}${l.sub}` : l.accountId);
+
+/** Net debit (positive) or credit (negative) per account and subledger key. */
 export function netOf(lines: Line[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const l of lines) m.set(keyOf(l), (m.get(keyOf(l)) ?? 0) + l.debitCents - l.creditCents);
+  return m;
+}
+
+/** Net per account only, whatever the subledger keys. */
+export function netByAccount(lines: Line[]): Map<string, number> {
   const m = new Map<string, number>();
   for (const l of lines) m.set(l.accountId, (m.get(l.accountId) ?? 0) + l.debitCents - l.creditCents);
   return m;
@@ -75,7 +113,38 @@ export function linesFromNet(net: Map<string, number>): Line[] {
   return [...net.entries()]
     .filter(([, v]) => v !== 0)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([accountId, v]) => (v > 0 ? { accountId, debitCents: v, creditCents: 0 } : { accountId, debitCents: 0, creditCents: -v }));
+    .map(([key, v]) => {
+      const i = key.indexOf(SEP);
+      const accountId = i < 0 ? key : key.slice(0, i);
+      const sub = i < 0 ? undefined : key.slice(i + 1);
+      const base = v > 0 ? { accountId, debitCents: v, creditCents: 0 } : { accountId, debitCents: 0, creditCents: -v };
+      return sub ? { ...base, sub } : base;
+    });
+}
+
+// cyrb53 (public domain): a fast 53-bit string hash. Two seeds give about 106
+// bits, plenty to tell one source's posting from its next version.
+function cyrb53(s: string, seed: number): string {
+  let h1 = 0xdeadbeef ^ seed;
+  let h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, "0");
+}
+
+/**
+ * The column holds 200 characters. A fingerprint that fits is stored as is
+ * (so every existing one still compares equal); a longer one (many lines, or
+ * subledger keys) is stored as its hash, never cut off: a cut-off fingerprint
+ * can never match its own source again, which would repost it on every run.
+ */
+export function compactFingerprint(s: string): string {
+  return s.length <= 200 ? s : `h:${s.length}:${cyrb53(s, 1)}${cyrb53(s, 2)}`;
 }
 
 // ── Bank lines matched to a job ──────────────────────────────────────────────
@@ -168,6 +237,69 @@ export function claimEntry(
   return { date: claim.spentOn, memo, lines: pair(debit, acct.reimbursements_payable, claim.amountCents) };
 }
 
+// ── Subledger keys on every posting (2026-11-13) ─────────────────────────────
+// The rules above say which accounts move; these say whose line it is, so the
+// control accounts can be tied to their subledgers. postLedger calls these.
+
+/** A bank line matched to a job: the bank against the job's control account, keyed to the job. */
+export function matchedBankEntry(
+  line: { amountCents: number; postedDate: string; memo: string },
+  job: { id: string; eventDate: string; cancelled: boolean },
+  bankAccountId: string,
+  acct: Record<AccrualKey, string>,
+): Desired {
+  const other = acct[matchedBankAccount(line, job)];
+  return withSub({ date: line.postedDate, memo: line.memo, lines: pair(bankAccountId, other, line.amountCents) }, [other], jobSub(job.id));
+}
+
+/** A job's revenue and cost entries, keyed to the job on every job account. */
+export function jobEntries(job: JobFacts, id: string, name: string, acct: Record<AccrualKey, string>, today: string): { revenue: Desired; cost: Desired } {
+  const accounts = jobAccounts(acct);
+  return {
+    revenue: withSub(jobRevenueEntry(job, name, acct, today), accounts, jobSub(id)),
+    cost: withSub(jobCostEntry(job, name, acct, today), accounts, jobSub(id)),
+  };
+}
+
+/** An approved expense report: the job side keyed to the job, the amount owed keyed to the person. */
+export function keyedClaimEntry(
+  claim: Parameters<typeof claimEntry>[0] & { jobId: string | null; personKey: string | null },
+  acct: Record<AccrualKey, string>,
+): Desired {
+  let d = claimEntry(claim, acct);
+  if (claim.jobId) d = withSub(d, jobAccounts(acct), jobSub(claim.jobId));
+  if (claim.personKey) d = withSub(d, [acct.reimbursements_payable], claim.personKey);
+  return d;
+}
+
+/**
+ * A bank payout that repaid expense reports: credit the bank, debit what each
+ * person was owed, keyed to them. A payout may cover more than the reports;
+ * with one person the extra is theirs (an advance), with several nobody can
+ * say whose it is, so it stays unkeyed and shows as a tie-out difference.
+ */
+export function payoutEntry(
+  line: { amountCents: number; postedDate: string; memo: string },
+  claims: { amountCents: number; personKey: string | null }[],
+  bankAccountId: string,
+  acct: Record<AccrualKey, string>,
+): Desired {
+  const rp = acct.reimbursements_payable;
+  if (line.amountCents >= 0) return { date: line.postedDate, memo: line.memo, lines: pair(bankAccountId, rp, line.amountCents) };
+  const paid = -line.amountCents;
+  const lines: Line[] = [{ accountId: bankAccountId, debitCents: 0, creditCents: paid }];
+  const people = [...new Set(claims.map((c) => c.personKey))];
+  let covered = 0;
+  for (const c of claims) {
+    const cents = Math.min(c.amountCents, paid - covered);
+    if (cents <= 0) break;
+    lines.push({ accountId: rp, debitCents: cents, creditCents: 0, sub: c.personKey });
+    covered += cents;
+  }
+  if (paid > covered) lines.push({ accountId: rp, debitCents: paid - covered, creditCents: 0, sub: people.length === 1 ? people[0] : null });
+  return { date: line.postedDate, memo: line.memo, lines: tidy(lines) };
+}
+
 // ── Live sync with a hard cutoff ─────────────────────────────────────────────
 
 export type LiveEntry = { id: string; date: string; fingerprint: string | null; lines: Line[] };
@@ -177,8 +309,9 @@ export type PostPlan = {
   post: { date: string; memo: string; fingerprint: string; lines: Line[]; adjustsPeriod: string | null; kind: "original" | "adjustment" }[];
 };
 
+/** What a posting is: its date and its net lines, with subledger keys. Never longer than 200 characters. */
 export function fingerprint(d: NonNullable<Desired>): string {
-  return `${d.date}|${tidy(d.lines).map((l) => `${l.accountId}:${l.debitCents - l.creditCents}`).join(",")}`;
+  return compactFingerprint(`${d.date}|${tidy(d.lines).map((l) => `${l.accountId}${l.sub ? `#${l.sub}` : ""}:${l.debitCents - l.creditCents}`).join(",")}`);
 }
 
 /**
@@ -220,7 +353,7 @@ export function planPosting(desired: Desired, live: LiveEntry[], locked: (date: 
   const delta = new Map<string, number>();
   for (const k of new Set([...base.keys(), ...target.keys()])) delta.set(k, (target.get(k) ?? 0) - (base.get(k) ?? 0));
   const deltaLines = linesFromNet(delta);
-  const adjFp = `adj|${fp ?? "none"}`;
+  const adjFp = compactFingerprint(`adj|${fp ?? "none"}`);
   if (open.length === 1 && open[0].fingerprint === adjFp) return plan;
   if (open.length === 0 && deltaLines.length === 0) return plan;
   plan.void.push(...open.map((e) => e.id));
@@ -363,9 +496,12 @@ export function closeBlockers(f: {
   unmatchedHandPayments: number;
   transfersInTransitCents: number;
   bankDifferences: number;
+  /** Control accounts (1100, 1300, 2300, 2400, 2500) whose balance differs from the sum of their subledger. */
+  subledgerDifferences?: number;
 }): Blocker[] {
   const all: Blocker[] = [
     { key: "unbalanced", label: "Journal entries that don't balance", count: f.unbalancedEntries, hard: true },
+    { key: "tie_out", label: "Control accounts that don't tie to their subledgers", count: f.subledgerDifferences ?? 0, hard: true },
     { key: "unreviewed", label: "Bank lines still waiting to be sorted", count: f.unreviewedLines, hard: true },
     { key: "claims", label: "Expense reports waiting for approval", count: f.submittedClaims, hard: true },
     { key: "uncosted", label: "Held jobs with a cost not filled in", count: f.uncostedJobs, hard: true },

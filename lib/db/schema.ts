@@ -622,6 +622,8 @@ export const journalLines = pgTable("journal_lines", {
   accountId: uuid("account_id").notNull().references(() => ledgerAccounts.id, { onDelete: "restrict" }),
   debitCents: bigint("debit_cents", { mode: "number" }).notNull().default(0),
   creditCents: bigint("credit_cents", { mode: "number" }).notNull().default(0),
+  // Subledger key (2026-11-13): job:<booking id> on job accounts, crew:<crew member id> on 2500.
+  subRef: varchar("sub_ref", { length: 80 }),
 });
 export type LedgerAccount = typeof ledgerAccounts.$inferSelect;
 

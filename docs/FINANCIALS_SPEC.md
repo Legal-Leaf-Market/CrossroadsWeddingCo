@@ -178,10 +178,39 @@ is NOT a sync (a spreadsheet, a PDF, an email, a Rocket Money or QuickBooks expo
 staging area first, gets a cached preview report of exactly what would post, needs an approval,
 and is audited. Not built yet; see docs/handoff.
 
+### Subledgers and the tie-out (2026-11-13)
+Every journal line on a control account carries a subledger key (`journal_lines.sub_ref`):
+`job:<booking id>` on 1100, 1300, 2300 and 2400 (and the job's 4500 and 5000 lines, so job
+profit reads straight from the ledger), `crew:<crew member id>` on 2500. The posting rules set
+the key (`matchedBankEntry`, `jobEntries`, `keyedClaimEntry`, `payoutEntry` in
+`lib/books/accrual.ts`), and netting, fingerprints and corrections all work per account AND
+key, so a reclassification between jobs is a real posting even when the account total does not
+move. A reimbursement payout that covers more than its claims puts the extra on the one person
+it paid, or, when it covered several people, leaves it unkeyed (nobody can say whose it is).
+
+Tie-out: each control account's balance against the sum of its subledger
+(`tieOut` in `lib/books/subledger-logic.ts`). They can only differ by lines with no key, or a
+key of the wrong kind; any difference is a HARD close blocker ("Control accounts that don't tie
+to their subledgers"), checked as of the month's end. Books posted before keys existed convert
+by themselves: an open-month entry is voided and reposted with its keys once; a closed month
+keeps its entry and gets one dated reclassification. Untagged entries keep their old fingerprint
+exactly, so bank lines that are not tied to a job do not churn. Fingerprints longer than the
+200-character column are stored as a hash instead of being cut off (a cut-off one could never
+match its source again and would repost on every run).
+
+Drill-down: report line (`/app/books`) -> account register with running balance
+(`/app/books/accounts/<id>`, `?from=&to=&sub=`) -> the subledger for control accounts (by job or
+person, `?sub=none` lists the lines the tie-out counts as a difference) -> journal entry
+(`/app/books/entries/<id>`: lines with keys, every version from the same source, the source
+record, the audit history of entry and source). Trial balance at `/app/books/accounts`, tie-out
+report at `/app/books/tie-out`, vendors link each 1099 payment to its entry. CSV out:
+`/api/app/books/export?report=trial-balance|subledgers|audit-log`. The job costing page
+(`/admin/[key]/jobs`) reads its balances from the ledger by key and states whether it ties.
+Checked by `scripts/verify-subledger.mjs`.
+
 ### Open items
 Stripe clearing account (card payments arrive net of fees); customer credits for overpayment;
 Compass Events as its own division owned by Terry Winchester II, with an intercompany due
 to/from account while its money lands in Crossroads; materiality threshold for reopen vs
-correction; subledger drill-down pages and the control-account tie-out report as a hard blocker;
-the job costing page (`/admin/[key]/jobs`) still computes prepaid/accrued from the "Paid" box
-and must be switched to read the ledger's facts so it ties.
+correction; QuickBooks-importable journal export; a job cost paid from the bank with no cost-plan
+line leaves a debit on 2400 after the event (the cost plan is the cost; add the line).

@@ -1452,3 +1452,27 @@ decisions absorbed from it:
   NOT verified in a browser: the close page's buttons with real signed-in sessions (the rules
   behind them are covered by the verify script). Open items are listed at the end of the spec and
   in `docs/handoff/CLAUDE.md`.
+- **True subledgers, the tie-out, and the jobs page on the ledger (2026-11-13, docs/handoff
+  tasks 2 and 3).** Every journal line on a control account names whose it is
+  (`journal_lines.sub_ref`: `job:<booking id>` on 1100/1300/2300/2400 and the job's 4500/5000,
+  `crew:<crew member id>` on 2500); netting, fingerprints and closed-month corrections work per
+  account and key. `/app/books/tie-out` ties each control account to its subledger and any
+  difference is a HARD close blocker (`tie_out` in `closeBlockers`, as of the month's end).
+  Drill-down: `/app/books` lines -> `/app/books/accounts/<id>` (register, running balance,
+  subledger, `?sub=`) -> `/app/books/entries/<id>` (lines, every version, source record, audit
+  history); trial balance at `/app/books/accounts`; vendor payments link to their entries; CSV
+  out at `/api/app/books/export` (trial balance, subledgers, audit log). `/admin/[key]/jobs` now
+  reads every balance from the ledger by key (archived and cancelled jobs with a balance are
+  listed so the totals ARE the GL) and says whether it ties. Pure rules in
+  `lib/books/subledger-logic.ts`; `node --experimental-strip-types scripts/verify-subledger.mjs`
+  (43 checks, including the handoff's "page totals equal the GL balances of 1100, 1300, 2300,
+  2400" and two sabotages). Existing books convert themselves: open-month job entries repost once
+  with keys, a closed month gets one dated reclassification, untagged bank entries keep their old
+  fingerprint (no churn). Fingerprints over 200 characters are now hashed, never cut off.
+  Migration verified twice on a local Postgres 16; this session had no package install, so the
+  Netlify deploy preview build is the type-check.
+- **Site email was down from the .com to .shop move until 2026-11-13.** Resend refused every
+  send ("The crossroadsweddingco.shop domain is not verified"), so sign-in links, booking
+  confirmations, hub links and message pointers all failed. Fixed: crossroadsweddingco.shop added
+  in Resend (account jacobkennedy.47201), and Netlify DNS gained `resend._domainkey` (TXT, DKIM)
+  plus `send` and `rsend` CNAMEs to `*.forge.rmta.net`. Proton's MX, SPF and DMARC are untouched.

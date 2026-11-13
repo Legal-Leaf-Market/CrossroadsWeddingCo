@@ -18,6 +18,8 @@ import {
 } from "@/lib/books/accrual";
 import { ledgerToday, postLedger, reconciliation } from "@/lib/books/ledger";
 import { rolesFor } from "@/lib/finance-roles";
+import { tieOutReport } from "@/lib/books/subledger";
+import { tieOutDifferences } from "@/lib/books/subledger-logic";
 import { isPayMethod, lineCost } from "@/lib/costing-logic";
 
 // The month-end close (2026-11-13). Jake prepares, Terry approves or vetoes,
@@ -159,6 +161,8 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
     from journal_lines l join journal_entries e on e.id = l.entry_id join ledger_accounts a on a.id = l.account_id
     where e.tenant_id = ${tenantId} and e.status = 'posted' and e.entry_date <= ${end} and a.system_key = 'transfers_clearing'`);
   const recon = await reconciliation(tenantId);
+  // Every control account must equal the sum of its subledger at the month's end.
+  const tie = await tieOutReport(tenantId, end);
   return closeBlockers({
     unbalancedEntries: unbalanced.n ?? 0,
     unreviewedLines: lines.unreviewed ?? 0,
@@ -169,6 +173,7 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
     unmatchedHandPayments: hand.n ?? 0,
     transfersInTransitCents: Number(clearing.bal ?? 0),
     bankDifferences: recon.filter((r) => r.difference !== null && r.difference !== 0).length,
+    subledgerDifferences: tieOutDifferences(tie.rows),
   });
 }
 

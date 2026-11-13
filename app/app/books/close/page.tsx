@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import CloseActions from "@/components/account/CloseActions";
 import { getBooksWorkspace } from "@/lib/auth";
-import { availableActions, LOCKED_STATUSES } from "@/lib/books/accrual";
+import { availableActions, LOCKED_STATUSES, periodEnd } from "@/lib/books/accrual";
 import { listPeriods, periodBlockers } from "@/lib/books/close";
 import { postLedger } from "@/lib/books/ledger";
 import { listRoles, rolesFor } from "@/lib/finance-roles";
@@ -125,7 +125,13 @@ export default async function ClosePage({ searchParams }: { searchParams: Promis
                       <li key={b.key} className="flex justify-between gap-3">
                         <span className={b.hard ? "text-terracotta-dark" : "text-ink/80"}>
                           {b.hard ? "Must fix: " : "Acknowledge: "}
-                          {b.label}
+                          {b.key === "tie_out" ? (
+                            <Link href={`/app/books/tie-out?asof=${periodEnd(selected.periodStart)}`} className="underline">
+                              {b.label}
+                            </Link>
+                          ) : (
+                            b.label
+                          )}
                         </span>
                         <span className="tabular-nums text-ink/60">{b.count}</span>
                       </li>

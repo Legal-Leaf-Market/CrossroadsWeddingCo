@@ -16,11 +16,12 @@ import { randomUUID } from "node:crypto";
 import { audit } from "@/lib/audit";
 import {
   ACCRUAL_ACCOUNTS,
-  claimEntry,
-  jobCostEntry,
-  jobRevenueEntry,
+  crewSub,
+  jobEntries,
+  keyedClaimEntry,
   LOCKED_STATUSES,
-  matchedBankAccount,
+  matchedBankEntry,
+  payoutEntry,
   periodOf,
   planPosting,
   type AccrualKey,
@@ -152,7 +153,7 @@ async function insertEntry(
   tx: Tx,
   tenantId: string,
   e: { entryDate: string; memo: string; sourceType: string; sourceId: string; fingerprint: string; createdBy?: string | null; sourceRef?: string; adjustsPeriod?: string | null },
-  lines: LineInput[],
+  lines: (LineInput & { sub?: string | null })[],
 ): Promise<string> {
   const d = lines.reduce((s, l) => s + l.debitCents, 0);
   const c = lines.reduce((s, l) => s + l.creditCents, 0);
@@ -171,7 +172,16 @@ async function insertEntry(
       createdBy: e.createdBy ?? null,
     })
     .returning({ id: journalEntries.id });
-  await tx.insert(journalLines).values(lines.map((l) => ({ ...l, entryId: entry.id, tenantId })));
+  await tx.insert(journalLines).values(
+    lines.map((l) => ({
+      entryId: entry.id,
+      tenantId,
+      accountId: l.accountId,
+      debitCents: l.debitCents,
+      creditCents: l.creditCents,
+      subRef: l.sub ? l.sub.slice(0, 80) : null,
+    })),
+  );
   return entry.id;
 }
 
@@ -274,17 +284,23 @@ export async function postLedger(
       .where(eq(bankTransactions.tenantId, tenantId));
 
     // Expense reports (built alongside; the table may not exist on an older database).
-    type Claim = { id: string; amount_cents: number; spent_on: string; merchant: string; claimant_name: string; cat_ledger_id: string | null; wedding_id: string | null; reimbursed_bank_transaction_id: string | null };
+    type Claim = { id: string; amount_cents: number; spent_on: string; merchant: string; claimant_name: string; cat_ledger_id: string | null; wedding_id: string | null; reimbursed_bank_transaction_id: string | null; crew_member_id: string | null };
     const claims: Claim[] = (await tableExists(tx, "expense_claims"))
       ? ((
           await tx.execute(sql`
             select c.id, c.amount_cents, c.spent_on::text as spent_on, c.merchant, c.claimant_name, lc.ledger_account_id as cat_ledger_id,
-                   c.wedding_id, c.reimbursed_bank_transaction_id
+                   c.wedding_id, c.reimbursed_bank_transaction_id, c.crew_member_id
             from expense_claims c left join ledger_categories lc on lc.id = c.category_id
-            where c.tenant_id = ${tenantId} and c.kind = 'reimbursement' and c.status = 'approved'`)
+            where c.tenant_id = ${tenantId} and c.kind = 'reimbursement' and c.status = 'approved'
+            order by c.submitted_at, c.id`)
         ).rows as Claim[])
       : [];
-    const reimbursing = new Set(claims.map((c) => c.reimbursed_bank_transaction_id).filter((x): x is string => !!x));
+    // Whose money a claim is: the crew member (crew rows are never deleted, so the id holds).
+    const personKey = (c: Claim) => (c.crew_member_id ? crewSub(c.crew_member_id) : null);
+    const reimbursing = new Map<string, Claim[]>();
+    for (const c of claims) {
+      if (c.reimbursed_bank_transaction_id) reimbursing.set(c.reimbursed_bank_transaction_id, [...(reimbursing.get(c.reimbursed_bank_transaction_id) ?? []), c]);
+    }
 
     const sources: Source[] = [];
     const payments = new Map<string, { date: string; cents: number }[]>();
@@ -296,17 +312,25 @@ export async function postLedger(
       const job = l.bookingId ? jobById.get(l.bookingId) : undefined;
       let desired: Desired = null;
       if (live && job) {
-        const key = matchedBankAccount(l, { eventDate: job.eventDate, cancelled: job.status === "cancelled" });
-        const other = acct[key];
-        desired = {
-          date: l.postedDate,
-          memo: `${l.merchant || l.description || "Bank transaction"} (${job.coupleNames}, ${l.amountCents > 0 ? (l.paymentKind === "deposit" ? "deposit" : "payment") : "job cost"})`,
-          lines: bankLinePosting(l.amountCents, l.bankLedgerId!, other),
-        };
+        desired = matchedBankEntry(
+          {
+            amountCents: l.amountCents,
+            postedDate: l.postedDate,
+            memo: `${l.merchant || l.description || "Bank transaction"} (${job.coupleNames}, ${l.amountCents > 0 ? (l.paymentKind === "deposit" ? "deposit" : "payment") : "job cost"})`,
+          },
+          { id: job.id, eventDate: job.eventDate, cancelled: job.status === "cancelled" },
+          l.bankLedgerId!,
+          acct,
+        );
         if (l.amountCents > 0) push(payments, job.id, { date: l.postedDate, cents: l.amountCents });
         else if (l.postedDate <= job.eventDate) push(prepaid, job.id, { date: l.postedDate, cents: -l.amountCents });
       } else if (live && reimbursing.has(l.id)) {
-        desired = { date: l.postedDate, memo: `${l.merchant || l.description || "Reimbursement"} (expense reimbursement)`, lines: bankLinePosting(l.amountCents, l.bankLedgerId!, acct.reimbursements_payable) };
+        desired = payoutEntry(
+          { amountCents: l.amountCents, postedDate: l.postedDate, memo: `${l.merchant || l.description || "Reimbursement"} (expense reimbursement)` },
+          (reimbursing.get(l.id) ?? []).map((c) => ({ amountCents: c.amount_cents, personKey: personKey(c) })),
+          l.bankLedgerId!,
+          acct,
+        );
       } else if (live && l.reviewStatus === "categorized" && l.catLedgerId) {
         desired = { date: l.postedDate, memo: l.merchant || l.description || "Bank transaction", lines: bankLinePosting(l.amountCents, l.bankLedgerId!, l.catLedgerId) };
       }
@@ -321,7 +345,10 @@ export async function postLedger(
         ref: `expense_claim:${c.id}`,
         type: "expense_claim",
         id: c.id,
-        desired: claimEntry({ amountCents: c.amount_cents, spentOn: c.spent_on, merchant: c.merchant, claimant: c.claimant_name, categoryAccountId: c.cat_ledger_id, job }, acct),
+        desired: keyedClaimEntry(
+          { amountCents: c.amount_cents, spentOn: c.spent_on, merchant: c.merchant, claimant: c.claimant_name, categoryAccountId: c.cat_ledger_id, job, jobId: j ? j.id : null, personKey: personKey(c) },
+          acct,
+        ),
       });
     }
 
@@ -363,8 +390,9 @@ export async function postLedger(
         costCents: (planCost.get(j.id) ?? 0) + (j.status === "cancelled" ? 0 : jobClaims),
         prepaid: prepaid.get(j.id) ?? [],
       };
-      sources.push({ ref: `job_revenue:${j.id}`, type: "job_revenue", id: j.id, desired: jobRevenueEntry(facts, j.coupleNames, acct, today) });
-      sources.push({ ref: `job_cost:${j.id}`, type: "job_cost", id: j.id, desired: jobCostEntry(facts, j.coupleNames, acct, today) });
+      const entries = jobEntries(facts, j.id, j.coupleNames, acct, today);
+      sources.push({ ref: `job_revenue:${j.id}`, type: "job_revenue", id: j.id, desired: entries.revenue });
+      sources.push({ ref: `job_cost:${j.id}`, type: "job_cost", id: j.id, desired: entries.cost });
     }
 
     // Everything already posted from these sources, with its lines.
@@ -374,12 +402,12 @@ export async function postLedger(
       .where(and(eq(journalEntries.tenantId, tenantId), eq(journalEntries.status, "posted"), inArray(journalEntries.sourceType, DERIVED_TYPES)));
     const entryLines = liveEntries.length
       ? await tx
-          .select({ entryId: journalLines.entryId, accountId: journalLines.accountId, debitCents: journalLines.debitCents, creditCents: journalLines.creditCents })
+          .select({ entryId: journalLines.entryId, accountId: journalLines.accountId, debitCents: journalLines.debitCents, creditCents: journalLines.creditCents, sub: journalLines.subRef })
           .from(journalLines)
           .where(and(eq(journalLines.tenantId, tenantId), inArray(journalLines.entryId, liveEntries.map((e) => e.id))))
       : [];
     const linesByEntry = new Map<string, Line[]>();
-    for (const l of entryLines) linesByEntry.set(l.entryId, [...(linesByEntry.get(l.entryId) ?? []), { accountId: l.accountId, debitCents: l.debitCents, creditCents: l.creditCents }]);
+    for (const l of entryLines) linesByEntry.set(l.entryId, [...(linesByEntry.get(l.entryId) ?? []), { accountId: l.accountId, debitCents: l.debitCents, creditCents: l.creditCents, sub: l.sub }]);
     const liveByRef = new Map<string, LiveEntry[]>();
     for (const e of liveEntries) {
       const ref = e.ref ?? "";
