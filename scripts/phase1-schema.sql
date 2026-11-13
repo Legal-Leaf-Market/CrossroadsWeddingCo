@@ -1022,6 +1022,65 @@ WITH ins AS (
 )
 INSERT INTO schema_seeds (name) SELECT 'crew_members_v1' FROM ins LIMIT 1 ON CONFLICT (name) DO NOTHING;
 
+-- Expense capture (2026-11-13, Jake: "a capture tool like rocket money or
+-- expensify or such for staff incidentals and reimbursements"). Staff send a
+-- receipt from a link on their phone; the report is approved, then its payout
+-- (see the two approvals below); an approved reimbursement is owed back until
+-- the bank payout that repays it is linked. Nothing is ever deleted: claims
+-- and receipts are voided. A card_receipt is a receipt for a charge already on
+-- the bank feed: it attaches proof and posts nothing by itself. The ledger reads this
+-- table (lib/books/ledger.ts); receipts are stored like wedding documents.
+ALTER TABLE crew_members ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+
+CREATE TABLE IF NOT EXISTS receipts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    file_name VARCHAR(255) NOT NULL DEFAULT '',
+    mime_type VARCHAR(100) NOT NULL,
+    byte_size INTEGER NOT NULL,
+    data BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_receipts_tenant ON receipts (tenant_id);
+
+CREATE TABLE IF NOT EXISTS expense_claims (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    crew_member_id UUID REFERENCES crew_members(id) ON DELETE SET NULL,
+    claimant_name VARCHAR(120) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'reimbursement',
+    bank_transaction_id UUID REFERENCES bank_transactions(id) ON DELETE SET NULL,
+    merchant VARCHAR(160) NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    spent_on DATE NOT NULL,
+    category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT,
+    wedding_id UUID REFERENCES weddings(id) ON DELETE SET NULL,
+    receipt_id UUID REFERENCES receipts(id) ON DELETE SET NULL,
+    status VARCHAR(12) NOT NULL DEFAULT 'submitted',
+    decided_by VARCHAR(255),
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT NOT NULL DEFAULT '',
+    reimbursed_bank_transaction_id UUID REFERENCES bank_transactions(id) ON DELETE SET NULL,
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- Two approvals (owner, 2026-11-13): the report, then the payout. Only the
+-- preparer (Jake) approves a report; the approver (Terry) approves its payout,
+-- except on Terry's own reports, where the tiebreaker (Nic) does. Terry may
+-- veto a payout; the preparer may escalate a veto to the tiebreaker, whose
+-- word is final. Cash moves (a payout is linked) only once payout_status is
+-- 'approved'. Roles come from finance_roles (lib/finance-roles.ts).
+ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS payout_status VARCHAR(12) NOT NULL DEFAULT 'none';
+ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS payout_decided_by VARCHAR(255);
+ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS payout_decided_at TIMESTAMPTZ;
+ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS payout_note TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_expense_claims_status ON expense_claims (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_expense_claims_wedding ON expense_claims (wedding_id);
+-- One receipt per bank line: a second upload replaces the claim's receipt instead.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_expense_claims_card_line
+    ON expense_claims (bank_transaction_id) WHERE kind = 'card_receipt' AND status <> 'void';
+
 -- ── Accrual basis, audit log, period close (2026-11-13) ─────────────────────
 -- Jake: "force accrual and US GAAP in the software ... we are not a cash basis
 -- gl"; "we use the matching principle"; live sync until "a hard cutoff"; "a

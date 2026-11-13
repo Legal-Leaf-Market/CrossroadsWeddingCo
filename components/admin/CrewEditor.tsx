@@ -13,6 +13,8 @@ export type CrewRow = {
   percentBps: number | null;
   shareBps: number | null;
   vendorId: string | null;
+  /** Their sign-in email: ties them to their finance role and to their own expense claims. */
+  email: string | null;
   notes: string;
   retired: boolean;
 };
@@ -22,7 +24,7 @@ type Draft = Omit<CrewRow, "rateCents" | "percentBps" | "shareBps"> & { amount: 
 function toDraft(r: CrewRow): Draft {
   const amount =
     r.payMethod === "percent" ? bpsToText(r.percentBps) : r.payMethod === "owner" ? bpsToText(r.shareBps) : centsToText(r.rateCents);
-  return { id: r.id, name: r.name, defaultRole: r.defaultRole, payMethod: r.payMethod, vendorId: r.vendorId, notes: r.notes, retired: r.retired, amount };
+  return { id: r.id, name: r.name, defaultRole: r.defaultRole, payMethod: r.payMethod, vendorId: r.vendorId, email: r.email, notes: r.notes, retired: r.retired, amount };
 }
 
 function amountHint(m: PayMethod): string {
@@ -73,6 +75,11 @@ export default function CrewEditor({
       const isPct = r.payMethod === "percent" || r.payMethod === "owner";
       const cents = isPct ? null : textToCents(r.amount);
       const bps = isPct ? textToBps(r.amount) : null;
+      if (r.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email.trim())) {
+        setError(`${r.name}: "${r.email}" isn't an email address.`);
+        setStatus("error");
+        return;
+      }
       if (r.amount.trim() && cents == null && bps == null) {
         setError(`${r.name}: "${r.amount}" isn't a number ${isPct ? "from 0 to 100" : "of dollars"}.`);
         setStatus("error");
@@ -87,6 +94,7 @@ export default function CrewEditor({
         percentBps: r.payMethod === "percent" ? bps : null,
         shareBps: r.payMethod === "owner" ? bps : null,
         vendorId: r.vendorId,
+        email: r.email?.trim() ? r.email.trim().toLowerCase() : null,
         notes: r.notes,
         retired: r.retired,
       });
@@ -165,6 +173,17 @@ export default function CrewEditor({
               </select>
             </label>
             <label className="text-xs font-semibold text-ink/60 sm:col-span-2">
+              Email (their sign-in; how the books know whose claim is whose)
+              <input
+                className={`${inputClass} mt-1`}
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                value={r.email ?? ""}
+                onChange={(e) => edit(i, { email: e.target.value })}
+              />
+            </label>
+            <label className="text-xs font-semibold text-ink/60 sm:col-span-2">
               Notes
               <input className={`${inputClass} mt-1`} value={r.notes} onChange={(e) => edit(i, { notes: e.target.value })} />
             </label>
@@ -178,7 +197,7 @@ export default function CrewEditor({
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={() => setRows((p) => [...p, { id: null, name: "", defaultRole: "", payMethod: "project", vendorId: null, notes: "", retired: false, amount: "" }])}
+          onClick={() => setRows((p) => [...p, { id: null, name: "", defaultRole: "", payMethod: "project", vendorId: null, email: null, notes: "", retired: false, amount: "" }])}
           className="rounded-full border border-terracotta px-4 py-1.5 text-sm font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
         >
           Add a person

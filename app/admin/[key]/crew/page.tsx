@@ -9,6 +9,8 @@ import { formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME, VENUE_TIME_ZONE } from "@/lib/site";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 import { listVendors } from "@/lib/vendors";
+import CopyLink from "@/components/account/CopyLink";
+import { expenseUrl } from "@/lib/expense-token";
 
 // Crew, pay and materials (2026-11-13, Jake: "project costing and planning for
 // material and hour resources starting with labor for Nic, Terry, and Jake";
@@ -179,10 +181,30 @@ export default async function CrewPage({ params }: { params: Promise<{ key: stri
               percentBps: c.percentBps,
               shareBps: c.shareBps,
               vendorId: c.vendorId,
+              email: c.email,
               notes: c.notes,
               retired: c.retiredAt !== null,
             }))}
           />
+        </section>
+
+        <section id="expense-links">
+          <h2 className="text-lg font-semibold text-charcoal">Expense links</h2>
+          <p className="mb-3 text-sm text-ink/60">
+            Each person&apos;s own link for sending receipts from their phone. It opens only their claims. Send it to them by text;
+            rotating the dashboard key retires every link. Reports are reviewed under Books, Expenses.
+          </p>
+          <div className="space-y-2">
+            {active.map((c) => {
+              const url = expenseUrl(c.id);
+              return (
+                <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-parchment bg-white px-4 py-3 text-sm">
+                  <span className="font-semibold text-charcoal">{c.name}</span>
+                  {url ? <CopyLink url={url} label={`${c.name}'s expense link`} /> : <span className="text-ink/55">Needs the dashboard key set.</span>}
+                </div>
+              );
+            })}
+          </div>
         </section>
 
         <section id="materials">

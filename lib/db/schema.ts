@@ -819,3 +819,53 @@ export const auditLog = pgTable("audit_log", {
   hash: varchar("hash", { length: 64 }).notNull(),
 });
 export type AuditRow = typeof auditLog.$inferSelect;
+
+// Expense capture (2026-11-13). See scripts/phase1-schema.sql, lib/expense-logic.ts
+// (pure) and lib/expenses.ts (server).
+export const receipts = pgTable(
+  "receipts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    fileName: varchar("file_name", { length: 255 }).notNull().default(""),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    byteSize: integer("byte_size").notNull(),
+    data: customType<{ data: Buffer; driverData: Buffer }>({
+      dataType: () => "bytea",
+    })("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_receipts_tenant").on(t.tenantId)],
+);
+
+export const expenseClaims = pgTable(
+  "expense_claims",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    crewMemberId: uuid("crew_member_id").references(() => crewMembers.id, { onDelete: "set null" }),
+    claimantName: varchar("claimant_name", { length: 120 }).notNull(),
+    kind: varchar("kind", { length: 20 }).notNull().default("reimbursement"),
+    bankTransactionId: uuid("bank_transaction_id").references(() => bankTransactions.id, { onDelete: "set null" }),
+    merchant: varchar("merchant", { length: 160 }).notNull().default(""),
+    description: text("description").notNull().default(""),
+    amountCents: integer("amount_cents").notNull(),
+    spentOn: date("spent_on").notNull(),
+    categoryId: uuid("category_id").references(() => ledgerCategories.id, { onDelete: "restrict" }),
+    weddingId: uuid("wedding_id").references(() => weddings.id, { onDelete: "set null" }),
+    receiptId: uuid("receipt_id").references(() => receipts.id, { onDelete: "set null" }),
+    status: varchar("status", { length: 12 }).notNull().default("submitted"),
+    decidedBy: varchar("decided_by", { length: 255 }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note").notNull().default(""),
+    reimbursedBankTransactionId: uuid("reimbursed_bank_transaction_id").references(() => bankTransactions.id, { onDelete: "set null" }),
+    payoutStatus: varchar("payout_status", { length: 12 }).notNull().default("none"),
+    payoutDecidedBy: varchar("payout_decided_by", { length: 255 }),
+    payoutDecidedAt: timestamp("payout_decided_at", { withTimezone: true }),
+    payoutNote: text("payout_note").notNull().default(""),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_expense_claims_status").on(t.tenantId, t.status), index("idx_expense_claims_wedding").on(t.weddingId)],
+);
+export type ExpenseClaim = typeof expenseClaims.$inferSelect;

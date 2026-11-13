@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KIND_LABEL, type CategoryKind } from "@/lib/books/categories";
+import ReceiptControl from "@/components/expenses/ReceiptControl";
 
 export type QueueCategory = { id: string; name: string; kind: CategoryKind };
 export type QueueItem = {
@@ -153,11 +154,14 @@ export default function ReviewQueue({
   items,
   categories,
   bookings = [],
+  receipts = {},
 }: {
   view: "unreviewed" | "categorized" | "excluded";
   items: QueueItem[];
   categories: QueueCategory[];
   bookings?: MatchBooking[];
+  /** Bank line id to its receipt record (expense capture), for money-out lines. */
+  receipts?: Record<string, string>;
 }) {
   const router = useRouter();
   const [gone, setGone] = useState<Set<string>>(new Set());
@@ -333,6 +337,11 @@ export default function ReviewQueue({
                       {item.sortedByRule && <span className="ml-2 rounded-full bg-parchment/70 px-2 py-0.5 text-xs font-semibold text-ink/60">by a rule</span>}
                       {item.note && <span className="text-ink/55"> · {item.note}</span>}
                     </p>
+                  )}
+                  {item.amountCents < 0 && (
+                    <div className="mt-1.5">
+                      <ReceiptControl lineId={item.id} claimId={receipts[item.id] ?? null} />
+                    </div>
                   )}
                 </div>
               </div>

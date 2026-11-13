@@ -22,6 +22,7 @@ export type CrewInput = {
   percentBps: number | null;
   shareBps: number | null;
   vendorId: string | null;
+  email?: string | null;
   notes: string;
   retired: boolean;
 };
@@ -92,6 +93,7 @@ export async function saveCrew(rows: CrewInput[], actor = "owner dashboard"): Pr
         percentBps: r.payMethod === "percent" ? r.percentBps : null,
         shareBps: r.payMethod === "owner" ? r.shareBps : null,
         vendorId: r.vendorId && vendorIds.has(r.vendorId) ? r.vendorId : null,
+        email: r.email ? r.email.trim().toLowerCase() : null,
         notes: r.notes,
         sort: i,
         retiredAt: r.retired ? sql`coalesce(${crewMembers.retiredAt}, now())` : null,
