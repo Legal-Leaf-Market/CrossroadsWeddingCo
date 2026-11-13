@@ -1,7 +1,7 @@
-import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { guestbookEntries, weddings } from "@/lib/db/schema";
-import { findReviewEvent } from "@/lib/review-constants";
+import { TRIBUTE_SLUGS, findReviewEvent, isTributeSlug } from "@/lib/review-constants";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 export { RELATIONS } from "@/lib/review-constants";
 
@@ -30,12 +30,18 @@ export type ModerationEntry = PublicEntry & {
   source: string | null;
 };
 
-/** Approved and not hidden, featured first, then newest. */
+/** Approved and not hidden, featured first, then newest. Tribute notes stay on their own page. */
 export async function getPublicEntries(): Promise<PublicEntry[]> {
   const rows = await db
     .select()
     .from(guestbookEntries)
-    .where(and(isNotNull(guestbookEntries.approvedAt), isNull(guestbookEntries.hiddenAt)))
+    .where(
+      and(
+        isNotNull(guestbookEntries.approvedAt),
+        isNull(guestbookEntries.hiddenAt),
+        or(isNull(guestbookEntries.eventSlug), notInArray(guestbookEntries.eventSlug, [...TRIBUTE_SLUGS])),
+      ),
+    )
     .orderBy(desc(guestbookEntries.featured), desc(guestbookEntries.createdAt))
     .limit(200);
   return rows.map((r) => ({
@@ -64,8 +70,10 @@ export async function getModerationEntries(): Promise<ModerationEntry[]> {
     state: r.hiddenAt ? "hidden" : r.approvedAt ? "approved" : "waiting",
     source: r.weddingId
       ? "Written by the couple from their planning hub"
-      : r.eventSlug
-        ? `Signed on the ${findReviewEvent(r.eventSlug)?.title ?? r.eventSlug} page`
+      : isTributeSlug(r.eventSlug)
+        ? "Signed on the Back YOUR Blue tribute page (shows there only)"
+        : r.eventSlug
+          ? `Signed on the ${findReviewEvent(r.eventSlug)?.title ?? r.eventSlug} page`
         : null,
   }));
 }
@@ -153,4 +161,22 @@ export async function hubNotesToday(weddingId: string): Promise<number> {
     .from(guestbookEntries)
     .where(and(eq(guestbookEntries.weddingId, weddingId), sql`${guestbookEntries.createdAt} > now() - interval '1 day'`));
   return r?.n ?? 0;
+}
+
+/** Approved notes for one tribute page, oldest first so the board reads in order. */
+export async function getTributeEntries(slug: string): Promise<PublicEntry[]> {
+  if (!isTributeSlug(slug)) return [];
+  const rows = await db
+    .select()
+    .from(guestbookEntries)
+    .where(and(isNotNull(guestbookEntries.approvedAt), isNull(guestbookEntries.hiddenAt), eq(guestbookEntries.eventSlug, slug)))
+    .orderBy(desc(guestbookEntries.featured), guestbookEntries.createdAt);
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    relation: r.relation,
+    message: r.message,
+    featured: r.featured,
+    createdAt: r.createdAt.toISOString(),
+  }));
 }
