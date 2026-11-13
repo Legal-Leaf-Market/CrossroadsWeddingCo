@@ -1305,3 +1305,28 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS audit_log_no_truncate ON audit_log;
 CREATE TRIGGER audit_log_no_truncate BEFORE TRUNCATE ON audit_log
     FOR EACH STATEMENT EXECUTE FUNCTION audit_log_no_truncate();
+
+-- ── True subledgers and the tie-out (2026-11-13, docs/handoff task 3) ──────
+-- Every journal line on a control account names whose it is: job:<booking id>
+-- on 1100, 1300, 2300, 2400 (and the job's 4500 and 5000 lines),
+-- crew:<crew member id> on 2500. A control account's balance must equal the
+-- sum of its subledger; a line with no key is a tie-out difference and a hard
+-- close blocker (lib/books/subledger-logic.ts). Lines stay append-only: the
+-- live sync voids and reposts open-month entries with their keys, and a
+-- closed month gets a dated reclassification instead.
+ALTER TABLE journal_lines ADD COLUMN IF NOT EXISTS sub_ref VARCHAR(80);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_sub ON journal_lines (tenant_id, account_id, sub_ref);
+
+-- ── Bookings into the books, correctly (2026-11-13, Jake: "make sure our
+-- bookings convert over correctly") ────────────────────────────────────────
+-- A deposit or balance marked paid by hand is real money (cash and check for
+-- now): it posts to 1050 Undeposited funds against the job until the bank
+-- deposit is matched. These record the day each box was ticked; NULL for
+-- boxes ticked before today, which post on a stated assumed date.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS deposit_paid_on DATE;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS balance_paid_on DATE;
+-- A booking that was never a real job (a test) is left out of the books by
+-- the owner, with a reason, audited. Nothing is deleted; it can be put back.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_at TIMESTAMPTZ;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_reason TEXT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_by VARCHAR(255);

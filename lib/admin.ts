@@ -6,7 +6,7 @@ import { nameSlug } from "@/lib/hub-constants";
 import { CORPORATE_PACKAGE } from "@/lib/invoice";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 import { auditQuietly } from "@/lib/audit";
-import { postBankLedgerQuietly } from "@/lib/books/ledger";
+import { ledgerToday, postBankLedgerQuietly } from "@/lib/books/ledger";
 
 // This dashboard is Crossroads' own (the house account). Every query below is
 // scoped to HOUSE_TENANT_ID, so a business that signs up for the platform can
@@ -309,6 +309,48 @@ export async function setWeddingArchived(weddingId: string, archived: boolean): 
 }
 
 /**
+ * Leave a booking out of the books, or put it back (2026-11-13, Jake: "make
+ * sure our bookings convert over correctly"). For a booking that was never a
+ * real job: a test, a demo. Nothing is deleted; the live sync voids its
+ * entries (a dated correction once a month is closed) and puts them back if it
+ * is restored. Refused while real money is tied to it: bank lines matched to
+ * the booking or approved expense reports on it. A reason is required and
+ * every change is audited.
+ */
+export async function setBooksExcluded(weddingId: string, exclude: boolean, reason: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!/^[0-9a-f-]{36}$/.test(weddingId)) return { ok: false, error: "Not found" };
+  const why = reason.trim();
+  if (exclude && why.length < 10) return { ok: false, error: "Say why it isn't a real job, in at least a sentence." };
+  const [before] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
+  if (!before) return { ok: false, error: "Not found" };
+  if (exclude) {
+    const tied = await db.execute(sql`
+      select (select count(*) from bank_transactions where booking_id = ${weddingId}::uuid and removed_at is null)::int as bank,
+             (select count(*) from expense_claims where wedding_id = ${weddingId}::uuid and status = 'approved')::int as claims`);
+    const t = tied.rows[0] as { bank: number; claims: number } | undefined;
+    if (t && (t.bank > 0 || t.claims > 0)) {
+      return { ok: false, error: "Real money is tied to this booking (matched bank lines or approved receipts). Unmatch those first." };
+    }
+  }
+  await db
+    .update(weddings)
+    .set(exclude ? { booksExcludedAt: new Date(), booksExcludedReason: why.slice(0, 500), booksExcludedBy: "owner dashboard", updatedAt: new Date() } : { booksExcludedAt: null, booksExcludedReason: null, booksExcludedBy: null, updatedAt: new Date() })
+    .where(and(eq(weddings.id, weddingId), isHouse));
+  await auditQuietly({
+    tenantId: HOUSE_TENANT_ID,
+    actor: "owner dashboard",
+    action: exclude ? "booking.books_excluded" : "booking.books_included",
+    entityType: "job",
+    entityId: weddingId,
+    before: { booksExcludedAt: before.booksExcludedAt, reason: before.booksExcludedReason },
+    after: { excluded: exclude },
+    reason: why || null,
+  });
+  await postBankLedgerQuietly(HOUSE_TENANT_ID, { actor: "owner dashboard", cause: exclude ? "booking left out of the books" : "booking put back in the books" });
+  return { ok: true };
+}
+
+/**
  * The one write the owner dashboard allows: the money and status fields no
  * couple-facing surface can set. Everything else about a wedding still comes
  * from the couple's own hub. Undefined fields are left alone.
@@ -331,7 +373,13 @@ export async function updateAdminWedding(
   if (patch.totalAmount !== undefined) set.totalAmount = patch.totalAmount;
   if (patch.depositAmount !== undefined) set.depositAmount = patch.depositAmount;
   if (patch.isDepositPaid !== undefined) set.isDepositPaid = patch.isDepositPaid;
+  // The day the box was ticked is the day the cash or check came in (the books post it then).
+  // Already ticked: keep the date it had; unticked: no date.
+  if (patch.isDepositPaid !== undefined)
+    set.depositPaidOn = patch.isDepositPaid ? sql`case when coalesce(${weddings.isDepositPaid}, false) then ${weddings.depositPaidOn} else ${ledgerToday()}::date end` : null;
   if (patch.isBalancePaid !== undefined) set.isBalancePaid = patch.isBalancePaid;
+  if (patch.isBalancePaid !== undefined)
+    set.balancePaidOn = patch.isBalancePaid ? sql`case when coalesce(${weddings.isBalancePaid}, false) then ${weddings.balancePaidOn} else ${ledgerToday()}::date end` : null;
   if (patch.customTerms !== undefined) set.customTerms = patch.customTerms;
   if (patch.artTheme !== undefined) set.artTheme = patch.artTheme;
   if (patch.addons !== undefined) set.addons = patch.addons;
@@ -398,6 +446,7 @@ export async function createCorporateBooking(input: {
       totalAmount: input.totalUsd.toFixed(2),
       depositAmount: Math.min(input.depositUsd, input.totalUsd).toFixed(2),
       isDepositPaid: input.depositReceived,
+      depositPaidOn: input.depositReceived ? ledgerToday() : null,
       status: input.depositReceived ? "deposit_paid" : "inquiry",
       notes,
     })
