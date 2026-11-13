@@ -29,8 +29,11 @@ function loadPlaid(): Promise<PlaidGlobal> {
   });
 }
 
-/** Connect a new bank, or with `repair` re-log into one whose login expired. */
-export default function PlaidConnect({ repair, label }: { repair?: string; label?: string }) {
+/**
+ * Connect a new bank, or with `repair` re-log into one whose login expired.
+ * With `selectAccounts` as well, the person picks the new accounts their bank reported.
+ */
+export default function PlaidConnect({ repair, label, selectAccounts = false }: { repair?: string; label?: string; selectAccounts?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -42,7 +45,7 @@ export default function PlaidConnect({ repair, label }: { repair?: string; label
       const res = await fetch("/api/app/integrations/plaid/link-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(repair ? { repair } : {}),
+        body: JSON.stringify(repair ? { repair, selectAccounts } : {}),
       });
       const json = (await res.json().catch(() => ({}))) as { linkToken?: string; error?: string };
       if (!res.ok || !json.linkToken) throw new Error(json.error ?? "Couldn't start the connection.");
@@ -51,11 +54,11 @@ export default function PlaidConnect({ repair, label }: { repair?: string; label
         token: json.linkToken,
         onSuccess: async (publicToken, metadata) => {
           if (repair) {
-            setMsg("Reconnected.");
+            setMsg(selectAccounts ? "Accounts updated." : "Reconnected.");
             await fetch(`/api/app/integrations/${repair}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "sync" }),
+              body: JSON.stringify(selectAccounts ? { action: "sync", accountsChosen: true } : { action: "sync" }),
             }).catch(() => null);
           } else {
             setMsg("Saving your accounts...");

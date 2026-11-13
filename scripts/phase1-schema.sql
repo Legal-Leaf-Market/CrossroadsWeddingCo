@@ -1305,3 +1305,8 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS audit_log_no_truncate ON audit_log;
 CREATE TRIGGER audit_log_no_truncate BEFORE TRUNCATE ON audit_log
     FOR EACH STATEMENT EXECUTE FUNCTION audit_log_no_truncate();
+
+-- ── Plaid: new accounts at the bank (2026-11-13) ────────────────────────────
+-- Set when Plaid sends NEW_ACCOUNTS_AVAILABLE, cleared once the person picks
+-- the accounts in Plaid Link (update mode with account selection).
+ALTER TABLE integration_connections ADD COLUMN IF NOT EXISTS new_accounts_at TIMESTAMPTZ;

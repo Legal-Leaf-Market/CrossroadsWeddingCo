@@ -85,10 +85,18 @@ export default async function IntegrationsPage() {
                   </div>
                   {c.status === "needs_reauth" && plaid.status === "available" ? (
                     <PlaidConnect repair={c.id} />
+                  ) : c.newAccountsAt && c.status !== "disconnected" && plaid.status === "available" ? (
+                    <PlaidConnect repair={c.id} selectAccounts label="Choose accounts" />
                   ) : c.status !== "disconnected" && plaid.status === "available" ? (
                     <ConnectionActions id={c.id} institution={c.institutionName ?? "this bank"} />
                   ) : null}
                 </div>
+                {c.status !== "active" && c.lastError && <p className="mt-1 text-sm text-ink/70">{c.lastError}</p>}
+                {c.newAccountsAt && c.status !== "disconnected" && (
+                  <p className="mt-1 text-sm text-ink/70">
+                    Your bank has accounts you haven&apos;t shared here yet. Choose the ones to add, or leave them off.
+                  </p>
+                )}
                 {c.accounts.length > 0 && (
                   <ul className="mt-2 space-y-1 text-sm text-ink/70">
                     {c.accounts.map((a) => (
