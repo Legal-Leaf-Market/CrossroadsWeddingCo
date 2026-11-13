@@ -1365,3 +1365,48 @@ decisions absorbed from it:
   tap must never be blocked, and the poll reconverges all devices. Still Phase 3 backlog:
   dispatch cascade (needs Twilio), blockout calendar, Music Stand/ChordPro, realtime push
   instead of polling.
+- **Expense capture: staff incidentals and reimbursements (2026-11-13, Jake: "a capture tool
+  like rocket money or expensify or such for staff incidentals and reimbursements").** Built
+  into the books, not beside them.
+  - **Capture link per crew member, no login:** `/expense/<crewId>.<hmac>`
+    (`lib/expense-token.ts`, the officiant-sign pattern: HMAC under `ADMIN_DASH_KEY`, nothing
+    stored, rotating the key retires every link, no key = 404). Phone first: the receipt input
+    opens the camera; amount, date (no future, within a year), where, what for, optional job
+    (house events 30 days back to 60 ahead) and expense category. 20 claims a day per person,
+    $5,000 cap per claim, receipts 4 MB, PNG/JPEG/WEBP/HEIC/PDF only. The page lists the
+    person's own claims and where each stands. Links are on `/admin/[key]/crew` (Expense links).
+  - **Two approvals (owner, 2026-11-13):** (1) the report: ONLY the preparer (Jake) approves
+    or rejects; the ledger recognizes the expense and the amount owed back here. (2) the
+    payout: the approver (Terry Winchester II, CBO acting CFO) approves or vetoes; on Terry's
+    own reports the tiebreaker (Nic, COO) decides. The preparer may escalate a veto to the
+    tiebreaker, whose decision is final, EXCEPT on the tiebreaker's own report, where the
+    approver's veto stands (nobody decides their own money). Nobody approves a payout to
+    themselves; the tiebreaker never initiates cash (no linking payouts, no escalating).
+    Cash is linked only once `payout_status = 'approved'`. Every rule is `decide()` in
+    `lib/expense-logic.ts`; the review page computes its buttons from the same function, so
+    it never offers what the server refuses. Roles come from `rolesFor()` in
+    `lib/finance-roles.ts` (the `finance_roles` table); a claimant's identity is
+    `crew_members.email`, now on the crew editor.
+  - **Review at `/app/books/expenses`** (books sign-in, nav "Expenses"): owed back per person,
+    then reports waiting, payouts waiting, approved to pay (tick the claims one bank payout
+    covered and pick the money-out line; a payout may cover more than the claims, never less),
+    paid back, and declined or voided. Decisions are conditional updates on the old states,
+    so two people acting at once cannot both win. A final payout veto tells the preparer to
+    void the report so it stops counting as owed.
+  - **Card receipts:** money-out lines on `/app/transactions` get "Add receipt"; it creates a
+    `card_receipt` claim (approved, posts nothing; one live per bank line, a second upload
+    replaces the receipt on the same record).
+  - **Tables:** `receipts` (bytes, like wedding documents) and `expense_claims` (status
+    submitted / approved / rejected / void; payout_status none / approved / vetoed /
+    escalated). Nothing is deleted: claims are voided. Receipt files are served with nosniff,
+    a sandbox CSP and no-store, to the tenant's books users or to the claimant's own link.
+  - Every submit, decision, link and receipt goes through `audit()` (`lib/audit.ts`), and
+    every change calls `postBankLedgerQuietly`. Ledger posting of claims is in
+    `lib/books/ledger.ts` (main session).
+  - Verify: `node --experimental-strip-types scripts/verify-expenses.mjs` (33 checks). Run
+    end to end on a local Postgres with three signed-in owners and a capture link (38
+    checks): only Jake approves reports; Terry approves payouts but not his own; Nic decides
+    Terry's; veto, escalate, final veto; Nic can't link cash; payout before approval refused;
+    money-in refused as a payout; wrong token 404; another person's receipt 404; SVG refused;
+    card receipt replace keeps one record. Capture page and review page measured at 390 and
+    1280: no sideways scroll.

@@ -23,6 +23,7 @@ export const crewBody = z.object({
         percentBps: bps,
         shareBps: bps,
         vendorId: id,
+        email: z.string().trim().toLowerCase().email("That isn't an email address").max(255).nullable().default(null),
         notes: text(2000),
         retired: z.boolean(),
       }),

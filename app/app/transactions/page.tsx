@@ -7,6 +7,7 @@ import { getBooksWorkspace } from "@/lib/auth";
 import { REVIEW_STATUSES, type CategoryKind, type ReviewStatus } from "@/lib/books/categories";
 import { openBookings, suggestFor } from "@/lib/books/matching";
 import { ensureDefaultCategories, listCategories, listQueue, queueCounts } from "@/lib/books/review";
+import { receiptsForLines } from "@/lib/expenses";
 import { PLATFORM_NAME } from "@/lib/tenant-constants";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     items: Awaited<ReturnType<typeof listQueue>>;
     categories: Awaited<ReturnType<typeof listCategories>>;
     bookings: Awaited<ReturnType<typeof openBookings>>;
+    receipts: Record<string, string>;
   } | null = null;
   try {
     await ensureDefaultCategories(ws.tenant.id);
@@ -40,7 +42,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       listCategories(ws.tenant.id),
       view === "unreviewed" ? openBookings(ws.tenant.id) : Promise.resolve([]),
     ]);
-    data = { counts, items, categories, bookings };
+    // Receipts are a nice-to-have on this page: if they fail to load, the queue still works.
+    const receipts = await receiptsForLines(ws.tenant.id, items.filter((i) => i.amountCents < 0).map((i) => i.id)).catch(() => ({}));
+    data = { counts, items, categories, bookings, receipts };
   } catch (err) {
     console.error("[books] transactions page failed:", err instanceof Error ? err.message : err);
     loadFailed = true;
@@ -110,6 +114,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
             items={data.items.map((i) => ({ ...i, suggestions: view === "unreviewed" ? suggestFor(i, data.bookings) : [] }))}
             bookings={data.bookings.map((b) => ({ id: b.id, name: b.name, eventDate: b.eventDate, depositDueCents: b.depositDueCents, balanceDueCents: b.balanceDueCents }))}
             categories={data.categories.map((c) => ({ id: c.id, name: c.name, kind: c.kind as CategoryKind }))}
+            receipts={data.receipts}
           />
         </>
       )}
