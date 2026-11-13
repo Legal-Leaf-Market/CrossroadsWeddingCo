@@ -37,6 +37,12 @@ export const metadata: Metadata = {
     type: "article",
     title: "My father was, and still is, my hero.",
     description: "Kevin Lee Kennedy is my dad. My Blue. A personal tribute from Jacob Kennedy, and a first look at Back YOUR Blue.",
+    siteName: "Back YOUR Blue, from Heart of Columbus",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "My father was, and still is, my hero.",
+    description: "Kevin Lee Kennedy is my dad. My Blue. Leave him a note for his 60th.",
   },
 };
 
@@ -139,7 +145,7 @@ export default async function BackYourBluePage() {
           </div>
         </article>
 
-        <section className="border-t border-[#a8834f]/40 bg-[#efe6d6]" aria-labelledby="notes-h">
+        <section id="notes" className="scroll-mt-24 border-t border-[#a8834f]/40 bg-[#efe6d6]" aria-labelledby="notes-h">
           <div className="mx-auto max-w-[44rem] px-5 py-14">
             <h2 id="notes-h" className="font-display text-3xl text-[#1f1d1a] sm:text-4xl">
               Notes for Kevin on his 60th
