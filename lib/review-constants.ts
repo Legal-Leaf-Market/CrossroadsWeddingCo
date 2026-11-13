@@ -39,6 +39,8 @@ export type ReviewMedia = {
   label?: string;
   /** Its tarot number, e.g. "VI". */
   numeral?: string;
+  /** Shown on the homepage's "From our events" section. No flags on an event: its first few. */
+  home?: boolean;
 };
 
 // Photos and video from real events, shown above the notes on /reviews.
@@ -76,11 +78,11 @@ export const REVIEW_EVENTS: ReviewEvent[] = [
     eventDate: "2026-10-17",
     media: [
       { src: `${VV}/room-set.jpg`, kind: "image", alt: "The ballroom at Valle Vista with the DJ table and speakers set up before guests arrived", width: 1600, height: 1200 },
-      { src: `${VV}/dance-floor.mp4`, kind: "video", poster: `${VV}/dance-floor-poster.jpg`, alt: "A short clip of a parent dance, filmed from the DJ table", width: 720, height: 1280 },
+      { src: `${VV}/dance-floor.mp4`, kind: "video", home: true, poster: `${VV}/dance-floor-poster.jpg`, alt: "A short clip of a parent dance, filmed from the DJ table", width: 720, height: 1280 },
       { src: `${VV}/dj-table.jpg`, kind: "image", alt: "Jake and Nic at the DJ table getting the music ready", width: 1600, height: 1200 },
-      { src: `${VV}/dance-floor.jpg`, kind: "image", alt: "The parent dance, seen from behind the mixer and laptop at the DJ table", width: 1200, height: 1600 },
-      { src: `${VV}/jake-before.jpg`, kind: "image", alt: "Jake in the ballroom before the reception", width: 1200, height: 1600 },
-      { src: `${VV}/jake-reception.jpg`, kind: "image", alt: "Jake during the reception with guests on the floor behind him", width: 1200, height: 1600 },
+      { src: `${VV}/dance-floor.jpg`, kind: "image", home: true, alt: "The parent dance, seen from behind the mixer and laptop at the DJ table", width: 1200, height: 1600 },
+      { src: `${VV}/jake-before.jpg`, kind: "image", home: true, alt: "Jake in the ballroom before the reception", width: 1200, height: 1600 },
+      { src: `${VV}/jake-reception.jpg`, kind: "image", home: true, alt: "Jake during the reception with guests on the floor behind him", width: 1200, height: 1600 },
     ],
   },
   {
@@ -102,15 +104,15 @@ export const REVIEW_EVENTS: ReviewEvent[] = [
     theme: "goth",
     tagline: "'Til We Are Ghosts",
     media: [
-      { src: `${FO}/welcome-sign.jpg`, kind: "image", numeral: "XVII", label: "The Star", alt: "The welcome sign: black with violet flowers and skeleton hands making a heart around 11.07.2026", width: 1200, height: 1600 },
+      { src: `${FO}/welcome-sign.jpg`, kind: "image", home: true, numeral: "XVII", label: "The Star", alt: "The welcome sign: black with violet flowers and skeleton hands making a heart around 11.07.2026", width: 1200, height: 1600 },
       { src: `${FO}/getting-ready.jpg`, kind: "image", numeral: "I", label: "Ace of Cups", alt: "The bride getting ready, putting in an earring at the mirror in a white satin robe", width: 1200, height: 1600 },
-      { src: `${FO}/vows.jpg`, kind: "image", numeral: "VI", label: "The Lovers", alt: "The vows under a black coffin-shaped arch with violet flowers and candles", width: 1200, height: 1600 },
-      { src: `${FO}/first-dance.jpg`, kind: "image", numeral: "II", label: "Two of Cups", alt: "The bride and groom in a dramatic dance hold, her gown white with black lace flowers", width: 1200, height: 1600 },
-      { src: `${FO}/table-wheel.jpg`, kind: "image", numeral: "X", label: "Wheel of Fortune", alt: "A table in black and violet under brick arched windows, its Wheel of Fortune tarot card standing tall", width: 1200, height: 1600 },
+      { src: `${FO}/vows.jpg`, kind: "image", home: true, numeral: "VI", label: "The Lovers", alt: "The vows under a black coffin-shaped arch with violet flowers and candles", width: 1200, height: 1600 },
+      { src: `${FO}/first-dance.jpg`, kind: "image", home: true, numeral: "II", label: "Two of Cups", alt: "The bride and groom in a dramatic dance hold, her gown white with black lace flowers", width: 1200, height: 1600 },
+      { src: `${FO}/table-wheel.jpg`, kind: "image", home: true, numeral: "X", label: "Wheel of Fortune", alt: "A table in black and violet under brick arched windows, its Wheel of Fortune tarot card standing tall", width: 1200, height: 1600 },
       { src: `${FO}/table.jpg`, kind: "image", numeral: "X", label: "Ten of Pentacles", alt: "A guest table set in black and violet with a lantern centerpiece", width: 1200, height: 1600 },
       { src: `${FO}/bride-dance.jpg`, kind: "image", numeral: "X", label: "Ten of Cups", alt: "The bride sharing a dance, smiling, as the groom watches from the head table", width: 1200, height: 1600 },
-      { src: `${FO}/dance-floor.jpg`, kind: "image", numeral: "XIX", label: "The Sun", alt: "The bride and groom laughing mid-dance on the floor", width: 1200, height: 1600 },
-      { src: `${FO}/slow-dance.jpg`, kind: "image", numeral: "IV", label: "Four of Wands", alt: "The bride and groom in a close slow dance in low light, the room soft behind them", width: 901, height: 1600 },
+      { src: `${FO}/dance-floor.jpg`, kind: "image", home: true, numeral: "XIX", label: "The Sun", alt: "The bride and groom laughing mid-dance on the floor", width: 1200, height: 1600 },
+      { src: `${FO}/slow-dance.jpg`, kind: "image", home: true, numeral: "IV", label: "Four of Wands", alt: "The bride and groom in a close slow dance in low light, the room soft behind them", width: 901, height: 1600 },
       { src: `${FO}/family-hug.jpg`, kind: "image", numeral: "XXI", label: "The World", alt: "A big group hug on the dance floor as guests look on", width: 1200, height: 1600 },
     ],
   },
