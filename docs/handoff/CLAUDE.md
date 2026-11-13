@@ -73,7 +73,8 @@ Logins are their `@crossroadsweddingco.shop` addresses (default house books list
    Calendar. Exports: GL CSV exists; add trial balance, every subledger, the audit log, and a
    QuickBooks-importable journal.
 8. **Materiality threshold** setting for "correct in the current month" vs "reopen".
-9. **Cash payout requests** (any money out, not just reimbursements): Jake requests, Terry
+9. **Cash payout requests** (any money out, not just reimbursements; commissions in 2600 are now
+   waiting on this, see FINANCIALS_SPEC rule 13): Jake requests, Terry
    approves or vetoes, Nic breaks ties, before the bank line can be matched as that payout.
 
 ## How to verify locally
@@ -81,3 +82,9 @@ Postgres 16 is in the container: initdb a cluster owned by `postgres`, run
 `DATABASE_URL=... node scripts/migrate.mjs` twice (it must be idempotent), set `ADMIN_DASH_KEY`
 in `.env.local`, `pnpm dev`. Test the database guards with psql (deletes and closed-month writes
 must error). Every `scripts/verify-*.mjs` must pass.
+
+## Added 2026-11-13 (owner, live)
+- DONE: bookings convert correctly (hand-paid money to 1050, "Not a real job?" for test bookings).
+- DONE: sales pipeline and commissions (`/admin/[key]/sales`, playbook hand-off, rule 12).
+- Owner to do: mark the test bookings "Not a real job?" on `/admin/[key]/jobs` once #122 is
+  live; set Plaid production keys in Netlify; add Steven to the crew only when he's off the bench.
