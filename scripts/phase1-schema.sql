@@ -920,3 +920,104 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_status VARCHAR(30);
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_period_end TIMESTAMPTZ;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_event_at TIMESTAMPTZ;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tenants_stripe_customer ON tenants (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+
+-- Project costing and resource planning (2026-11-13, Jake: "project costing and
+-- planning for material and hour resources starting with labor for Nic, Terry,
+-- and Jake"; "it should be fully customizable"; pay "is by project right now").
+-- Nothing about pay is assumed: the old 75% split and $2,000 draw in the spec
+-- are out of date (owner, same day), so every rate starts empty and costing
+-- says "rate not set" instead of guessing.
+--
+-- crew_members: the people who work events, edited from /admin/[key]/crew.
+-- pay_method is 'project' (flat per event), 'hour', 'percent' (of the event's
+-- total) or 'owner': an owner is not a cost, they split what is left after
+-- every cost (2026-11-13, Jake: "jake and terry are fulltime splitting
+-- cashflow with minor shadowing payouts to Nic right now"). share_bps is an
+-- owner's slice of that remainder; owners with no share set split evenly
+-- whatever the set shares leave. Amounts are integer cents, percents basis points.
+CREATE TABLE IF NOT EXISTS crew_members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(120) NOT NULL,
+    default_role VARCHAR(80) NOT NULL DEFAULT '',
+    pay_method VARCHAR(10) NOT NULL DEFAULT 'project',
+    rate_cents INTEGER,
+    percent_bps INTEGER,
+    share_bps INTEGER,
+    -- Everyone is a 1099 contractor paid through Found (owner, 2026-11-13), so
+    -- each person can point at their vendors row, whose bank-feed totals are
+    -- the 1099-NEC record. Planned pay lives here; paid money lives there.
+    vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL,
+    notes TEXT NOT NULL DEFAULT '',
+    sort INTEGER NOT NULL DEFAULT 0,
+    retired_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_crew_members_tenant ON crew_members (tenant_id);
+
+-- resource_items: the owner's own list of materials, rentals and consumables,
+-- each with a unit ("each", "bag", "case", "mile") and a default unit cost.
+CREATE TABLE IF NOT EXISTS resource_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(120) NOT NULL,
+    category VARCHAR(60) NOT NULL DEFAULT '',
+    unit VARCHAR(30) NOT NULL DEFAULT 'each',
+    unit_cost_cents INTEGER,
+    notes TEXT NOT NULL DEFAULT '',
+    sort INTEGER NOT NULL DEFAULT 0,
+    retired_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_resource_items_tenant ON resource_items (tenant_id);
+
+-- event_resources: one event's plan, labor and material lines. Pay terms and
+-- costs are COPIED onto the line when it is added, so changing someone's
+-- default later never rewrites an event already planned. Planned and actual
+-- sit side by side; actual_cost_cents, when set, is what was really paid and
+-- wins over any arithmetic.
+CREATE TABLE IF NOT EXISTS event_resources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    wedding_id UUID NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
+    kind VARCHAR(10) NOT NULL DEFAULT 'labor',
+    crew_member_id UUID REFERENCES crew_members(id) ON DELETE SET NULL,
+    resource_item_id UUID REFERENCES resource_items(id) ON DELETE SET NULL,
+    label VARCHAR(160) NOT NULL DEFAULT '',
+    role VARCHAR(80) NOT NULL DEFAULT '',
+    pay_method VARCHAR(10),
+    rate_cents INTEGER,
+    percent_bps INTEGER,
+    planned_minutes INTEGER,
+    actual_minutes INTEGER,
+    unit VARCHAR(30) NOT NULL DEFAULT '',
+    unit_cost_cents INTEGER,
+    planned_qty NUMERIC(10, 2),
+    actual_qty NUMERIC(10, 2),
+    actual_cost_cents INTEGER,
+    notes TEXT NOT NULL DEFAULT '',
+    sort INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_event_resources_wedding ON event_resources (wedding_id);
+CREATE INDEX IF NOT EXISTS idx_event_resources_crew ON event_resources (crew_member_id);
+
+-- Start the crew with the three partners as the owner described them: Jake
+-- and Terry are owners splitting what is left (no share set, so even), Nic is
+-- paid per project with NO amount set. Seeded once and recorded, so every
+-- later edit, rename or retirement sticks.
+WITH ins AS (
+    INSERT INTO crew_members (tenant_id, name, default_role, pay_method, notes, sort)
+    SELECT '00000000-0000-4000-8000-000000000001', v.name, v.role, v.method, v.notes, v.sort
+    FROM (VALUES
+        ('Jake', 'DJ / MC', 'owner', '', 1),
+        ('Terry', 'Stage manager', 'owner', '', 2),
+        ('Nic', 'Shadowing', 'project', 'Keeps his day job; small per-event shadowing payouts for now.', 3)
+    ) AS v(name, role, method, notes, sort)
+    WHERE NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'crew_members_v1')
+    RETURNING 1
+)
+INSERT INTO schema_seeds (name) SELECT 'crew_members_v1' FROM ins LIMIT 1 ON CONFLICT (name) DO NOTHING;

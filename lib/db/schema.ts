@@ -689,3 +689,76 @@ export const serviceAgreements = pgTable(
   (t) => [index("idx_service_agreements_wedding").on(t.weddingId)],
 );
 export type ServiceAgreement = typeof serviceAgreements.$inferSelect;
+
+// Project costing and resource planning (2026-11-13). See scripts/phase1-schema.sql,
+// lib/costing-logic.ts (pure) and lib/costing.ts (server).
+export const crewMembers = pgTable(
+  "crew_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    defaultRole: varchar("default_role", { length: 80 }).notNull().default(""),
+    payMethod: varchar("pay_method", { length: 10 }).notNull().default("project"),
+    rateCents: integer("rate_cents"),
+    percentBps: integer("percent_bps"),
+    shareBps: integer("share_bps"),
+    vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_crew_members_tenant").on(t.tenantId)],
+);
+export type CrewMember = typeof crewMembers.$inferSelect;
+
+export const resourceItems = pgTable(
+  "resource_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    category: varchar("category", { length: 60 }).notNull().default(""),
+    unit: varchar("unit", { length: 30 }).notNull().default("each"),
+    unitCostCents: integer("unit_cost_cents"),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_resource_items_tenant").on(t.tenantId)],
+);
+export type ResourceItem = typeof resourceItems.$inferSelect;
+
+export const eventResources = pgTable(
+  "event_resources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 10 }).notNull().default("labor"),
+    crewMemberId: uuid("crew_member_id").references(() => crewMembers.id, { onDelete: "set null" }),
+    resourceItemId: uuid("resource_item_id").references(() => resourceItems.id, { onDelete: "set null" }),
+    label: varchar("label", { length: 160 }).notNull().default(""),
+    role: varchar("role", { length: 80 }).notNull().default(""),
+    payMethod: varchar("pay_method", { length: 10 }),
+    rateCents: integer("rate_cents"),
+    percentBps: integer("percent_bps"),
+    plannedMinutes: integer("planned_minutes"),
+    actualMinutes: integer("actual_minutes"),
+    unit: varchar("unit", { length: 30 }).notNull().default(""),
+    unitCostCents: integer("unit_cost_cents"),
+    plannedQty: numeric("planned_qty", { precision: 10, scale: 2 }),
+    actualQty: numeric("actual_qty", { precision: 10, scale: 2 }),
+    actualCostCents: integer("actual_cost_cents"),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_event_resources_wedding").on(t.weddingId), index("idx_event_resources_crew").on(t.crewMemberId)],
+);
+export type EventResource = typeof eventResources.$inferSelect;

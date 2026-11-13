@@ -1113,6 +1113,41 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   Verify: `node --experimental-strip-types scripts/verify-admin-insights.mjs` (24 checks).
   Measured on `/admin/preview` at 360/390/768/1280: no sideways scroll.
 
+- **Job costing, crew pay and materials, accrual basis (2026-11-13, Jake: "project costing
+  and planning for material and hour resources starting with labor for Nic, Terry, and
+  Jake"; "fully customizable"; "force accrual and US GAAP ... we are not a cash basis gl";
+  "we use the matching principle"; "match revenue to expenses by job costing"; "and
+  accruals").** STANDING DIRECTIVE: the books are accrual basis under US GAAP. The GL in
+  `lib/books/ledger.ts` is still cash basis (FINANCIALS_SPEC.md principle 1) and is next to
+  convert; nothing new may be built on the cash-basis assumption.
+  - **Compensation (owner, 2026-11-13):** Jake and Terry are full time and split what the
+    business leaves; Nic keeps his day job and takes small per-event shadowing payouts.
+    Everyone is a 1099 contractor paid through Found. The spec's 75% split and Nic's
+    $2,000/month draw (9.2a) are OUT OF DATE; never use them. No pay amount is seeded.
+  - **Tables** (`scripts/phase1-schema.sql`): `crew_members` (editable crew; pay_method
+    project / hour / percent / owner, cents and basis points, `share_bps` for owners,
+    `vendor_id` to the 1099 vendors row), `resource_items` (the owner's materials list),
+    `event_resources` (one job's labor and material lines; pay terms are COPIED onto the
+    line so editing a default never rewrites a planned job). Seeded once (`crew_members_v1`):
+    Jake and Terry as owners, Nic per project, no amounts.
+  - **Rules** (`lib/costing-logic.ts`, pure): an owner line is never a cost; owners split
+    what a job leaves (unset shares split evenly). A rate not set is reported as missing,
+    never guessed. "Paid" on a line is what went out and wins over the plan. Accrual per job:
+    revenue recognized on the event date (ASC 606, point in time); before it, collected cash
+    is deferred revenue and paid costs are prepaid job costs; on and after it, direct costs
+    are matched to the revenue as cost of revenue, unpaid costs are accrued job costs and
+    uncollected revenue is a receivable.
+  - **Pages:** `/admin/[key]/costing/<id>` (job plan editor with a live summary: left to
+    split, owners' split, per-person pay per hour), `/admin/[key]/crew` (crew and default
+    pay, materials list, planned hours by month, double-booked days, unstaffed events, 1099
+    paid this year per linked vendor), `/admin/[key]/jobs` (accrual balances, earned by event
+    month, backlog, every job). Dashboard: Costing button per card, Job costing and Crew links.
+  - Verify: `node --experimental-strip-types scripts/verify-costing.mjs` (37 checks).
+    Verified on a local Postgres: migration applies twice with one seed, crew/materials/plan
+    saves, bad body 400, wrong key 404, all pages 200, no sideways scroll at 390 and 1280.
+  - Found has no public API; Plaid is the aggregator that lists it, and the Plaid feed in
+    `/app/integrations` is how its transactions arrive (needs PLAID keys in production).
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

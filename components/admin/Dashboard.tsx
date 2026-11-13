@@ -192,6 +192,14 @@ function WeddingCard({
         )}
         {basePath !== "/admin/preview" && (
           <a
+            href={`${basePath}/costing/${wedding.id}`}
+            className="rounded-full border border-terracotta px-4 py-1.5 font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
+          >
+            Costing
+          </a>
+        )}
+        {basePath !== "/admin/preview" && (
+          <a
             href={`${basePath}/invoice/${wedding.id}`}
             className="rounded-full border border-terracotta px-4 py-1.5 font-semibold text-terracotta hover:bg-terracotta hover:text-cream"
           >
@@ -411,6 +419,8 @@ export default function Dashboard({ data, basePath, platform = null }: { data: A
     { href: "/app/vendors", label: "Vendors" },
   ];
   const tools = [
+    { href: `${basePath}/jobs`, label: "Job costing" },
+    { href: `${basePath}/crew`, label: "Crew and materials" },
     { href: `${basePath}/hours`, label: "Call times" },
     { href: `${basePath}/reviews`, label: "Reviews to approve" },
     { href: `${basePath}/playbook`, label: "Lead playbook" },
