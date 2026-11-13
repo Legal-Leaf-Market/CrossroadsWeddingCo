@@ -5,6 +5,8 @@ import { appointments, leads, serviceAgreements, weddingMessages, weddings } fro
 import { nameSlug } from "@/lib/hub-constants";
 import { CORPORATE_PACKAGE } from "@/lib/invoice";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
+import { auditQuietly } from "@/lib/audit";
+import { postBankLedgerQuietly } from "@/lib/books/ledger";
 
 // This dashboard is Crossroads' own (the house account). Every query below is
 // scoped to HOUSE_TENANT_ID, so a business that signs up for the platform can
@@ -334,7 +336,25 @@ export async function updateAdminWedding(
   if (patch.artTheme !== undefined) set.artTheme = patch.artTheme;
   if (patch.addons !== undefined) set.addons = patch.addons;
   if (patch.status !== undefined) set.status = patch.status;
+  const [before] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
+  if (!before) return false;
+  // The day it was cancelled is when a kept deposit is earned (accrual, ASC 606).
+  if (patch.status === "cancelled" && before.status !== "cancelled") set.cancelledAt = new Date();
+  if (patch.status !== undefined && patch.status !== "cancelled" && before.status === "cancelled") set.cancelledAt = null;
   await db.update(weddings).set(set).where(and(eq(weddings.id, weddingId), isHouse));
+  const pick = (w: typeof before) => ({
+    status: w.status,
+    totalAmount: w.totalAmount,
+    depositAmount: w.depositAmount,
+    isDepositPaid: w.isDepositPaid,
+    isBalancePaid: w.isBalancePaid,
+    addons: w.addons,
+    customTerms: w.customTerms,
+    cancelledAt: w.cancelledAt,
+  });
+  const [after] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
+  await auditQuietly({ tenantId: HOUSE_TENANT_ID, actor: "owner dashboard", action: "booking.money", entityType: "job", entityId: weddingId, before: pick(before), after: after ? pick(after) : null });
+  await postBankLedgerQuietly(HOUSE_TENANT_ID, { actor: "owner dashboard", cause: "booking money or status edited" });
   return true;
 }
 

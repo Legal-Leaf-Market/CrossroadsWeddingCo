@@ -2,6 +2,7 @@ import { and, asc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-o
 import { db } from "@/lib/db";
 import { bankAccounts, bankTransactions, ledgerCategories, weddings } from "@/lib/db/schema";
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
+import { auditQuietly } from "@/lib/audit";
 import { creditFor, type OpenBooking, type PaymentKind } from "@/lib/books/logic";
 export { PAYMENT_KINDS, suggestFor, creditFor, type OpenBooking, type PaymentKind, type Suggestion } from "@/lib/books/logic";
 
@@ -153,7 +154,8 @@ export async function matchLine(
   if (!res.length) return { ok: false, status: 404, error: "That transaction can't be matched. Only money coming in can." };
 
   await markPaidFromReceipts(tenantId, booking.id);
-  await postBankLedgerQuietly(tenantId);
+  await auditQuietly({ tenantId, actor: `user:${userId}`, action: "bank.match", entityType: "bank_transaction", entityId: input.transactionId, after: { bookingId: booking.id, kind: input.kind, categoryId } });
+  await postBankLedgerQuietly(tenantId, { actor: `user:${userId}`, cause: "bank line matched to a job" });
   return { ok: true };
 }
 

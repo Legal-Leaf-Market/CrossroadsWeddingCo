@@ -37,6 +37,7 @@ export type PlanCrew = {
 export type PlanItem = { id: string; name: string; unit: string; unitCostCents: number | null; retired: boolean };
 
 export type PlanLine = {
+  id?: string | null;
   kind: "labor" | "material";
   crewMemberId: string | null;
   resourceItemId: string | null;
@@ -59,6 +60,7 @@ export type PlanLine = {
 // survives a half-typed state.
 type Draft = {
   key: number;
+  id: string | null;
   kind: "labor" | "material";
   crewMemberId: string | null;
   resourceItemId: string | null;
@@ -82,6 +84,7 @@ function lineToDraft(l: PlanLine): Draft {
   const pm = isPayMethod(l.payMethod) ? l.payMethod : null;
   return {
     key: nextKey++,
+    id: l.id ?? null,
     kind: l.kind,
     crewMemberId: l.crewMemberId,
     resourceItemId: l.resourceItemId,
@@ -103,6 +106,7 @@ function lineToDraft(l: PlanLine): Draft {
 function draftToLine(d: Draft): PlanLine {
   const pct = d.payMethod === "percent";
   return {
+    id: d.id,
     kind: d.kind,
     crewMemberId: d.crewMemberId,
     resourceItemId: d.resourceItemId,
@@ -182,6 +186,7 @@ export default function EventPlanEditor({
       ...p,
       {
         key: nextKey++,
+        id: null,
         kind: "labor",
         crewMemberId: c.id,
         resourceItemId: null,
@@ -208,6 +213,7 @@ export default function EventPlanEditor({
       ...p,
       {
         key: nextKey++,
+        id: null,
         kind: "material",
         crewMemberId: null,
         resourceItemId: it?.id ?? null,
@@ -257,6 +263,8 @@ export default function EventPlanEditor({
         return fail(json.error ?? "That didn't save.");
       }
       setStatus("saved");
+      // New lines need their saved ids before the next save can edit them.
+      if (drafts.some((d) => !d.id)) window.location.reload();
     } catch {
       fail("That didn't save.");
     }

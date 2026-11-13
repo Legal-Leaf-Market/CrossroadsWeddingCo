@@ -50,6 +50,7 @@ export const planBody = z.object({
   lines: z
     .array(
       z.object({
+        id: id.optional(),
         kind: z.enum(["labor", "material"]),
         crewMemberId: id,
         resourceItemId: id,

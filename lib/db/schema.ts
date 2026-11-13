@@ -147,6 +147,8 @@ export const weddings = pgTable(
     hubSpeakers: text("hub_speakers").array().notNull().default([]),
     // Set when the wedding is hidden from the dashboard. Never deleted: see
     // the note in phase1-schema.sql.
+    /** When the booking was cancelled; a kept deposit is earned that day (accrual, 2026-11-13). */
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     contactEmail: varchar("contact_email", { length: 255 }),
     contactPhone: varchar("contact_phone", { length: 50 }),
@@ -607,6 +609,8 @@ export const journalEntries = pgTable("journal_entries", {
   voidedAt: timestamp("voided_at", { withTimezone: true }),
   voidReason: varchar("void_reason", { length: 200 }),
   fingerprint: varchar("fingerprint", { length: 200 }),
+  sourceRef: varchar("source_ref", { length: 80 }),
+  adjustsPeriod: date("adjusts_period"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -704,6 +708,7 @@ export const crewMembers = pgTable(
     percentBps: integer("percent_bps"),
     shareBps: integer("share_bps"),
     vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+    email: varchar("email", { length: 255 }),
     notes: text("notes").notNull().default(""),
     sort: integer("sort").notNull().default(0),
     retiredAt: timestamp("retired_at", { withTimezone: true }),
@@ -756,9 +761,61 @@ export const eventResources = pgTable(
     actualCostCents: integer("actual_cost_cents"),
     notes: text("notes").notNull().default(""),
     sort: integer("sort").notNull().default(0),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("idx_event_resources_wedding").on(t.weddingId), index("idx_event_resources_crew").on(t.crewMemberId)],
 );
 export type EventResource = typeof eventResources.$inferSelect;
+
+// Accrual basis, audit log and period close (2026-11-13). scripts/phase1-schema.sql
+// carries the triggers that make the close a hard cutoff and the log append-only.
+export const financeRoles = pgTable("finance_roles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  email: varchar("email", { length: 255 }).notNull(),
+  name: varchar("name", { length: 120 }).notNull().default(""),
+  role: varchar("role", { length: 12 }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ledgerPeriods = pgTable("ledger_periods", {
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  periodStart: date("period_start").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("open"),
+  preparedBy: varchar("prepared_by", { length: 255 }),
+  preparedAt: timestamp("prepared_at", { withTimezone: true }),
+  preparedHash: varchar("prepared_hash", { length: 64 }),
+  preparedNote: text("prepared_note").notNull().default(""),
+  acknowledged: jsonb("acknowledged").notNull().default([]),
+  decidedBy: varchar("decided_by", { length: 255 }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  decisionNote: text("decision_note").notNull().default(""),
+  closedHash: varchar("closed_hash", { length: 64 }),
+  closedSnapshot: jsonb("closed_snapshot"),
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+  reopenRequestedBy: varchar("reopen_requested_by", { length: 255 }),
+  reopenRequestedAt: timestamp("reopen_requested_at", { withTimezone: true }),
+  reopenReason: text("reopen_reason").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type LedgerPeriod = typeof ledgerPeriods.$inferSelect;
+
+export const auditLog = pgTable("audit_log", {
+  id: bigint("id", { mode: "number" }).primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  actor: varchar("actor", { length: 255 }).notNull(),
+  action: varchar("action", { length: 60 }).notNull(),
+  entityType: varchar("entity_type", { length: 40 }).notNull(),
+  entityId: varchar("entity_id", { length: 80 }),
+  before: jsonb("before"),
+  after: jsonb("after"),
+  reason: text("reason"),
+  cause: text("cause"),
+  prevHash: varchar("prev_hash", { length: 64 }),
+  hash: varchar("hash", { length: 64 }).notNull(),
+});
+export type AuditRow = typeof auditLog.$inferSelect;

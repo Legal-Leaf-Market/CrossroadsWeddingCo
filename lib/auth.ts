@@ -220,11 +220,14 @@ export async function getCustomerWorkspace(): Promise<Workspace | null> {
  * Who may keep the house account's books (Crossroads itself): the emails in
  * HOUSE_BOOKS_EMAILS, comma separated. Read on every request, so removing an
  * email from the setting locks that person out at once, session or not.
- * Unset means nobody: the house books fail closed like every other gated feature.
+ * Unset means the three partners (jake@, terry@, nic@crossroadsweddingco.shop).
  */
 export function houseBooksEmails(): Set<string> {
+  // Default (owner, 2026-11-13): the three partners' company addresses, each
+  // with full access to see, enter and edit. HOUSE_BOOKS_EMAILS, when set,
+  // replaces the list. Who can trigger and approve is finance_roles, not this.
   return new Set(
-    (process.env.HOUSE_BOOKS_EMAILS ?? "")
+    (process.env.HOUSE_BOOKS_EMAILS ?? "jake@crossroadsweddingco.shop,terry@crossroadsweddingco.shop,nic@crossroadsweddingco.shop")
       .split(",")
       .map(normalizeEmail)
       .filter((e) => e.includes("@")),

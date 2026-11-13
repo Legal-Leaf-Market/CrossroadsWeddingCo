@@ -1021,3 +1021,228 @@ WITH ins AS (
     RETURNING 1
 )
 INSERT INTO schema_seeds (name) SELECT 'crew_members_v1' FROM ins LIMIT 1 ON CONFLICT (name) DO NOTHING;
+
+-- ── Accrual basis, audit log, period close (2026-11-13) ─────────────────────
+-- Jake: "force accrual and US GAAP in the software ... we are not a cash basis
+-- gl"; "we use the matching principle"; live sync until "a hard cutoff"; "a
+-- damn good audit log before and after the cutoff, and damn good controls on
+-- that cutoff". Roles: Jake (CEO) prepares, Terry Winchester II (CBO, acting
+-- CFO) approves and is where the buck stops, Nic (COO) breaks ties.
+-- docs/FINANCIALS_SPEC.md is the spec; lib/books/accrual.ts the pure rules.
+
+-- Every journal entry names the thing it was derived from, so a source's
+-- effective posting is the sum of its live entries: the original plus any
+-- corrections posted after its period closed.
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS source_ref VARCHAR(80);
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS adjusts_period DATE;
+UPDATE journal_entries SET source_ref = source_type || ':' || coalesce(source_id::text, id::text) WHERE source_ref IS NULL;
+CREATE INDEX IF NOT EXISTS idx_journal_source_ref ON journal_entries (tenant_id, source_ref);
+
+-- When a booking was cancelled: a retained deposit is earned that day (ASC 606).
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
+
+-- Everyone in the finance chain is matched by email (they sign in to /app/books).
+ALTER TABLE crew_members ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+
+-- Who may do what in the close. One row per person and role.
+CREATE TABLE IF NOT EXISTS finance_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    email VARCHAR(255) NOT NULL,
+    name VARCHAR(120) NOT NULL DEFAULT '',
+    role VARCHAR(12) NOT NULL,              -- preparer | approver | tiebreaker
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_finance_roles ON finance_roles (tenant_id, lower(email), role) WHERE revoked_at IS NULL;
+
+-- The house finance chain as the owner set it (2026-11-13): "@crossroadsweddingco.shop
+-- emails should clearly be the logins for terry, jake, and nic". Jake (CEO, the
+-- accounting experience) prepares; Terry Winchester II (CBO, acting CFO) approves
+-- and is where the buck stops; Nic (COO) breaks ties. Seeded once and recorded,
+-- so a later change made in the app sticks.
+WITH ins AS (
+    INSERT INTO finance_roles (tenant_id, email, name, role)
+    SELECT '00000000-0000-4000-8000-000000000001', v.email, v.name, v.role
+    FROM (VALUES
+        ('jake@crossroadsweddingco.shop', 'Jake', 'preparer'),
+        ('terry@crossroadsweddingco.shop', 'Terry Winchester II', 'approver'),
+        ('nic@crossroadsweddingco.shop', 'Nic', 'tiebreaker')
+    ) AS v(email, name, role)
+    WHERE NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'finance_roles_v1')
+    ON CONFLICT DO NOTHING
+    RETURNING 1
+)
+INSERT INTO schema_seeds (name) SELECT 'finance_roles_v1' FROM ins LIMIT 1 ON CONFLICT (name) DO NOTHING;
+WITH upd AS (
+    UPDATE crew_members c SET email = lower(c.name) || '@crossroadsweddingco.shop'
+    WHERE c.tenant_id = '00000000-0000-4000-8000-000000000001' AND c.email IS NULL
+      AND c.name IN ('Jake', 'Terry', 'Nic')
+      AND NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'crew_emails_v1')
+    RETURNING 1
+)
+INSERT INTO schema_seeds (name) SELECT 'crew_emails_v1' FROM upd LIMIT 1 ON CONFLICT (name) DO NOTHING;
+
+-- A removed job-plan line is voided, never deleted (owner, 2026-11-13: "no one
+-- can delete, only modify or void").
+ALTER TABLE event_resources ADD COLUMN IF NOT EXISTS voided_at TIMESTAMPTZ;
+
+-- The same rule, enforced by the database on every table that carries money or
+-- the record of it. Retire, archive or void instead.
+CREATE OR REPLACE FUNCTION forbid_delete() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION '% rows are never deleted: void, retire or archive instead', TG_TABLE_NAME;
+END;
+$$ LANGUAGE plpgsql;
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['weddings', 'event_resources', 'crew_members', 'resource_items', 'vendors',
+        'bank_transactions', 'bank_accounts', 'ledger_accounts', 'ledger_categories', 'ledger_periods',
+        'finance_roles', 'service_agreements', 'expense_claims', 'receipts']
+    LOOP
+        IF to_regclass(t) IS NOT NULL THEN
+            EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I', t || '_no_delete', t);
+            EXECUTE format('CREATE TRIGGER %I BEFORE DELETE ON %I FOR EACH ROW EXECUTE FUNCTION forbid_delete()', t || '_no_delete', t);
+        END IF;
+    END LOOP;
+END $$;
+
+-- One row per month that has been through the close workflow. No row = open.
+-- status: open | prepared | escalated | closed | reopen_requested.
+-- closed and reopen_requested are LOCKED: the triggers below refuse any
+-- journal write dated in them.
+CREATE TABLE IF NOT EXISTS ledger_periods (
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    period_start DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    prepared_by VARCHAR(255),
+    prepared_at TIMESTAMPTZ,
+    prepared_hash CHAR(64),
+    prepared_note TEXT NOT NULL DEFAULT '',
+    acknowledged JSONB NOT NULL DEFAULT '[]'::jsonb,
+    decided_by VARCHAR(255),
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT NOT NULL DEFAULT '',
+    closed_hash CHAR(64),
+    closed_snapshot JSONB,
+    closed_at TIMESTAMPTZ,
+    reopen_requested_by VARCHAR(255),
+    reopen_requested_at TIMESTAMPTZ,
+    reopen_reason TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, period_start)
+);
+
+CREATE OR REPLACE FUNCTION ledger_period_locked(t UUID, d DATE) RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM ledger_periods p
+        WHERE p.tenant_id = t
+          AND p.period_start = date_trunc('month', d)::date
+          AND p.status IN ('closed', 'reopen_requested')
+    );
+$$ LANGUAGE sql STABLE;
+
+-- The hard cutoff, enforced by the database rather than trusted to the app:
+-- nothing is posted into, voided in, or edited in a locked month, and the
+-- money fields of an entry never change after insert.
+CREATE OR REPLACE FUNCTION journal_entry_period_guard() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        IF ledger_period_locked(NEW.tenant_id, NEW.entry_date) THEN
+            RAISE EXCEPTION 'period % is closed: post a correction in an open month', to_char(NEW.entry_date, 'YYYY-MM');
+        END IF;
+        RETURN NEW;
+    END IF;
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'journal entries are never deleted';
+    END IF;
+    IF ledger_period_locked(OLD.tenant_id, OLD.entry_date) THEN
+        RAISE EXCEPTION 'period % is closed: its entries cannot change', to_char(OLD.entry_date, 'YYYY-MM');
+    END IF;
+    IF NEW.entry_date <> OLD.entry_date OR NEW.tenant_id <> OLD.tenant_id
+       OR NEW.source_type <> OLD.source_type OR NEW.source_id IS DISTINCT FROM OLD.source_id THEN
+        RAISE EXCEPTION 'a posted entry''s date, account and source never change: void it and post again';
+    END IF;
+    IF OLD.status = 'void' AND NEW.status <> 'void' THEN
+        RAISE EXCEPTION 'a voided entry stays void';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS journal_entries_period_guard ON journal_entries;
+CREATE TRIGGER journal_entries_period_guard
+    BEFORE INSERT OR UPDATE OR DELETE ON journal_entries
+    FOR EACH ROW EXECUTE FUNCTION journal_entry_period_guard();
+
+CREATE OR REPLACE FUNCTION journal_line_guard() RETURNS trigger AS $$
+DECLARE d DATE; t UUID;
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        RAISE EXCEPTION 'journal lines are append-only';
+    END IF;
+    SELECT entry_date, tenant_id INTO d, t FROM journal_entries WHERE id = NEW.entry_id;
+    IF ledger_period_locked(t, d) THEN
+        RAISE EXCEPTION 'period % is closed', to_char(d, 'YYYY-MM');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS journal_lines_guard ON journal_lines;
+CREATE TRIGGER journal_lines_guard
+    BEFORE INSERT OR UPDATE OR DELETE ON journal_lines
+    FOR EACH ROW EXECUTE FUNCTION journal_line_guard();
+
+-- The audit log: append-only and hash-chained per account. Each row's hash
+-- covers its own content and the previous row's hash, so changing or removing
+-- any row breaks every hash after it, and /app/books/audit shows where.
+CREATE TABLE IF NOT EXISTS audit_log (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    actor VARCHAR(255) NOT NULL,
+    action VARCHAR(60) NOT NULL,
+    entity_type VARCHAR(40) NOT NULL,
+    entity_id VARCHAR(80),
+    before JSONB,
+    after JSONB,
+    reason TEXT,
+    cause TEXT,
+    prev_hash CHAR(64),
+    hash CHAR(64) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_log (tenant_id, id);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log (tenant_id, entity_type, entity_id);
+
+CREATE OR REPLACE FUNCTION audit_digest(prev CHAR(64), r audit_log) RETURNS CHAR(64) AS $$
+    SELECT encode(sha256(convert_to(concat_ws('|',
+        coalesce(prev, ''), r.tenant_id::text, to_char(r.at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
+        r.actor, r.action, r.entity_type, coalesce(r.entity_id, ''),
+        coalesce(r.before::text, ''), coalesce(r.after::text, ''),
+        coalesce(r.reason, ''), coalesce(r.cause, '')), 'UTF8')), 'hex');
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION audit_log_chain() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        RAISE EXCEPTION 'the audit log is append-only';
+    END IF;
+    PERFORM pg_advisory_xact_lock(hashtextextended('audit:' || NEW.tenant_id::text, 0));
+    NEW.at := clock_timestamp();
+    SELECT hash INTO NEW.prev_hash FROM audit_log WHERE tenant_id = NEW.tenant_id ORDER BY id DESC LIMIT 1;
+    NEW.hash := audit_digest(NEW.prev_hash, NEW);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS audit_log_chain ON audit_log;
+CREATE TRIGGER audit_log_chain
+    BEFORE INSERT OR UPDATE OR DELETE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION audit_log_chain();
+CREATE OR REPLACE FUNCTION audit_log_no_truncate() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'the audit log is append-only';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS audit_log_no_truncate ON audit_log;
+CREATE TRIGGER audit_log_no_truncate BEFORE TRUNCATE ON audit_log
+    FOR EACH STATEMENT EXECUTE FUNCTION audit_log_no_truncate();

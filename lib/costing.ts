@@ -2,6 +2,8 @@ import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { crewMembers, eventResources, resourceItems, vendors, weddings } from "@/lib/db/schema";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
+import { audit, auditQuietly } from "@/lib/audit";
+import { postBankLedgerQuietly } from "@/lib/books/ledger";
 import { costEvent, isPayMethod, type CostLine, type EventCosting, type Owner, type PayMethod, type ScheduledLine } from "@/lib/costing-logic";
 
 // Project costing and resource planning, server side (2026-11-13). Owner
@@ -35,6 +37,8 @@ export type ItemInput = {
 };
 
 export type LineInput = {
+  /** The saved line this edits; null for a new line. Lines left out are voided, never deleted. */
+  id?: string | null;
   kind: "labor" | "material";
   crewMemberId: string | null;
   resourceItemId: string | null;
@@ -75,8 +79,9 @@ export async function listVendorChoices() {
  * point at them: taking someone off the list retires them, and a retired
  * person keeps their name on every event they were planned for.
  */
-export async function saveCrew(rows: CrewInput[]): Promise<void> {
+export async function saveCrew(rows: CrewInput[], actor = "owner dashboard"): Promise<void> {
   const vendorIds = new Set((await listVendorChoices()).map((v) => v.id));
+  const before = await listCrew();
   await db.transaction(async (tx) => {
     for (const [i, r] of rows.entries()) {
       const values = {
@@ -99,9 +104,11 @@ export async function saveCrew(rows: CrewInput[]): Promise<void> {
       }
     }
   });
+  await auditQuietly({ tenantId: T, actor, action: "crew.save", entityType: "crew", entityId: null, before, after: await listCrew() });
 }
 
-export async function saveItems(rows: ItemInput[]): Promise<void> {
+export async function saveItems(rows: ItemInput[], actor = "owner dashboard"): Promise<void> {
+  const before = await listItems();
   await db.transaction(async (tx) => {
     for (const [i, r] of rows.entries()) {
       const values = {
@@ -121,6 +128,7 @@ export async function saveItems(rows: ItemInput[]): Promise<void> {
       }
     }
   });
+  await auditQuietly({ tenantId: T, actor, action: "materials.save", entityType: "materials", entityId: null, before, after: await listItems() });
 }
 
 function dollarsToCents(v: string | null | undefined): number {
@@ -156,7 +164,7 @@ export async function getEventPlan(weddingId: string) {
   const [w] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), eq(weddings.tenantId, T))).limit(1);
   if (!w) return null;
   const [rows, crew, items] = await Promise.all([
-    db.select().from(eventResources).where(and(eq(eventResources.weddingId, weddingId), eq(eventResources.tenantId, T))).orderBy(asc(eventResources.sort)),
+    db.select().from(eventResources).where(and(eq(eventResources.weddingId, weddingId), eq(eventResources.tenantId, T), isNull(eventResources.voidedAt))).orderBy(asc(eventResources.sort)),
     listCrew(),
     listItems(),
   ]);
@@ -166,11 +174,13 @@ export async function getEventPlan(weddingId: string) {
 }
 
 /**
- * Replace one event's plan in a transaction. Ids the client sends for crew
- * and items are checked against this account; anything else is dropped to
- * null rather than trusted.
+ * Save one event's plan. Lines carrying an id are updated, new lines are
+ * added, and saved lines left out are VOIDED, never deleted (owner,
+ * 2026-11-13: "no one can delete, only modify or void"; the database refuses
+ * deletes on this table). Crew and item ids are checked against this account.
+ * Every change is written to the audit log with the plan before and after.
  */
-export async function saveEventPlan(weddingId: string, lines: LineInput[]): Promise<boolean> {
+export async function saveEventPlan(weddingId: string, lines: LineInput[], actor = "owner dashboard"): Promise<boolean> {
   if (!UUID_RE.test(weddingId)) return false;
   const [w] = await db.select({ id: weddings.id }).from(weddings).where(and(eq(weddings.id, weddingId), eq(weddings.tenantId, T))).limit(1);
   if (!w) return false;
@@ -178,12 +188,13 @@ export async function saveEventPlan(weddingId: string, lines: LineInput[]): Prom
   const crewIds = new Set(crew.map((c) => c.id));
   const itemIds = new Set(items.map((i) => i.id));
   await db.transaction(async (tx) => {
-    await tx.delete(eventResources).where(and(eq(eventResources.weddingId, weddingId), eq(eventResources.tenantId, T)));
-    if (lines.length === 0) return;
-    await tx.insert(eventResources).values(
-      lines.map((l, i) => ({
-        tenantId: T,
-        weddingId,
+    const before = await tx
+      .select()
+      .from(eventResources)
+      .where(and(eq(eventResources.weddingId, weddingId), eq(eventResources.tenantId, T), isNull(eventResources.voidedAt)));
+    const keep = new Set<string>();
+    for (const [i, l] of lines.entries()) {
+      const values = {
         kind: l.kind,
         crewMemberId: l.kind === "labor" && l.crewMemberId && crewIds.has(l.crewMemberId) ? l.crewMemberId : null,
         resourceItemId: l.kind === "material" && l.resourceItemId && itemIds.has(l.resourceItemId) ? l.resourceItemId : null,
@@ -201,9 +212,31 @@ export async function saveEventPlan(weddingId: string, lines: LineInput[]): Prom
         actualCostCents: l.actualCostCents,
         notes: l.notes,
         sort: i,
-      })),
-    );
+        updatedAt: new Date(),
+      };
+      const existing = l.id && before.find((b) => b.id === l.id);
+      if (existing) {
+        keep.add(existing.id);
+        await tx.update(eventResources).set(values).where(and(eq(eventResources.id, existing.id), eq(eventResources.tenantId, T)));
+      } else {
+        await tx.insert(eventResources).values({ ...values, tenantId: T, weddingId });
+      }
+    }
+    const gone = before.filter((b) => !keep.has(b.id)).map((b) => b.id);
+    if (gone.length) {
+      await tx
+        .update(eventResources)
+        .set({ voidedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(eventResources.tenantId, T), inArray(eventResources.id, gone)));
+    }
+    const after = await tx
+      .select()
+      .from(eventResources)
+      .where(and(eq(eventResources.weddingId, weddingId), eq(eventResources.tenantId, T), isNull(eventResources.voidedAt)))
+      .orderBy(asc(eventResources.sort));
+    await audit(tx, { tenantId: T, actor, action: "costing.save", entityType: "job", entityId: weddingId, before, after, cause: gone.length ? `${gone.length} line(s) voided` : null });
   });
+  await postBankLedgerQuietly(T, { actor, cause: "job cost plan saved" });
   return true;
 }
 
@@ -214,7 +247,7 @@ export async function linesByWedding(ids: string[]): Promise<Map<string, CostLin
   const lines = await db
     .select()
     .from(eventResources)
-    .where(and(eq(eventResources.tenantId, T), inArray(eventResources.weddingId, ids)))
+    .where(and(eq(eventResources.tenantId, T), inArray(eventResources.weddingId, ids), isNull(eventResources.voidedAt)))
     .orderBy(asc(eventResources.sort));
   for (const l of lines) {
     const list = out.get(l.weddingId) ?? [];
@@ -230,7 +263,7 @@ export async function costingByWedding(rowsFor: { id: string; totalAmount: strin
   if (rowsFor.length === 0) return out;
   const ids = rowsFor.map((r) => r.id);
   const [lines, crew] = await Promise.all([
-    db.select().from(eventResources).where(and(eq(eventResources.tenantId, T), inArray(eventResources.weddingId, ids))).orderBy(asc(eventResources.sort)),
+    db.select().from(eventResources).where(and(eq(eventResources.tenantId, T), inArray(eventResources.weddingId, ids), isNull(eventResources.voidedAt))).orderBy(asc(eventResources.sort)),
     listCrew(),
   ]);
   const owners = ownersFrom(crew);
@@ -264,6 +297,7 @@ export async function scheduledLabor(fromDate: string): Promise<ScheduledLine[]>
       and(
         eq(eventResources.tenantId, T),
         eq(eventResources.kind, "labor"),
+        isNull(eventResources.voidedAt),
         isNull(weddings.archivedAt),
         sql`${weddings.status} <> 'cancelled'`,
         sql`${weddings.eventDate} >= ${fromDate}`,
@@ -284,7 +318,7 @@ export async function unplannedEvents(fromDate: string) {
         isNull(weddings.archivedAt),
         sql`${weddings.status} <> 'cancelled'`,
         sql`${weddings.eventDate} >= ${fromDate}`,
-        sql`not exists (select 1 from event_resources r where r.wedding_id = ${weddings.id} and r.kind = 'labor')`,
+        sql`not exists (select 1 from event_resources r where r.wedding_id = ${weddings.id} and r.kind = 'labor' and r.voided_at is null)`,
       ),
     )
     .orderBy(asc(weddings.eventDate));

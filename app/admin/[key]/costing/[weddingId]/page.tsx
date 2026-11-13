@@ -64,6 +64,7 @@ export default async function CostingPage({ params }: { params: Promise<{ key: s
           items={items.map((i) => ({ id: i.id, name: i.name, unit: i.unit, unitCostCents: i.unitCostCents, retired: i.retiredAt !== null }))}
           owners={crew.filter((c) => c.payMethod === "owner" && !c.retiredAt).map((c) => ({ id: c.id, name: c.name, shareBps: c.shareBps }))}
           initial={rows.map((r) => ({
+            id: r.id,
             kind: r.kind === "material" ? "material" : "labor",
             crewMemberId: r.crewMemberId,
             resourceItemId: r.resourceItemId,
