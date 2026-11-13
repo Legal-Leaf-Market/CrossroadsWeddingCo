@@ -1452,3 +1452,18 @@ decisions absorbed from it:
   NOT verified in a browser: the close page's buttons with real signed-in sessions (the rules
   behind them are covered by the verify script). Open items are listed at the end of the spec and
   in `docs/handoff/CLAUDE.md`.
+- **Plaid hardening and scheduled jobs on Netlify (2026-11-13).** The webhook now handles
+  `USER_PERMISSION_REVOKED` (item removed at Plaid, token forgotten, connection disconnected with
+  the reason; pulled lines and books stay), `USER_ACCOUNT_REVOKED` (log in again),
+  `NEW_ACCOUNTS_AVAILABLE` (`integration_connections.new_accounts_at`; the integrations page offers
+  "Choose accounts", which opens Plaid Link update mode with account selection) and records every
+  other `ITEM:ERROR` on the connection instead of dropping it; each status change is audited. The
+  rules are pure in `lib/integrations/plaid-webhook-logic.ts`. A daily backup sync
+  (`/api/cron/bank-sync`, stalest first, 20-second budget) covers webhooks that never arrive.
+  Netlify ignores `vercel.json`, so jobs now run as Netlify scheduled functions
+  (`netlify/functions/bank-sync-daily.mjs` at 11:17 UTC, `checkins-daily.mjs` at 15:00 UTC, the
+  check-in texts that never ran on Netlify; still silent until Twilio keys exist). They call the
+  routes with `CRON_SECRET` if set, else a per-job HMAC of `ADMIN_DASH_KEY` (`lib/cron-auth.ts`),
+  so no new secret is needed. `node --experimental-strip-types scripts/verify-plaid.mjs` (22 checks).
+  Still the owner's: Plaid production keys (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`) in
+  Netlify.

@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getBooksWorkspace, sameOrigin } from "@/lib/auth";
-import { disconnect, getConnection, syncConnection } from "@/lib/integrations/bank-feed";
+import { disconnect, getConnection, setNewAccounts, syncConnection } from "@/lib/integrations/bank-feed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
 
-const schema = z.object({ action: z.enum(["sync", "disconnect"]) });
+// accountsChosen: the person just picked accounts in Plaid Link after the bank reported new ones.
+const schema = z.object({ action: z.enum(["sync", "disconnect"]), accountsChosen: z.boolean().optional() });
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: NO_STORE });
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       await disconnect(ws.tenant.id, id);
       return NextResponse.json({ ok: true }, { headers: NO_STORE });
     }
+    if (parsed.data.accountsChosen) await setNewAccounts(id, false);
     const result = await syncConnection(id);
     if ("error" in result) {
       const msg = result.error === "needs_reauth" ? "Your bank needs you to log in again." : "Couldn't refresh right now.";

@@ -484,6 +484,8 @@ export const integrationConnections = pgTable(
     syncCursor: text("sync_cursor"),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     lastError: text("last_error"),
+    /** Set by Plaid's NEW_ACCOUNTS_AVAILABLE; cleared once the person picks accounts. */
+    newAccountsAt: timestamp("new_accounts_at", { withTimezone: true }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
