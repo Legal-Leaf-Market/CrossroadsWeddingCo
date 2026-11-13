@@ -113,7 +113,7 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
       select w.id, w.total_amount::text as total,
         (select count(*) from event_resources r where r.wedding_id = w.id and r.voided_at is null)::int as lines
       from weddings w
-      where w.tenant_id = ${tenantId} and w.status <> 'cancelled' and w.event_date between ${periodStart} and ${end}`)
+      where w.tenant_id = ${tenantId} and w.status <> 'cancelled' and w.books_excluded_at is null and w.event_date between ${periodStart} and ${end}`)
   ).rows as { id: string; total: string; lines: number }[];
   let uncosted = 0;
   let noPlan = 0;
@@ -151,7 +151,7 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
   // must have the bank money matched to it.
   const hand = await one<{ n: number }>(sql`
     select count(*)::int as n from weddings w
-    where w.tenant_id = ${tenantId} and w.status <> 'cancelled' and w.created_at::date <= ${end}
+    where w.tenant_id = ${tenantId} and w.status <> 'cancelled' and w.books_excluded_at is null and w.created_at::date <= ${end}
       and (coalesce(w.is_deposit_paid,false) or coalesce(w.is_balance_paid,false))
       and coalesce((select sum(t.amount_cents) from bank_transactions t
                     where t.booking_id = w.id and t.amount_cents > 0 and t.removed_at is null and not t.pending), 0)

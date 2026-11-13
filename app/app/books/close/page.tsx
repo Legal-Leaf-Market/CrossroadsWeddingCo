@@ -43,7 +43,12 @@ export default async function ClosePage({ searchParams }: { searchParams: Promis
   }
   const { m } = await searchParams;
   const [periods, roles, seats] = await Promise.all([listPeriods(ws.tenant.id), rolesFor(ws.tenant.id, ws.user.email), listRoles(ws.tenant.id)]);
-  const selected = periods.find((p) => p.periodStart === m) ?? periods.find((p) => !LOCKED_STATUSES.includes(p.status) && p.periodStart < periods[0]?.periodStart) ?? periods[0];
+  // Months close in order, so open on the OLDEST month still open that has ended
+  // and has entries (the list is newest first). It used to open the newest.
+  const selected =
+    periods.find((p) => p.periodStart === m) ??
+    [...periods].reverse().find((p) => !LOCKED_STATUSES.includes(p.status) && p.entries > 0 && p.periodStart < periods[0]?.periodStart) ??
+    periods[0];
   const blockers = selected ? await periodBlockers(ws.tenant.id, selected.periodStart) : [];
   const actions = selected ? availableActions(selected.status, roles) : [];
   const r = selected?.row;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { adminKeyMatches } from "@/lib/admin";
+import BooksExcludeButton from "@/components/admin/BooksExcludeButton";
 import { linesByWedding } from "@/lib/costing";
 import { centsLabel, lineCost } from "@/lib/costing-logic";
 import { db } from "@/lib/db";
@@ -46,8 +47,9 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
   const rows = await db.select().from(weddings).where(eq(weddings.tenantId, HOUSE_TENANT_ID));
   const lines = await linesByWedding(rows.map((r) => r.id));
   const { balances, tie } = await jobLedgerBalances(HOUSE_TENANT_ID);
+  const excludedRows = rows.filter((w) => w.booksExcludedAt);
   const page = jobsPage(
-    rows.map((w) => {
+    rows.filter((w) => !w.booksExcludedAt).map((w) => {
       const contract = Math.round(Number(w.totalAmount) * 100) || 0;
       const plan = lines.get(w.id) ?? [];
       let planned = 0;
@@ -76,6 +78,7 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
   const b = page.ledger;
   const codeOf = (k: string, fallback: string) => tie.find((t) => t.systemKey === k)?.code ?? fallback;
   const tiles = [
+    { label: "Undeposited funds", code: codeOf("undeposited_funds", "1050"), value: b.undeposited, shown: page.totals.undeposited, note: "Cash and checks marked paid, not yet matched to a bank deposit" },
     { label: "Deferred revenue", code: codeOf("deferred_revenue", "2300"), value: b.deferredRevenue, shown: page.totals.deferredRevenue, note: "Collected for events not yet held (liability)" },
     { label: "Accounts receivable", code: codeOf("accounts_receivable", "1100"), value: b.receivable, shown: page.totals.receivable, note: "Earned, not yet collected (asset)" },
     { label: "Prepaid job costs", code: codeOf("prepaid_job_costs", "1300"), value: b.prepaidCost, shown: page.totals.prepaidCost, note: "Paid out for events not yet held (asset)" },
@@ -115,10 +118,10 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
           </p>
           <p className={`mb-3 rounded-xl border bg-white p-3 text-sm ${page.ties ? "border-parchment text-sage-dark" : "border-terracotta text-terracotta-dark"}`}>
             {page.ties
-              ? "Ties to the general ledger: the jobs below add up to 1100, 1300, 2300 and 2400 exactly."
+              ? "Ties to the general ledger: the jobs below add up to 1050, 1100, 1300, 2300 and 2400 exactly."
               : "Does not tie to the general ledger. Some money on these accounts isn't keyed to a job; the month can't close until it is. Open Books, then Tie-out, to see which lines."}
           </p>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             {tiles.map((t) => (
               <div key={t.label} className="rounded-2xl border border-parchment bg-white p-4">
                 <p className="text-xs uppercase tracking-wider text-ink/55">
@@ -199,7 +202,9 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
                         {j.archived && " · archived"}
                         {!j.hasPlan && " · no cost plan"}
                         {j.missing > 0 && ` · ${j.missing} cost${j.missing === 1 ? "" : "s"} not set`}
+                        {j.undeposited ? ` · ${centsLabel(j.undeposited)} paid by hand, not deposited yet` : ""}
                       </span>
+                      <BooksExcludeButton adminKey={key} weddingId={j.id} excluded={false} />
                     </td>
                     <td className="py-1.5 text-right">{centsLabel(j.revenue)}</td>
                     <td className="py-1.5 text-right">{centsLabel(j.cost)}</td>
@@ -229,6 +234,27 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
             </table>
           </div>
         </section>
+
+        {excludedRows.length > 0 && (
+          <section>
+            <h2 className="mb-1 text-lg font-semibold text-charcoal">Left out of the books</h2>
+            <p className="mb-3 text-sm text-ink/60">Bookings marked as never a real job. Nothing was deleted; each change is in the audit log.</p>
+            <ul className="divide-y divide-parchment rounded-2xl border border-parchment bg-white px-4 text-sm">
+              {excludedRows.map((w) => (
+                <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span className="min-w-0 break-words">
+                    <span className="font-semibold text-charcoal">{w.coupleNames}</span>{" "}
+                    <span className="text-ink/55">
+                      {w.eventDate ? formatEventDate(w.eventDate) : ""}
+                      {w.booksExcludedReason ? ` · ${w.booksExcludedReason}` : ""}
+                    </span>
+                  </span>
+                  <BooksExcludeButton adminKey={key} weddingId={w.id} excluded />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </div>
   );

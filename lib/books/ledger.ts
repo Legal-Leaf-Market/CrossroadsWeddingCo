@@ -17,6 +17,8 @@ import { audit } from "@/lib/audit";
 import {
   ACCRUAL_ACCOUNTS,
   crewSub,
+  handPaymentEntry,
+  handPayments,
   jobEntries,
   keyedClaimEntry,
   LOCKED_STATUSES,
@@ -196,7 +198,7 @@ async function lockTenant(tx: Tx, tenantId: string) {
 // repost it, or, once its month is locked, post a dated correction instead.
 // The database refuses any write into a locked month regardless.
 
-const DERIVED_TYPES = ["bank_transaction", "job_revenue", "job_cost", "expense_claim", "adjustment"];
+const DERIVED_TYPES = ["bank_transaction", "job_revenue", "job_cost", "expense_claim", "hand_deposit", "hand_balance", "adjustment"];
 
 async function accrualAccounts(ex: Exec, tenantId: string): Promise<Record<AccrualKey, string>> {
   const existing = await ex.select({ code: ledgerAccounts.code }).from(ledgerAccounts).where(eq(ledgerAccounts.tenantId, tenantId));
@@ -258,8 +260,13 @@ export async function postLedger(
     const lockedSet = new Set(lockedRows.map((r) => r.p));
     const locked = (d: string) => lockedSet.has(periodOf(d));
 
-    const jobs = await tx.select().from(weddings).where(eq(weddings.tenantId, tenantId));
+    // A booking the owner marked "not a real job" (a test) is left out of the
+    // books entirely: its entries void, and money matched to it posts as an
+    // ordinary sorted line.
+    const jobs = (await tx.select().from(weddings).where(eq(weddings.tenantId, tenantId))).filter((j) => !j.booksExcludedAt);
     const jobById = new Map(jobs.map((j) => [j.id, j]));
+    const venueDate = (t: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Indiana/Indianapolis" }).format(t);
+    const bankIn = new Map<string, { cents: number; depositLines: number }>();
     const cancelledOn = (j: (typeof jobs)[number]) =>
       j.cancelledAt ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Indiana/Indianapolis" }).format(j.cancelledAt) : null;
 
@@ -322,7 +329,11 @@ export async function postLedger(
           l.bankLedgerId!,
           acct,
         );
-        if (l.amountCents > 0) push(payments, job.id, { date: l.postedDate, cents: l.amountCents });
+        if (l.amountCents > 0) {
+          push(payments, job.id, { date: l.postedDate, cents: l.amountCents });
+          const b = bankIn.get(job.id) ?? { cents: 0, depositLines: 0 };
+          bankIn.set(job.id, { cents: b.cents + l.amountCents, depositLines: b.depositLines + (l.paymentKind === "deposit" ? 1 : 0) });
+        }
         else if (l.postedDate <= job.eventDate) push(prepaid, job.id, { date: l.postedDate, cents: -l.amountCents });
       } else if (live && reimbursing.has(l.id)) {
         desired = payoutEntry(
@@ -380,6 +391,28 @@ export async function postLedger(
       planCost.set(r.weddingId, (planCost.get(r.weddingId) ?? 0) + (line.actualCostCents ?? c.actual ?? c.planned ?? 0));
     }
     for (const j of jobs) {
+      // Cash and checks marked paid by hand (deposits are cash and check for now).
+      const bank = bankIn.get(j.id) ?? { cents: 0, depositLines: 0 };
+      const hand = handPayments(
+        {
+          totalCents: Math.round(Number(j.totalAmount) * 100) || 0,
+          depositCents: Math.round(Number(j.depositAmount) * 100) || 0,
+          isDepositPaid: !!j.isDepositPaid,
+          isBalancePaid: !!j.isBalancePaid,
+          bankCents: bank.cents,
+          bankDepositLines: bank.depositLines,
+          createdOn: venueDate(j.createdAt),
+          eventDate: j.eventDate,
+          depositPaidOn: j.depositPaidOn,
+          balancePaidOn: j.balancePaidOn,
+        },
+        today,
+      );
+      const handJob = { id: j.id, eventDate: j.eventDate, cancelled: j.status === "cancelled" };
+      for (const [kind, part] of [["deposit", hand.deposit], ["balance", hand.balance]] as const) {
+        if (part) push(payments, j.id, { date: part.date, cents: part.cents });
+        sources.push({ ref: `hand_${kind}:${j.id}`, type: `hand_${kind}`, id: j.id, desired: handPaymentEntry(part, kind, handJob, j.coupleNames, acct) });
+      }
       const jobClaims = claims.filter((c) => c.wedding_id === j.id && c.spent_on <= j.eventDate).reduce((s, c) => s + c.amount_cents, 0);
       const facts: JobFacts = {
         totalCents: Math.round(Number(j.totalAmount) * 100) || 0,

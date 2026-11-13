@@ -200,6 +200,13 @@ export const weddings = pgTable(
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),
     isBalancePaid: boolean("is_balance_paid").default(false),
+    /** The day each box was ticked (2026-11-13): when cash or a check came in by hand. */
+    depositPaidOn: date("deposit_paid_on"),
+    balancePaidOn: date("balance_paid_on"),
+    /** A booking that was never a real job (a test). Kept, audited, left out of the books. */
+    booksExcludedAt: timestamp("books_excluded_at", { withTimezone: true }),
+    booksExcludedReason: text("books_excluded_reason"),
+    booksExcludedBy: varchar("books_excluded_by", { length: 255 }),
     status: eventStatus("status").notNull().default("inquiry"),
     assignedTalentId: uuid("assigned_talent_id").references(() => talentProfiles.id, {
       onDelete: "set null",

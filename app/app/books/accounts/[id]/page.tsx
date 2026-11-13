@@ -21,6 +21,8 @@ const SOURCE_LABEL: Record<string, string> = {
   job_cost: "Job cost",
   expense_claim: "Expense report",
   opening_balance: "Opening balance",
+  hand_deposit: "Deposit paid by hand",
+  hand_balance: "Balance paid by hand",
 };
 
 function ranges(today: string) {

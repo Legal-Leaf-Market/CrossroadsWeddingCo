@@ -15,6 +15,7 @@ export type AccountMeta = { id: string; code: string; name: string; type: string
 
 /** The control accounts, by system key, and what their subledger is kept by. */
 export const CONTROL_ACCOUNTS = {
+  undeposited_funds: "job",
   accounts_receivable: "job",
   prepaid_job_costs: "job",
   deferred_revenue: "job",
@@ -103,6 +104,8 @@ export function tieOutDifferences(rows: TieOutRow[]): number {
 
 export type JobBalance = {
   jobId: string;
+  /** Cash and checks marked paid by hand, not yet matched to a bank deposit (1050). */
+  undeposited: number;
   deferredRevenue: number;
   receivable: number;
   prepaidCost: number;
@@ -113,6 +116,7 @@ export type JobBalance = {
 };
 
 const JOB_FIELD: Record<string, keyof Omit<JobBalance, "jobId">> = {
+  undeposited_funds: "undeposited",
   deferred_revenue: "deferredRevenue",
   accounts_receivable: "receivable",
   prepaid_job_costs: "prepaidCost",
@@ -131,7 +135,7 @@ export function jobBalances(sums: SubSum[], accounts: AccountMeta[]): Map<string
     const field = a?.systemKey ? JOB_FIELD[a.systemKey] : undefined;
     if (!a || !field) continue;
     const id = subId(s.sub!);
-    const row = out.get(id) ?? { jobId: id, deferredRevenue: 0, receivable: 0, prepaidCost: 0, accruedCost: 0, revenue: 0, cost: 0 };
+    const row = out.get(id) ?? { jobId: id, undeposited: 0, deferredRevenue: 0, receivable: 0, prepaidCost: 0, accruedCost: 0, revenue: 0, cost: 0 };
     row[field] += natural(a.type, s.debit, s.credit);
     out.set(id, row);
   }
@@ -158,15 +162,15 @@ export type JobsPageRow = JobInfo & JobBalance & { earned: boolean; grossProfit:
 export type JobsPage = {
   rows: JobsPageRow[];
   /** Sum of the rows: what the page shows as each balance. */
-  totals: { deferredRevenue: number; receivable: number; prepaidCost: number; accruedCost: number };
+  totals: { undeposited: number; deferredRevenue: number; receivable: number; prepaidCost: number; accruedCost: number };
   /** The general ledger balance of each control account, and whether the page ties to it. */
-  ledger: { deferredRevenue: number; receivable: number; prepaidCost: number; accruedCost: number };
+  ledger: { undeposited: number; deferredRevenue: number; receivable: number; prepaidCost: number; accruedCost: number };
   ties: boolean;
   periods: { key: string; jobs: number; revenue: number; cost: number; grossProfit: number }[];
   backlog: { jobs: number; revenue: number; cost: number; grossProfit: number };
 };
 
-const ZERO = { deferredRevenue: 0, receivable: 0, prepaidCost: 0, accruedCost: 0, revenue: 0, cost: 0 };
+const ZERO = { undeposited: 0, deferredRevenue: 0, receivable: 0, prepaidCost: 0, accruedCost: 0, revenue: 0, cost: 0 };
 
 /**
  * The job costing page's numbers. Held jobs show what the ledger recognized;
@@ -195,8 +199,9 @@ export function jobsPage(jobs: JobInfo[], balances: Map<string, JobBalance>, tie
     });
   }
   rows.sort((a, b) => a.eventDate.localeCompare(b.eventDate) || a.name.localeCompare(b.name));
-  const totals = { deferredRevenue: 0, receivable: 0, prepaidCost: 0, accruedCost: 0 };
+  const totals = { undeposited: 0, deferredRevenue: 0, receivable: 0, prepaidCost: 0, accruedCost: 0 };
   for (const r of rows) {
+    totals.undeposited += r.undeposited;
     totals.deferredRevenue += r.deferredRevenue;
     totals.receivable += r.receivable;
     totals.prepaidCost += r.prepaidCost;
@@ -204,6 +209,7 @@ export function jobsPage(jobs: JobInfo[], balances: Map<string, JobBalance>, tie
   }
   const ctl = (k: ControlKey) => tie.find((t) => t.systemKey === k)?.control ?? 0;
   const ledger = {
+    undeposited: ctl("undeposited_funds"),
     deferredRevenue: ctl("deferred_revenue"),
     receivable: ctl("accounts_receivable"),
     prepaidCost: ctl("prepaid_job_costs"),

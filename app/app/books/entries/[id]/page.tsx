@@ -140,7 +140,7 @@ export default async function EntryPage({ params }: { params: Promise<{ id: stri
         )}
         {s.kind === "job" && s.row && (
           <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-            <Field label={s.which === "revenue" ? "Revenue recognized for" : "Direct cost matched to"}>
+            <Field label={s.which === "revenue" ? "Revenue recognized for" : s.which === "cost" ? "Direct cost matched to" : "Paid by hand on"}>
               {house ? (
                 str(s.row.names)
               ) : (
@@ -151,7 +151,17 @@ export default async function EntryPage({ params }: { params: Promise<{ id: stri
             </Field>
             <Field label="Event date">{str(s.row.eventDate)}</Field>
             <Field label="Contract total">{usd(Math.round(Number(s.row.total) * 100) || 0)}</Field>
-            <Field label="Status">{str(s.row.status)}{s.row.archivedAt ? ", archived" : ""}</Field>
+            <Field label="Status">
+              {str(s.row.status)}
+              {s.row.archivedAt ? ", archived" : ""}
+              {s.row.excludedAt ? ", left out of the books" : ""}
+            </Field>
+            {s.which === "hand" && (
+              <Field label="Marked paid">
+                {s.row.depositPaid ? `Deposit ${usd(Math.round(Number(s.row.deposit) * 100) || 0)}${s.row.depositPaidOn ? ` on ${str(s.row.depositPaidOn)}` : " (date not recorded)"}` : "Deposit not marked"}
+                {s.row.balancePaid ? `; balance${s.row.balancePaidOn ? ` on ${str(s.row.balancePaidOn)}` : " (date not recorded)"}` : ""}. Cash and checks stay in Undeposited funds until the bank deposit is matched to this booking.
+              </Field>
+            )}
             <div className="sm:col-span-2">
               {jobLine && (
                 <Link href={`/app/books/accounts/${jobLine.accountId}?sub=${encodeURIComponent(jobLine.sub!)}`} className="text-sm font-semibold text-terracotta underline">

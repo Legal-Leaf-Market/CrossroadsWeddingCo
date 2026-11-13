@@ -131,6 +131,7 @@ job costs, 6990 Uncategorized expense (receipts).
 | 8. Reimbursement paid (after payout approval) | Reimbursements payable | Cash |
 | 9. Job cancelled | Deferred revenue (payments kept) / Cost of revenue (prepaid written off) | Event revenue / Prepaid job costs |
 | 10. Anything not tied to a job | As before: the bank line against its category | |
+| 11. Deposit or balance marked paid by hand (cash, check), not matched from the bank | 1050 Undeposited funds | Deferred revenue (on or before the event) / Accounts receivable (after) |
 
 Job cost = each cost-plan line's paid (actual) amount, else its planned cost (an estimate,
 trued up as a change in estimate), plus job-linked receipts dated on or before the event.
@@ -207,6 +208,18 @@ report at `/app/books/tie-out`, vendors link each 1099 payment to its entry. CSV
 `/api/app/books/export?report=trial-balance|subledgers|audit-log`. The job costing page
 (`/admin/[key]/jobs`) reads its balances from the ledger by key and states whether it ties.
 Checked by `scripts/verify-subledger.mjs`.
+
+### Bookings into the books (2026-11-13, "make sure our bookings convert over correctly")
+- **Hand-paid money is a source** (rule 11): `hand_deposit:<booking>` and `hand_balance:<booking>`,
+  amounts by the same rule as `creditFor`, keyed to the job, counted as collected for revenue
+  recognition. Dated the day the box was ticked (`weddings.deposit_paid_on`/`balance_paid_on`,
+  recorded from 2026-11-13); boxes ticked earlier post on the booking's date (deposit) or the day
+  after the event (balance), and the memo says "date assumed". When the bank deposit is matched to
+  the booking, the hand-paid amount drops and the bank line carries the payment: no double count.
+  1050 is a control account (by job) and "deposit and match before close" stays a hard blocker.
+- **Not a real job**: the owner can leave a test booking out of the books from the job costing
+  page (`weddings.books_excluded_at`, reason required, audited, refused while bank lines or
+  approved receipts are tied to it). Its entries void; it can be put back.
 
 ### Open items
 Stripe clearing account (card payments arrive net of fees); customer credits for overpayment;

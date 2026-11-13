@@ -15,6 +15,7 @@
 // ── Accounts the accrual rules post to (system accounts, per tenant) ────────
 
 export const ACCRUAL_ACCOUNTS = {
+  undeposited_funds: { code: "1050", name: "Undeposited funds (cash and checks)", type: "asset" },
   accounts_receivable: { code: "1100", name: "Accounts receivable", type: "asset" },
   prepaid_job_costs: { code: "1300", name: "Prepaid job costs", type: "asset" },
   deferred_revenue: { code: "2300", name: "Deferred revenue (client deposits)", type: "liability" },
@@ -36,7 +37,7 @@ export type AccrualKey = keyof typeof ACCRUAL_ACCOUNTS;
 export type Line = { accountId: string; debitCents: number; creditCents: number; sub?: string | null };
 
 /** The accounts whose lines carry the job's key: the four control accounts plus its revenue and direct cost. */
-export const JOB_DIMENSION: AccrualKey[] = ["accounts_receivable", "prepaid_job_costs", "deferred_revenue", "accrued_job_costs", "job_revenue", "job_costs"];
+export const JOB_DIMENSION: AccrualKey[] = ["undeposited_funds", "accounts_receivable", "prepaid_job_costs", "deferred_revenue", "accrued_job_costs", "job_revenue", "job_costs"];
 
 export const jobSub = (bookingId: string) => `job:${bookingId}`;
 export const crewSub = (crewMemberId: string) => `crew:${crewMemberId}`;
@@ -298,6 +299,79 @@ export function payoutEntry(
   }
   if (paid > covered) lines.push({ accountId: rp, debitCents: paid - covered, creditCents: 0, sub: people.length === 1 ? people[0] : null });
   return { date: line.postedDate, memo: line.memo, lines: tidy(lines) };
+}
+
+// ── Payments marked paid by hand (2026-11-13) ────────────────────────────────
+// Deposits are cash and check for now, marked paid by hand on the booking. That
+// money is real, so it is a source: Dr 1050 Undeposited funds / Cr the job's
+// deferred revenue (on or before the event) or receivable (after), keyed to the
+// job. When the deposit is matched from the bank, the hand-paid amount drops to
+// zero, this entry goes away (a dated correction once its month is closed) and
+// the bank line carries the payment instead. "Always deposit and match before
+// close" still holds: 1050 not at zero is a hard blocker.
+
+export type HandPart = { date: string; cents: number; assumed: boolean };
+
+const nextDay = (d: string) => {
+  const t = new Date(`${d}T12:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + 1);
+  return t.toISOString().slice(0, 10);
+};
+const notAfter = (d: string, today: string) => (d > today ? today : d);
+
+/**
+ * How much of a booking was paid outside the bank, and when. Same rule as
+ * creditFor (lib/books/logic.ts): a deposit marked paid with no deposit
+ * matched from the bank was paid in cash or check; a booking marked paid in
+ * full owes nothing, so whatever the bank didn't bring in came by hand. Dates
+ * are the day the box was ticked; for boxes ticked before that was recorded,
+ * the booking's own date for a deposit and the day after the event for a
+ * balance, each marked as assumed.
+ */
+export function handPayments(
+  b: {
+    totalCents: number;
+    depositCents: number;
+    isDepositPaid: boolean;
+    isBalancePaid: boolean;
+    /** Money in matched from the bank (live lines). */
+    bankCents: number;
+    bankDepositLines: number;
+    createdOn: string;
+    eventDate: string;
+    depositPaidOn: string | null;
+    balancePaidOn: string | null;
+  },
+  today: string,
+): { deposit: HandPart | null; balance: HandPart | null } {
+  const dep = b.isDepositPaid && b.bankDepositLines === 0 ? Math.max(0, Math.min(b.depositCents, b.totalCents)) : 0;
+  const bal = b.isBalancePaid ? Math.max(0, b.totalCents - b.bankCents - dep) : 0;
+  const balanceAssumed = b.eventDate <= today ? nextDay(b.eventDate) : b.createdOn;
+  return {
+    deposit: dep > 0 ? { date: notAfter(b.depositPaidOn ?? b.createdOn, today), cents: dep, assumed: !b.depositPaidOn } : null,
+    balance: bal > 0 ? { date: notAfter(b.balancePaidOn ?? balanceAssumed, today), cents: bal, assumed: !b.balancePaidOn } : null,
+  };
+}
+
+/** The entry for one hand-paid part: cash on hand against the job's contract liability or receivable. */
+export function handPaymentEntry(
+  part: HandPart | null,
+  kind: "deposit" | "balance",
+  job: { id: string; eventDate: string; cancelled: boolean },
+  name: string,
+  acct: Record<AccrualKey, string>,
+): Desired {
+  if (!part || part.cents <= 0) return null;
+  const other = acct[matchedBankAccount({ amountCents: part.cents, postedDate: part.date }, job)];
+  return withSub(
+    {
+      date: part.date,
+      memo: `${kind === "deposit" ? "Deposit" : "Balance"} paid by hand, not yet deposited (${name})${part.assumed ? ", date assumed" : ""}`,
+      lines: pair(acct.undeposited_funds, other, part.cents),
+    },
+    [acct.undeposited_funds, other],
+    jobSub(job.id),
+  );
 }
 
 // ── Live sync with a hard cutoff ─────────────────────────────────────────────

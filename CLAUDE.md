@@ -1476,3 +1476,13 @@ decisions absorbed from it:
   confirmations, hub links and message pointers all failed. Fixed: crossroadsweddingco.shop added
   in Resend (account jacobkennedy.47201), and Netlify DNS gained `resend._domainkey` (TXT, DKIM)
   plus `send` and `rsend` CNAMEs to `*.forge.rmta.net`. Proton's MX, SPF and DMARC are untouched.
+- **Bookings convert into the books correctly (2026-11-13, Jake: "make sure our bookings convert
+  over correctly").** The first production sync recognized every past booking, test bookings
+  included ($13,900 of receivables, mostly tests), and left out every deposit marked paid by hand
+  (no bank is connected). Now a hand-paid deposit or balance posts to 1050 Undeposited funds
+  against the job (rule 11 in FINANCIALS_SPEC), dated the day the box is ticked
+  (`deposit_paid_on`/`balance_paid_on`) or on a stated assumed date for older flags, and gives way
+  to the bank line once the deposit is matched. Test bookings are left out with "Not a real job?"
+  on `/admin/[key]/jobs` (reason, audit, put back any time; refused while real money is tied to
+  the booking). Excluded bookings also drop out of Money and the close blockers. The close page
+  now opens on the oldest open month. `verify-subledger.mjs` grew to 54 checks.

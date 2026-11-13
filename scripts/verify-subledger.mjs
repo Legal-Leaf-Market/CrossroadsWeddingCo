@@ -11,6 +11,8 @@ import {
   closeBlockers,
   compactFingerprint,
   fingerprint,
+  handPaymentEntry,
+  handPayments,
   jobEntries,
   keyedClaimEntry,
   matchedBankEntry,
@@ -33,9 +35,10 @@ function check(label, got, want) {
   }
 }
 
-const A = { accounts_receivable: "AR", prepaid_job_costs: "PRE", deferred_revenue: "DEF", accrued_job_costs: "ACC", reimbursements_payable: "RP", job_revenue: "REV", job_costs: "COGS", uncategorized_expense: "UNC" };
+const A = { undeposited_funds: "UND", accounts_receivable: "AR", prepaid_job_costs: "PRE", deferred_revenue: "DEF", accrued_job_costs: "ACC", reimbursements_payable: "RP", job_revenue: "REV", job_costs: "COGS", uncategorized_expense: "UNC" };
 const ACCOUNTS = [
   { id: "CASH", code: "1010", name: "Checking", type: "asset", systemKey: null },
+  { id: "UND", code: "1050", name: "Undeposited funds", type: "asset", systemKey: "undeposited_funds" },
   { id: "AR", code: "1100", name: "Accounts receivable", type: "asset", systemKey: "accounts_receivable" },
   { id: "PRE", code: "1300", name: "Prepaid job costs", type: "asset", systemKey: "prepaid_job_costs" },
   { id: "DEF", code: "2300", name: "Deferred revenue", type: "liability", systemKey: "deferred_revenue" },
@@ -174,8 +177,8 @@ sync(journal, sources);
 check("a second sync is a no-op (keys are stable)", journal.length, again);
 
 const tie = tieOut(sums(journal), ACCOUNTS);
-check("tie-out: every control account ties to its subledger", tie.map((r) => [r.code, r.difference]), [["1100", 0], ["1300", 0], ["2300", 0], ["2400", 0], ["2500", 0]]);
-check("tie-out: control balances are the ledger's balances", tie.map((r) => r.control), ["AR", "PRE", "DEF", "ACC", "RP"].map((id) => ledgerBalance(journal, id)));
+check("tie-out: every control account ties to its subledger", tie.map((r) => [r.code, r.difference]), [["1050", 0], ["1100", 0], ["1300", 0], ["2300", 0], ["2400", 0], ["2500", 0]]);
+check("tie-out: control balances are the ledger's balances", tie.map((r) => r.control), ["UND", "AR", "PRE", "DEF", "ACC", "RP"].map((id) => ledgerBalance(journal, id)));
 check("2500 by person: Nic paid back in full, Jake still owed", tie.find((r) => r.code === "2500").parties, [{ sub: "crew:JAKE", balance: 2500 }]);
 
 const balancesByJob = jobBalances(sums(journal), ACCOUNTS);
@@ -226,6 +229,51 @@ check("closed month: after the reclassification 2300 ties", tieOut(sums(closed),
 const n = closed.length;
 sync(closed, src1, (d) => d.startsWith("2026-06"));
 check("closed month: the reclassification is not repeated", closed.length, n);
+
+
+// ── Payments marked paid by hand (cash and check) ───────────────────────────
+const base = { totalCents: 100000, depositCents: 50000, isDepositPaid: true, isBalancePaid: false, bankCents: 0, bankDepositLines: 0, createdOn: "2026-08-20", eventDate: "2027-05-01", depositPaidOn: null, balancePaidOn: null };
+check("hand deposit, date not recorded: the booking's date, marked assumed", handPayments(base, T), { deposit: { date: "2026-08-20", cents: 50000, assumed: true }, balance: null });
+check("hand deposit with its recorded date", handPayments({ ...base, depositPaidOn: "2026-09-02" }, T).deposit, { date: "2026-09-02", cents: 50000, assumed: false });
+check("deposit matched from the bank: nothing by hand", handPayments({ ...base, bankCents: 50000, bankDepositLines: 1 }, T), { deposit: null, balance: null });
+check("paid in full by hand on a held event: balance dated the day after, assumed", handPayments({ ...base, isBalancePaid: true, eventDate: "2026-11-07" }, T).balance, { date: "2026-11-08", cents: 50000, assumed: true });
+check("paid in full, part through the bank: only the rest came by hand", handPayments({ ...base, isDepositPaid: false, isBalancePaid: true, bankCents: 30000, eventDate: "2026-11-07" }, T), { deposit: null, balance: { date: "2026-11-08", cents: 70000, assumed: true } });
+check("an assumed date never lands after today", handPayments({ ...base, isBalancePaid: true, eventDate: T }, T).balance.date, T);
+check("a deposit bigger than the quote is capped at the quote", handPayments({ ...base, totalCents: 30000 }, T).deposit.cents, 30000);
+check("nothing marked: nothing posts", handPayments({ ...base, isDepositPaid: false }, T), { deposit: null, balance: null });
+const he = handPaymentEntry({ date: "2026-08-20", cents: 50000, assumed: true }, "deposit", { id: "H", eventDate: "2027-05-01", cancelled: false }, "Next year couple", A);
+check("hand deposit before the event: Dr undeposited funds / Cr deferred revenue, both keyed to the job", he.lines, [{ accountId: "UND", debitCents: 50000, creditCents: 0, sub: "job:H" }, { accountId: "DEF", debitCents: 0, creditCents: 50000, sub: "job:H" }]);
+check("the memo says the date was assumed", he.memo.endsWith("date assumed"), true);
+
+// A future booking with a cash deposit, and a held one paid in full by hand (a trade deal).
+function handBook(bankMatched) {
+  const src = [];
+  const H = { id: "H", eventDate: "2027-05-01", cancelled: false, cancelledOn: null, totalCents: 100000 };
+  const K = { id: "K", eventDate: "2026-11-07", cancelled: false, cancelledOn: null, totalCents: 30000 };
+  const hh = handPayments({ ...base, bankCents: bankMatched ? 50000 : 0, bankDepositLines: bankMatched ? 1 : 0 }, T);
+  const kk = handPayments({ ...base, totalCents: 30000, depositCents: 30000, isBalancePaid: true, eventDate: "2026-11-07", createdOn: "2026-08-28" }, T);
+  if (bankMatched) src.push({ ref: "bank_transaction:dep", desired: matchedBankEntry({ amountCents: 50000, postedDate: "2026-11-12", memo: "deposit" }, H, "CASH", A) });
+  for (const [job, hp] of [[H, hh], [K, kk]]) {
+    const pays = [];
+    for (const kind of ["deposit", "balance"]) {
+      if (hp[kind]) pays.push({ date: hp[kind].date, cents: hp[kind].cents });
+      src.push({ ref: `hand_${kind}:${job.id}`, desired: handPaymentEntry(hp[kind], kind, job, job.id, A) });
+    }
+    if (bankMatched && job.id === "H") pays.push({ date: "2026-11-12", cents: 50000 });
+    const e = jobEntries({ ...job, payments: pays, prepaid: [], costCents: 0 }, job.id, job.id, A, T);
+    src.push({ ref: `job_revenue:${job.id}`, desired: e.revenue }, { ref: `job_cost:${job.id}`, desired: e.cost });
+  }
+  return src;
+}
+const hj = sync([], handBook(false));
+const ht = tieOut(sums(hj), ACCOUNTS);
+const hb = jobBalances(sums(hj), ACCOUNTS);
+check("cash deposit for next year: in undeposited funds and deferred revenue, ties", [hb.get("H").undeposited, hb.get("H").deferredRevenue, tieOutDifferences(ht)], [50000, 50000, 0]);
+check("trade deal paid in full by hand: revenue earned, nothing receivable, cash on hand", [hb.get("K").revenue, hb.get("K").receivable, hb.get("K").deferredRevenue, hb.get("K").undeposited], [30000, 0, 0, 30000]);
+sync(hj, handBook(true));
+const hb2 = jobBalances(sums(hj), ACCOUNTS);
+check("the deposit gets matched from the bank: the hand entry goes, the bank carries it, no double count", [hb2.get("H").undeposited, hb2.get("H").deferredRevenue, ledgerBalance(hj, "CASH")], [0, 50000, 50000]);
+check("and the books still tie", tieOutDifferences(tieOut(sums(hj), ACCOUNTS)), 0);
 
 // ── Registers ───────────────────────────────────────────────────────────────
 const reg = register("liability", 1000, [

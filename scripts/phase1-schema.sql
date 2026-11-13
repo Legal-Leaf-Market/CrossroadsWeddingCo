@@ -1316,3 +1316,17 @@ CREATE TRIGGER audit_log_no_truncate BEFORE TRUNCATE ON audit_log
 -- closed month gets a dated reclassification instead.
 ALTER TABLE journal_lines ADD COLUMN IF NOT EXISTS sub_ref VARCHAR(80);
 CREATE INDEX IF NOT EXISTS idx_journal_lines_sub ON journal_lines (tenant_id, account_id, sub_ref);
+
+-- ── Bookings into the books, correctly (2026-11-13, Jake: "make sure our
+-- bookings convert over correctly") ────────────────────────────────────────
+-- A deposit or balance marked paid by hand is real money (cash and check for
+-- now): it posts to 1050 Undeposited funds against the job until the bank
+-- deposit is matched. These record the day each box was ticked; NULL for
+-- boxes ticked before today, which post on a stated assumed date.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS deposit_paid_on DATE;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS balance_paid_on DATE;
+-- A booking that was never a real job (a test) is left out of the books by
+-- the owner, with a reason, audited. Nothing is deleted; it can be put back.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_at TIMESTAMPTZ;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_reason TEXT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_by VARCHAR(255);
