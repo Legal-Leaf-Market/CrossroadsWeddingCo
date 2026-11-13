@@ -1096,6 +1096,23 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   approved from `/admin/[key]/reviews` like every note, shown on that page only and
   excluded from `/reviews`. Share uses the Web Share API with a copy-link fallback.
 
+- **Owner dashboard becomes a command center (2026-11-13, Jake: "can we ramp this the hell
+  up?").** `/admin/[key]` now opens on what needs doing instead of a flat list. Four money
+  tiles (booked ahead, still to collect with collected so far, past due, pipeline), a ranked
+  "Do this next" list, a 12-month bar strip (booked solid, inquiries dashed) and the year's
+  pacing against `WEDDINGS_PER_YEAR_CAP` (24, `lib/site.ts`; corporate nights excluded, a
+  pace not a lock). A sticky jump bar (Today, Upcoming, Ready?, Calls, Sources, Past, unread
+  count) and a header row linking the ERP pages (Money, Books, Transactions, Vendors) and the
+  owner tools. Upcoming moved up to sit right under the command center. All logic is pure in
+  `lib/admin-insights.ts` and takes `today` (venue time zone): booked = deposit in or status
+  moved past inquiry; a balance is past due from the day after the event (the 24-hours-after
+  rule); cancelled rows count nowhere. Actions, in order: Now (unread messages, past-due
+  balances, agreements waiting on our signature, deposits within 60 days, unsigned agreement
+  within 30 days), Soon (missing email, far deposits and signatures), Heads up (booked events
+  within 14 days, intro calls today or tomorrow by local date). First 8 show, the rest fold.
+  Verify: `node --experimental-strip-types scripts/verify-admin-insights.mjs` (24 checks).
+  Measured on `/admin/preview` at 360/390/768/1280: no sideways scroll.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:
