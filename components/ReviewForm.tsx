@@ -7,7 +7,23 @@ const field =
   "w-full rounded-lg border border-parchment bg-white px-4 py-2.5 text-ink placeholder:text-ink/40 focus:border-terracotta focus:outline-none";
 
 /** The public sign-the-board form. Name and a note; no email, no login. */
-export default function ReviewForm({ eventSlug }: { eventSlug?: string } = {}) {
+export default function ReviewForm({
+  eventSlug,
+  relations = RELATIONS,
+  relationLabel = "You're writing about",
+  defaultRelation,
+  submitLabel = "Sign the board",
+  thanks = "We read every note before it goes up, so yours will show here once one of us has seen it.",
+  noteLabel = "Your note",
+}: {
+  eventSlug?: string;
+  relations?: readonly string[];
+  relationLabel?: string;
+  defaultRelation?: string;
+  submitLabel?: string;
+  thanks?: string;
+  noteLabel?: string;
+} = {}) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState("");
 
@@ -46,7 +62,7 @@ export default function ReviewForm({ eventSlug }: { eventSlug?: string } = {}) {
       <div className="rounded-2xl border border-parchment bg-white p-6" role="status">
         <h3 className="text-xl text-charcoal">Thank you. We got it.</h3>
         <p className="mt-2 text-ink/70">
-          We read every note before it goes up, so yours will show here once one of us has seen it.
+          {thanks}
         </p>
       </div>
     );
@@ -60,16 +76,16 @@ export default function ReviewForm({ eventSlug }: { eventSlug?: string } = {}) {
           <input id="rv-name" name="name" required maxLength={80} autoComplete="name" className={field} />
         </label>
         <label className="grid gap-1 text-sm font-semibold text-charcoal" htmlFor="rv-relation">
-          You&apos;re writing about
-          <select id="rv-relation" name="relation" defaultValue="Our wedding" className={field}>
-            {RELATIONS.map((r) => (
+          {relationLabel}
+          <select id="rv-relation" name="relation" defaultValue={defaultRelation ?? relations[0]} className={field}>
+            {relations.map((r) => (
               <option key={r}>{r}</option>
             ))}
           </select>
         </label>
       </div>
       <label className="grid gap-1 text-sm font-semibold text-charcoal" htmlFor="rv-message">
-        Your note
+        {noteLabel}
         <textarea id="rv-message" name="message" required minLength={2} maxLength={2000} rows={5} className={field} />
       </label>
       {/* Honeypot: hidden from people and screen readers, filled by bots. */}
@@ -90,7 +106,7 @@ export default function ReviewForm({ eventSlug }: { eventSlug?: string } = {}) {
         disabled={status === "sending"}
         className="justify-self-start rounded-full bg-terracotta px-6 py-3 text-sm font-semibold text-cream hover:bg-terracotta-dark disabled:opacity-60"
       >
-        {status === "sending" ? "Sending..." : "Sign the board"}
+        {status === "sending" ? "Sending..." : submitLabel}
       </button>
     </form>
   );

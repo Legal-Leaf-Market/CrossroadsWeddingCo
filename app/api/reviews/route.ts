@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { Resend } from "resend";
 import { createEntry } from "@/lib/reviews";
-import { RELATIONS, findReviewEvent } from "@/lib/review-constants";
+import { RELATIONS, TRIBUTE_RELATIONS, findReviewEvent, isTributeSlug } from "@/lib/review-constants";
 import { EMAIL_FROM_ADDRESS, OWNER_EMAIL, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const runtime = "nodejs";
@@ -30,7 +30,7 @@ function limited(ip: string): boolean {
 
 const schema = z.object({
   name: z.string().trim().min(1, "Add your name so people know who wrote it").max(80),
-  relation: z.enum(RELATIONS).optional().default("Other"),
+  relation: z.enum([...RELATIONS, ...TRIBUTE_RELATIONS.filter((r) => !(RELATIONS as readonly string[]).includes(r))] as [string, ...string[]]).optional().default("Other"),
   message: z.string().trim().min(2, "Write a few words first").max(2000, "Keep it under 2,000 characters"),
   website: z.string().optional().default(""),
   eventSlug: z.string().max(80).optional(),
@@ -55,8 +55,9 @@ export async function POST(req: NextRequest) {
   if (data.website) return NextResponse.json({ ok: true }, { headers: NO_STORE });
 
   try {
-    // Only a real event page slug is kept; anything else is dropped, never refused.
-    await createEntry({ name: data.name, relation: data.relation, message: data.message, eventSlug: findReviewEvent(data.eventSlug)?.slug ?? null });
+    // Only a real event page or tribute slug is kept; anything else is dropped, never refused.
+    const slug = findReviewEvent(data.eventSlug)?.slug ?? (isTributeSlug(data.eventSlug) ? data.eventSlug : null);
+    await createEntry({ name: data.name, relation: data.relation, message: data.message, eventSlug: slug });
   } catch (err) {
     console.error("[reviews] insert failed:", err);
     return NextResponse.json(

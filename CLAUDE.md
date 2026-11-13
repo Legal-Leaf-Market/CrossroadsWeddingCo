@@ -1087,6 +1087,15 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   Platform scoreboard: "Paying" counts active and past_due. Verified locally with signed
   test events (19 checks); the first real checkout against Stripe is the remaining proof.
 
+- **Back YOUR Blue tribute (2026-11-13, Jacob).** `/back-your-blue` is Jacob's tribute to his
+  father, Kevin Lee Kennedy (retired USAF, 21 years; turning 60 on November 16), and the first
+  look at a Heart of Columbus gratitude section, hosted here until heartofcolumbus.com is live.
+  Every fact is Jacob's own (see the page file's header); add nothing about rank, units or
+  dates of service. Its notes board is the moderated guestbook: rows tagged
+  `event_slug = 'back-your-blue'` (`TRIBUTE_SLUGS`), relations from `TRIBUTE_RELATIONS`,
+  approved from `/admin/[key]/reviews` like every note, shown on that page only and
+  excluded from `/reviews`. Share uses the Web Share API with a copy-link fallback.
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:

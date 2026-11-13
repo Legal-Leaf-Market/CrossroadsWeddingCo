@@ -9,6 +9,23 @@ export const RELATIONS = [
   "Other",
 ] as const;
 
+// Tribute pages (2026-11-13, Jacob: Back YOUR Blue). A tribute has its own
+// notes board: same moderated guestbook rows, tagged with the tribute's slug,
+// shown only on that page and never on /reviews (they are about a person, not
+// about our events). Add, never rename: the link is shared with family.
+export const TRIBUTE_SLUGS = ["back-your-blue"] as const;
+export const isTributeSlug = (s: string | null | undefined): s is (typeof TRIBUTE_SLUGS)[number] =>
+  !!s && (TRIBUTE_SLUGS as readonly string[]).includes(s);
+export const TRIBUTE_RELATIONS = [
+  "Family",
+  "Friend",
+  "Coworker",
+  "Church family",
+  "Fellow veteran",
+  "Neighbor",
+  "Other",
+] as const;
+
 export type ReviewMedia = {
   /** Path under public/, e.g. "/reviews/valle-vista-2026-10-17/first-dance.webp". */
   src: string;
