@@ -1486,3 +1486,19 @@ decisions absorbed from it:
   on `/admin/[key]/jobs` (reason, audit, put back any time; refused while real money is tied to
   the booking). Excluded bookings also drop out of Money and the close blockers. The close page
   now opens on the oldest open month. `verify-subledger.mjs` grew to 54 checks.
+- **Sales pipeline, CRM accounts and commissions (2026-11-13, Jake: "can the playbook play into
+  like sales orders and such and be a direct pipeline into invoicing and CRM"; "commissions per
+  playbook deal per event commission direct and account management commissions ongoing").**
+  Terms (asked and answered): $100 flat to the closer per event, 5% ongoing to the account manager
+  on every later event from an account, earned on the event day and paid once the client has paid
+  in full, nothing on a cancellation. **Jake, Terry and Nic all earn commissions; they are all
+  owners** ("we need paychecks for living, and it is good incentive"; this replaced a first answer
+  of "owners split profit only" the same morning). Steven is benched: not on the crew, so he can't
+  be a closer. `/admin/[key]/sales`: the order form (account or a new one, closer, deposit), the
+  pipeline with stage, invoice and job plan links, commissions per person (owed in the books,
+  ready to pay, still ahead) and accounts with their manager. `crm_accounts` (no delete), and
+  sales fields on `weddings` that COPY the terms at sale time. The playbook (site copy) offers
+  "Make a sales order" on every lead card and after logging a booked deal, opening the form
+  filled in. Posting: rule 12 in FINANCIALS_SPEC (Dr 5100 / Cr 2600 by person on the event day).
+  NOT YET: paying commissions out from the bank (needs cash payout requests, handoff task 9).
+  `node --experimental-strip-types scripts/verify-sales.mjs` (20 checks).

@@ -132,6 +132,8 @@ job costs, 6990 Uncategorized expense (receipts).
 | 9. Job cancelled | Deferred revenue (payments kept) / Cost of revenue (prepaid written off) | Event revenue / Prepaid job costs |
 | 10. Anything not tied to a job | As before: the bank line against its category | |
 | 11. Deposit or balance marked paid by hand (cash, check), not matched from the bank | 1050 Undeposited funds | Deferred revenue (on or before the event) / Accounts receivable (after) |
+| 12. Event date, a sale's commission (closer $100; account manager 5% on later events from the account) | 5100 Sales commissions (the job) | 2600 Commissions payable (the person) |
+| 13. Commission paid out (once the client has paid in full; payout linking comes with cash payout requests) | 2600 Commissions payable | Cash |
 
 Job cost = each cost-plan line's paid (actual) amount, else its planned cost (an estimate,
 trued up as a change in estimate), plus job-linked receipts dated on or before the event.
@@ -221,7 +223,19 @@ Checked by `scripts/verify-subledger.mjs`.
   page (`weddings.books_excluded_at`, reason required, audited, refused while bank lines or
   approved receipts are tied to it). Its entries void; it can be put back.
 
+### Sales commissions (2026-11-13, owner's terms)
+$100 flat to whoever closes each event; 5% of the contract, ongoing, on every later event from an
+account to whoever manages it; earned on the event day (matched to the revenue as a job cost, so it
+comes out before the owners split), paid once the client has paid in full; nothing on a cancelled or
+test booking. Jake, Terry and Nic are all owners and all earn them. Terms are copied onto each
+sale (`weddings.closer_crew_id`, `account_manager_crew_id`, `commission_direct_cents`,
+`commission_mgmt_bps`), so changing a rate or a manager never rewrites a deal already made.
+Rules: `lib/sales-logic.ts`; posting: `commissionEntry` in `lib/books/accrual.ts`; 2600 is a
+control account by person. Checked by `scripts/verify-sales.mjs`.
+
 ### Open items
+Paying commissions out from the bank (rule 13) with the cash payout request approvals; for
+owners, commissions are likely guaranteed payments for tax (the accountant should confirm).
 Stripe clearing account (card payments arrive net of fees); customer credits for overpayment;
 Compass Events as its own division owned by Terry Winchester II, with an intercompany due
 to/from account while its money lands in Crossroads; materiality threshold for reopen vs

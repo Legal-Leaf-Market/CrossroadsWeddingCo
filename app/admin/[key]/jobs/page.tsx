@@ -104,6 +104,9 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
             <a href={`/admin/${key}/crew`} className="text-terracotta underline decoration-parchment underline-offset-2">
               Crew, pay and materials
             </a>
+            <a href={`/admin/${key}/sales`} className="text-terracotta underline decoration-parchment underline-offset-2">
+              Sales and commissions
+            </a>
           </div>
         </div>
       </header>

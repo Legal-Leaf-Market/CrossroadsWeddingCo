@@ -21,8 +21,10 @@ export const ACCRUAL_ACCOUNTS = {
   deferred_revenue: { code: "2300", name: "Deferred revenue (client deposits)", type: "liability" },
   accrued_job_costs: { code: "2400", name: "Accrued job costs", type: "liability" },
   reimbursements_payable: { code: "2500", name: "Reimbursements payable", type: "liability" },
+  commissions_payable: { code: "2600", name: "Commissions payable", type: "liability" },
   job_revenue: { code: "4500", name: "Event revenue", type: "income" },
   job_costs: { code: "5000", name: "Cost of revenue: job costs", type: "expense" },
+  sales_commissions: { code: "5100", name: "Cost of revenue: sales commissions", type: "expense" },
   uncategorized_expense: { code: "6990", name: "Uncategorized expense (receipts)", type: "expense" },
 } as const;
 export type AccrualKey = keyof typeof ACCRUAL_ACCOUNTS;
@@ -37,7 +39,7 @@ export type AccrualKey = keyof typeof ACCRUAL_ACCOUNTS;
 export type Line = { accountId: string; debitCents: number; creditCents: number; sub?: string | null };
 
 /** The accounts whose lines carry the job's key: the four control accounts plus its revenue and direct cost. */
-export const JOB_DIMENSION: AccrualKey[] = ["undeposited_funds", "accounts_receivable", "prepaid_job_costs", "deferred_revenue", "accrued_job_costs", "job_revenue", "job_costs"];
+export const JOB_DIMENSION: AccrualKey[] = ["undeposited_funds", "accounts_receivable", "prepaid_job_costs", "deferred_revenue", "accrued_job_costs", "job_revenue", "job_costs", "sales_commissions"];
 
 export const jobSub = (bookingId: string) => `job:${bookingId}`;
 export const crewSub = (crewMemberId: string) => `crew:${crewMemberId}`;
@@ -372,6 +374,30 @@ export function handPaymentEntry(
     [acct.undeposited_funds, other],
     jobSub(job.id),
   );
+}
+
+// ── Sales commissions (2026-11-13; terms in lib/sales-logic.ts) ──────────────
+// A commission is a direct cost of the event it was earned on, so it is matched
+// to that event's revenue: on the event date, Dr 5100 Sales commissions (keyed
+// to the job) / Cr 2600 Commissions payable (keyed to the person). Nothing
+// before the event, nothing for a cancelled one. Paid out later: Dr 2600 / Cr
+// cash, once the client has paid in full.
+
+export function commissionEntry(
+  c: { role: "closer" | "account_manager"; crewId: string; cents: number } | null,
+  job: { id: string; eventDate: string; cancelled: boolean },
+  name: string,
+  acct: Record<AccrualKey, string>,
+  today: string,
+): Desired {
+  if (!c || c.cents <= 0 || job.cancelled || job.eventDate > today) return null;
+  let d = withSub(
+    { date: job.eventDate, memo: `${c.role === "closer" ? "Closing commission" : "Account management commission"}: ${name}`, lines: pair(acct.sales_commissions, acct.commissions_payable, c.cents) },
+    [acct.sales_commissions],
+    jobSub(job.id),
+  );
+  d = withSub(d, [acct.commissions_payable], crewSub(c.crewId));
+  return d;
 }
 
 // ── Live sync with a hard cutoff ─────────────────────────────────────────────

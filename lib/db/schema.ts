@@ -207,6 +207,13 @@ export const weddings = pgTable(
     booksExcludedAt: timestamp("books_excluded_at", { withTimezone: true }),
     booksExcludedReason: text("books_excluded_reason"),
     booksExcludedBy: varchar("books_excluded_by", { length: 255 }),
+    /** Sales order fields (2026-11-13, lib/sales-logic.ts): the account that sent it, who closed it, who manages the account, and the commission terms copied at sale time. */
+    crmAccountId: uuid("crm_account_id"),
+    closerCrewId: uuid("closer_crew_id"),
+    accountManagerCrewId: uuid("account_manager_crew_id"),
+    commissionDirectCents: integer("commission_direct_cents"),
+    commissionMgmtBps: integer("commission_mgmt_bps"),
+    playbookLeadId: varchar("playbook_lead_id", { length: 100 }),
     status: eventStatus("status").notNull().default("inquiry"),
     assignedTalentId: uuid("assigned_talent_id").references(() => talentProfiles.id, {
       onDelete: "set null",
@@ -878,3 +885,21 @@ export const expenseClaims = pgTable(
   (t) => [index("idx_expense_claims_status").on(t.tenantId, t.status), index("idx_expense_claims_wedding").on(t.weddingId)],
 );
 export type ExpenseClaim = typeof expenseClaims.$inferSelect;
+
+// 17. CRM accounts (2026-11-13): who sends us work. lib/sales.ts
+export const crmAccounts = pgTable("crm_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  name: varchar("name", { length: 160 }).notNull(),
+  kind: varchar("kind", { length: 20 }).notNull().default("other"),
+  playbookLeadId: varchar("playbook_lead_id", { length: 100 }),
+  managerCrewId: uuid("manager_crew_id"),
+  contactName: varchar("contact_name", { length: 160 }).notNull().default(""),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull().default(""),
+  contactPhone: varchar("contact_phone", { length: 50 }).notNull().default(""),
+  notes: text("notes").notNull().default(""),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type CrmAccount = typeof crmAccounts.$inferSelect;

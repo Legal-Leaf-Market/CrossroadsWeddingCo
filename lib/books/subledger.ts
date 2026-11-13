@@ -165,7 +165,7 @@ export async function accountRegister(tenantId: string, accountId: string, opts:
 
 export type SourceView =
   | { kind: "bank_transaction"; id: string; row: Row | null }
-  | { kind: "job"; id: string; row: Row | null; which: "revenue" | "cost" | "hand" }
+  | { kind: "job"; id: string; row: Row | null; which: "revenue" | "cost" | "hand" | "commission" }
   | { kind: "expense_claim"; id: string; row: Row | null }
   | { kind: "opening_balance"; id: string; row: Row | null }
   | { kind: "other"; ref: string };
@@ -185,14 +185,14 @@ async function sourceRecord(tenantId: string, ref: string | null): Promise<Sourc
       where t.id = ${id}::uuid and t.tenant_id = ${tenantId}`);
     return { kind: "bank_transaction", id, row: row ?? null };
   }
-  if (type === "job_revenue" || type === "job_cost" || type === "hand_deposit" || type === "hand_balance") {
+  if (["job_revenue", "job_cost", "hand_deposit", "hand_balance", "commission_closer", "commission_mgmt"].includes(type)) {
     const [row] = await rows<Row>(sql`
       select id::text, couple_names as names, event_date::text as "eventDate", total_amount::text as total, status,
              cancelled_at as "cancelledAt", archived_at as "archivedAt", package_type as "packageType",
              deposit_amount::text as deposit, is_deposit_paid as "depositPaid", is_balance_paid as "balancePaid",
              deposit_paid_on::text as "depositPaidOn", balance_paid_on::text as "balancePaidOn", books_excluded_at as "excludedAt"
       from weddings where id = ${id}::uuid and tenant_id = ${tenantId}`);
-    return { kind: "job", id, row: row ?? null, which: type === "job_revenue" ? "revenue" : type === "job_cost" ? "cost" : "hand" };
+    return { kind: "job", id, row: row ?? null, which: type === "job_revenue" ? "revenue" : type === "job_cost" ? "cost" : type.startsWith("commission") ? "commission" : "hand" };
   }
   if (type === "expense_claim") {
     const [row] = await rows<Row>(sql`
@@ -216,7 +216,7 @@ function auditEntityFor(ref: string | null): { type: string; id: string }[] {
   const type = ref.slice(0, ref.indexOf(":"));
   const id = ref.slice(ref.indexOf(":") + 1);
   if (type === "bank_transaction") return [{ type: "bank_transaction", id }];
-  if (type === "job_revenue" || type === "job_cost" || type === "hand_deposit" || type === "hand_balance") return [{ type: "job", id }];
+  if (["job_revenue", "job_cost", "hand_deposit", "hand_balance", "commission_closer", "commission_mgmt"].includes(type)) return [{ type: "job", id }];
   if (type === "expense_claim") return [{ type: "expense_claim", id }];
   return [];
 }
