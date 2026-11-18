@@ -1246,6 +1246,25 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Site menu, past events, partners (2026-11-18, Jacob: "a side menu bar and a top menu bar
+  on desktop, side menu bar for mobile"; "past events, partners"; a page each for Cookie
+  Paradise and Rabbit's Balloons).** One list, `lib/nav.ts`: `TOP_LINKS` in the header bar
+  from lg (1024px), with `wide` links only from xl (1280px) because at 1024 six links
+  truncated the brand name; `MENU_SECTIONS` in `components/SideMenu.tsx`, a right drawer on
+  every width (88vw on a phone, 360px max). Two traps, both measured: the header's
+  `backdrop-blur` makes it the containing block for `fixed` children, so the drawer is a
+  portal on `<body>` (inside the header it was 64px tall and the hero ate the clicks); and a
+  closed drawer parked off screen by a transform widened every page by 360px until a fixed
+  `overflow-hidden` layer clipped it (its shadow also showed as a strip at the right edge, so
+  the shadow is only on while open). `/past-events` reads `REVIEW_EVENTS` newest first;
+  `cover` picks the card photo where the first image names the couple (Forge's welcome
+  sign). `/partners` and `/partners/[slug]` read `lib/partners.ts`: only what each business
+  says about itself, with source and date (Cookie Paradise from cookieparadise.co, read
+  2026-11-13; Rabbit's Balloons from its owner, Rachael Starr, 2026-11-15, no public site,
+  phone or prices yet, so the way in is our inbox). The Rabbit's image is our inspiration art
+  from the Heart of Columbus draft site, captioned as not her work. Measured at
+  360/390/768/1024/1280/1440: no sideways scroll, drawer full height, Escape closes, focus
+  returns to the Menu button.
 - **Phase 3, sixth slice (2026-09-04): native intro-call booking with office hours.**
   Replaces the unset `NEXT_PUBLIC_BOOKING_URL` Calendly hole, and it is what the QR
   code on every printed business card resolves to: `/book?with=<slug>` for jake, nic,
