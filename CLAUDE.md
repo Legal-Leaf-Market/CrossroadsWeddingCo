@@ -1246,6 +1246,17 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Partner pages, deeper (2026-11-18, Jacob: "work way harder on the rabbits, balloons and
+  cookie paradise pages ... an MD for chat to research and make better").** Cookie Paradise
+  shows its live menu, read server-side from its public Shopify `/products.json`
+  (`lib/partner-menu.ts`, in-stock only, names and prices and links, no photos until they
+  give permission), with the page on a six-hour ISR revalidate; if their store does not
+  answer, the section does not render. Rabbit's Balloons gains how a project runs, her
+  stated low-waste practices and her own caveat, all from what Rachael Starr told Heart of
+  Columbus for her draft site; her "Why Rabbit?" story is NOT quoted until she says so.
+  Both pages get a "what to have ready" list (ours, not their policy) and cross-links.
+  `docs/handoff/PARTNERS_RESEARCH.md` is the ChatGPT brief: what is verified, what to
+  research, owner-outreach drafts, and a fixed return format with source and date per fact.
 - **Site menu, past events, partners (2026-11-18, Jacob: "a side menu bar and a top menu bar
   on desktop, side menu bar for mobile"; "past events, partners"; a page each for Cookie
   Paradise and Rabbit's Balloons).** One list, `lib/nav.ts`: `TOP_LINKS` in the header bar
