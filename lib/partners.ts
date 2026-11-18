@@ -9,7 +9,11 @@
 // src/data/own-facts.mjs). The owner asked to cross promote the wedding page.
 // Rabbit's Balloons: from its owner, Rachael Starr, 2026-11-15. It has no
 // public website yet (her draft is under review), so no address, phone or
-// prices are shown, and the way in is through us.
+// prices are shown, and the way in is through us. Her steps and practices are
+// what she told Heart of Columbus for her draft site (under her review), kept
+// to plain statements; her personal story waits for her OK to quote. The
+// "ask" lists are ours: questions a couple should bring, not their policies.
+// docs/handoff/PARTNERS_RESEARCH.md is the brief for researching the rest.
 
 import { CONTACT_EMAIL } from "@/lib/site";
 
@@ -26,7 +30,17 @@ export type Partner = {
   links: { label: string; href: string; primary?: boolean }[];
   /** Art we made, never a photo of their work unless they sent it. */
   art?: { src: string; alt: string; caption: string };
-  related?: { name: string; about: string };
+  related?: { name: string; about: string; href?: string };
+  /** How a job runs, in the order they told us. */
+  steps?: { title: string; body: string }[];
+  /** Practices they describe, each a plain statement. */
+  practices?: { title: string; body: string }[];
+  /** A limit they state themselves, shown as written. */
+  caveat?: string;
+  /** Read their public Shopify catalog for a live "on the menu now" list. */
+  liveMenu?: { origin: string };
+  /** Questions to bring when you contact them (ours, not theirs). */
+  ask?: string[];
   source: string;
   checked: string;
 };
@@ -55,6 +69,13 @@ export const PARTNERS: Partner[] = [
       { label: "Corporate catering", href: "https://cookieparadise.co/pages/corporate-catering" },
       { label: "Their website", href: "https://cookieparadise.co/" },
     ],
+    liveMenu: { origin: "https://cookieparadise.co" },
+    ask: [
+      "Your date, the venue and whether it is indoors or outdoors.",
+      "Guest count, and whether you want a dessert table, favors, or both.",
+      "Whether the trailer can come to your venue, and what it needs (space, power, time).",
+      "Which flavors suit the season: their menu changes through the year.",
+    ],
     source: "https://cookieparadise.co/pages/contact",
     checked: "2026-11-13",
   },
@@ -77,7 +98,26 @@ export const PARTNERS: Partner[] = [
       alt: "Illustration of an organic balloon arch in soft pastel colors",
       caption: "Inspiration art, not a photo of a Rabbit's Balloons install. Rachael's own photos replace it when she sends them.",
     },
-    related: { name: "Turtle's Flowers", about: "its sister business, an artisan florist in Columbus" },
+    related: { name: "Turtle's Flowers", about: "its sister business, an artisan florist in Columbus", href: "https://www.turtlesflowers.com/" },
+    steps: [
+      { title: "Tell her the vibe", body: "Date, venue, colors and the feeling you want people to walk into. A photo, a mood board or three words all work." },
+      { title: "Get a design and a quote", body: "A sketch of the install and a clear price before a single balloon is ordered." },
+      { title: "Setup, on time", body: "Installed and finished before your guests arrive." },
+      { title: "Breakdown, low waste", body: "When it is over, it comes down. What can be reused is reused, and the rest goes out the least wasteful way she can find." },
+    ],
+    practices: [
+      { title: "All natural latex", body: "Premium natural latex balloons from Sempertex." },
+      { title: "Minimal plastics", body: "Far less plastic than a typical party store balloon, and the plastic there is gets salvaged." },
+      { title: "Reuse everything", body: "If a piece can go again, it goes again." },
+      { title: "Fewer pops", body: "Cheap store balloons used to pop on her about one in three while she built. With Sempertex she builds a whole arch without losing one." },
+    ],
+    caveat: "Natural latex is not the same as compostable, and she does not pretend it is.",
+    ask: [
+      "Your date, venue and setup window (when the room opens to vendors and when guests arrive).",
+      "Where it goes: ceremony arch, photo backdrop, dessert table garland, entrance columns.",
+      "Your colors, or a photo of your flowers or invitation.",
+      "Whether it is indoors or outdoors, since heat, sun and wind change what holds up.",
+    ],
     source: "Rachael Starr, owner",
     checked: "2026-11-15",
   },
