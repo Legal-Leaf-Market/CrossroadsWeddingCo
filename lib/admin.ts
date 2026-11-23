@@ -207,6 +207,49 @@ export async function countersignContract(
   return "already_signed";
 }
 
+/**
+ * Undo the couple's acceptance, for when it was typed by someone other than the
+ * couple (2026-11-23: signed by mistake from the admin side while viewing their
+ * hub). Clears only the couple's side so the accept box comes back in their hub;
+ * the company's signature stays, since signing first is allowed. The cleared
+ * name, time and frozen terms go into the audit log, so nothing is lost.
+ */
+export async function clearClientSignature(
+  weddingId: string,
+): Promise<"ok" | "not_signed" | "not_found"> {
+  const w = await getAdminWeddingRow(weddingId);
+  if (!w) return "not_found";
+  if (!w.contractAcceptedAt) return "not_signed";
+  const updated = await db
+    .update(weddings)
+    .set({
+      contractVersion: null,
+      contractAcceptedAt: null,
+      contractAcceptedName: null,
+      contractSnapshot: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(weddings.id, weddingId), isHouse, isNotNull(weddings.contractAcceptedAt)))
+    .returning({ id: weddings.id });
+  if (updated.length === 0) return "not_signed";
+  await auditQuietly({
+    tenantId: HOUSE_TENANT_ID,
+    actor: "owner dashboard",
+    action: "contract.client_signature_cleared",
+    entityType: "job",
+    entityId: weddingId,
+    before: {
+      contractVersion: w.contractVersion,
+      contractAcceptedAt: w.contractAcceptedAt.toISOString(),
+      contractAcceptedName: w.contractAcceptedName,
+      contractSnapshot: w.contractSnapshot,
+    },
+    after: null,
+    reason: "Client signature cleared from the admin agreement page so the couple can sign it themselves.",
+  });
+  return "ok";
+}
+
 export async function getAdminData(): Promise<AdminData> {
   const [allWeddings, recentLeads, unreadRows, callRows] = await Promise.all([
     db.select().from(weddings).where(and(isHouse, isNull(weddings.archivedAt))).orderBy(weddings.eventDate),
