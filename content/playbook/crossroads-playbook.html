@@ -164,6 +164,7 @@ a{color:var(--accent)}
 .treach{font-size:14px;margin:2px 0 0;overflow-wrap:anywhere}
 .tlog{font-size:12px;color:var(--muted);margin:0}
 .lead{scroll-margin-top:110px}
+.hoc{margin:8px 0 0;font-size:14px}
 .lead .close{margin-left:auto}
 .empty .btn{margin-left:8px}
 @media (prefers-reduced-motion:reduce){.tile{transition:none}.tile:hover{transform:none}}
@@ -957,6 +958,14 @@ const STARS={"andrew-sutherland":[4, "Personal connection: Jake worked for him, 
 const STAR_DEFAULT={columbus:[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],chamber:[1,"Member listing only. No event or contact info beyond the main line."],network:[2,"Referral ask. They hear about events but don't plan them."],linkedin:[2,"A cold LinkedIn message."],venue:[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],event:[2,"A dated event, need not confirmed."],partner:[3,"Partner."]};
 function starsOf(l){const e=log[l.id]||{};const n=+e.stars;if(n>=1&&n<=5)return {n,why:e.starWhy||"",by:e.starBy||e.by||"",mine:true};const d=STARS[l.id]||STAR_DEFAULT[l.sec]||[2,""];return {n:d[0],why:d[1],mine:false}}
 const starTxt=n=>"\u2605".repeat(n)+"\u2606".repeat(5-n);
+// Heart of Columbus (Jacob's Columbus directory) already has a page for some of these leads (2026-11-23, Jacob:
+// "if you find any of these Columbus pages on the Heart of Columbus repo, link in their page and site").
+// HOC: lead id -> [path on Heart of Columbus, label when the page is a guide rather than the business's own
+// listing, the business's own website as Heart of Columbus lists it].
+const HOC_ORIGIN="https://heartofcolumbus.netlify.app/";
+const HOC={"ryan-furr-creative":["b/ryan-furr-creative/","","http://www.ryanfurr.com/"],"forge-on-4th":["b/the-forge-english-pub/","","https://forgeon4th.com/"],"crump-theatre":["b/crump-center-for-the-performing-arts/","",""],"matty-o-entertainment":["b/matty-o-entertainment/","","https://www.mattyoentertainment.com/"],"li-alex-thatcher":["b/lhp-engineering-solutions/","","https://www.lhpes.com/"],"cbus-taylor-bros":["b/taylor-bros-construction-co-inc/","","http://www.tbcci.com/"],"cbus-upland":["b/upland-columbus-pump-house/","","https://uplandbeer.com/columbus/"],"cbus-irwin-gardens":["b/inn-at-irwin-gardens/","","https://www.irwingardens.com/"],"cbus-harrison-lake":["b/harrison-lake-country-club/","","http://www.harrisonlakeclub.com/"],"cbus-ceraland":["b/ceraland-park/","",""],"cbus-henry-social":["b/henry-social-club/","","http://www.henrysocialclub.com/"],"cbus-simmons":["b/simmons-winery-450-north-brewery/","","http://450northbrewing.com/"],"cbus-gracie-mae":["b/gracie-mae-events-llc/","","http://www.graciemaeevents.com/"],"cbus-gather":["b/gather-columbus/","","http://gathercolumbus.com/"],"cbus-clarity":["b/clarity-of-central-indiana/","","https://www.claritycares.org/"],"cbus-centra":["b/centra-credit-union/","","https://www.centra.org/"],"cbus-gypsy-rose":["b/gypsy-rose-events/","",""],"jcbank-columbus":["b/jcbank-central-avenue/","","https://www.jcbank.com/"],"cbus-siho":["b/siho-insurance-services/","","https://www.siho.org/"],"cbus-qmix":["b/qmix-107-3/","","https://www.qmix.com/"],"cbus-fairgrounds":["b/bartholomew-county-4-h-fairgrounds/","","https://bartholomewcountyfair.com/"],"cbus-cummins":["cummins/","Cummins guide","https://www.cummins.com/"],"cbus-su-casa":["help/#su-casa","Help page: Su Casa",""],"cbus-jackpot-generations":["help/#mill-race-center","Help page: Mill Race Center",""],"cbus-festival-of-lights":["events/","Events","https://columbusfestivaloflights.com/"],"cbus-caac":["events/","Events (their calendar)","https://www.artsincolumbus.org/"],"cbus-landmark":["arts/","Arts guide (Exhibit Columbus)","https://landmarkcolumbusfoundation.org/"]};
+function hocLinks(l){const x=HOC[l.id];if(!x)return "";const [path,label,site]=x;
+  return `<p class="hoc"><a href="${esc(HOC_ORIGIN+path)}" target="_blank" rel="noopener">Heart of Columbus ${label?esc(label):"page"}</a>${site?` · <a href="${esc(site)}" target="_blank" rel="noopener">Their website</a>`:""}</p>`}
 function card(l){
   const s=statusOf(l.id), e=log[l.id]||{};
   const opts=STATUSES.map(([v,t])=>`<option value="${v}"${v===s?" selected":""}>${t}</option>`).join("");
@@ -976,6 +985,7 @@ function card(l){
     ${PREP[l.id]?prepHtml(PREP[l.id],l.id):""}
     ${(LEAD_SCRIPTS[l.id]||[]).map(([h,t],i)=>`<div class="lscript"><h3>${esc(h)}</h3><p>${esc(voice(t))}</p><button class="btn" data-lcopy="${l.id}:${i}">Copy</button></div>`).join("")}
     ${(l.srcs||(l.src?[l.src]:[])).map((u,i,a)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${a.length>1?"Source "+(i+1):"Source"}</a>`).join(" · ")}
+    ${hocLinks(l)}
    </div>
    <div class="log">
     <div class="row">
@@ -996,7 +1006,7 @@ const STATUS_LABEL=Object.fromEntries(STATUSES);
 const OPEN_ST=["todo","sent","replied","vm","talked"];
 const WHEN=[["late","Overdue or today"],["week","Next 7 days"],["later","Later"],["none","No date"],["gone","Event passed"]];
 const WHEN_LABEL=Object.fromEntries(WHEN);
-const REACH=[["phone","Phone listed"],["email","Email listed"],["li","LinkedIn"],["none","Nothing listed"]];
+const REACH=[["phone","Phone listed"],["email","Email listed"],["li","LinkedIn"],["site","Website listed"],["hoc","On Heart of Columbus"],["none","Nothing listed"]];
 const REACH_LABEL=Object.fromEntries(REACH);
 const KIND_LABEL={partner:"Partners",venue:"Venues and planners",event:"Nov to Dec events",chamber:"Chamber members",linkedin:"LinkedIn near us",network:"LinkedIn network","c:dated":"Columbus: dated","c:corp":"Columbus employers","c:venue":"Columbus venues","c:gala":"Columbus galas","c:youth":"Columbus proms","c:partner":"Columbus connectors"};
 const KIND_ORDER=SECS.flatMap(([k])=>k==="columbus"?CBUS_GRPS.map(([g])=>"c:"+g):[k]);
@@ -1006,7 +1016,7 @@ const townRaw=l=>(l.city||"").replace(/\s*\(.*?\)\s*/g," ").split(/[\/,]/)[0].re
 const TOWN_N={};for(const l of LEADS){const t=townRaw(l);if(t)TOWN_N[t]=(TOWN_N[t]||0)+1}
 const TOWN=new Map(LEADS.map(l=>{const t=townRaw(l);return [l.id,!t?"Not listed":TOWN_N[t]>=3?t:"Elsewhere"]}));
 const townOf=l=>TOWN.get(l.id);
-const reachOf=l=>{const r=[];if(l.phone)r.push("phone");if(l.email)r.push("email");if(l.li)r.push("li");return r.length?r:["none"]};
+const reachOf=l=>{const r=[];if(l.phone)r.push("phone");if(l.email)r.push("email");if(l.li)r.push("li");if(HOC[l.id]&&HOC[l.id][2])r.push("site");if(!r.length)r.push("none");if(HOC[l.id])r.push("hoc");return r};
 function whenOf(l){const d=dueOf(l);if(!d)return "none";if(d.gone)return "gone";const n=Math.round((new Date(d.d+"T12:00")-new Date(todayStr()+"T12:00"))/864e5);return n<=0?"late":n<=7?"week":"later"}
 const plural=(n,w)=>n+" "+w+(n===1?"":"s");
 const FACETS=[
@@ -1076,6 +1086,7 @@ function tile(l){
    <p class="meta">${metaHtml(l)}</p>
    ${dueChip(l)}${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}
    <p class="treach">${reach}</p>
+   ${HOC[l.id]?`<p class="tlog"><a class="lk" href="${esc(HOC_ORIGIN+HOC[l.id][0])}" target="_blank" rel="noopener">On Heart of Columbus</a>${HOC[l.id][2]?` · <a class="lk" href="${esc(HOC[l.id][2])}" target="_blank" rel="noopener">Website</a>`:""}</p>`:""}
    <p class="tlog">${when?`Logged by ${esc(e.by||"someone")}, ${when}${e.note?" · has notes":""}`:"No calls logged"}</p>
   </article>`;
 }
