@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import ClearClientSignatureButton from "@/components/admin/ClearClientSignatureButton";
 import CountersignForm from "@/components/admin/CountersignForm";
 import SignatureBlock from "@/components/contract/SignatureBlock";
 import PrintButton from "@/components/hub/PrintButton";
@@ -93,6 +94,14 @@ export default async function AdminContractPage({
         />
 
         {!company && <CountersignForm adminKey={key} weddingId={wedding.id} />}
+
+        {client && (
+          <ClearClientSignatureButton
+            adminKey={key}
+            weddingId={wedding.id}
+            signedName={client.name}
+          />
+        )}
       </div>
     </div>
   );
