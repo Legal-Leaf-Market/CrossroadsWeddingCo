@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ClearClientSignatureButton from "@/components/admin/ClearClientSignatureButton";
 import CountersignForm from "@/components/admin/CountersignForm";
+import ReissueContractButton from "@/components/admin/ReissueContractButton";
 import SignatureBlock from "@/components/contract/SignatureBlock";
 import PrintButton from "@/components/hub/PrintButton";
 import { adminKeyMatches, getAdminWeddingRow } from "@/lib/admin";
-import { contractSectionsForWedding, contractVersionForWedding } from "@/lib/contract";
+import { contractIsStale, contractSectionsForWedding, contractVersionForWedding } from "@/lib/contract";
 import { formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME } from "@/lib/site";
 
@@ -52,6 +53,8 @@ export default async function AdminContractPage({
           {/* The admin key is in this URL; print headers must never show it. */}
           <PrintButton maskPath="/agreement" />
         </div>
+
+        {contractIsStale(wedding) && <ReissueContractButton adminKey={key} weddingId={wedding.id} />}
 
         {!client && (
           <p className="mt-4 rounded-xl bg-gold/15 px-4 py-3 text-sm text-ink print:hidden">
