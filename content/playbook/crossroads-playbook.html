@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=Karla:wght@400;600;700&display=swap">
 <style>
-/* Layout: a call sheet. Scripts on top, then one card per lead, filtered by list and status. Brand colors from the Crossroads site. */
+/* Layout: a call sheet. Scripts on top, then the slice panel, then one tile or card per lead. Brand colors from the Crossroads site. */
 :root{
   --bg:#f7f2e8;--panel:#fffdf8;--sunk:#efe7d6;--fg:#2b2622;--muted:#6f655b;--line:#e1d6c2;
   --accent:#b8583a;--accent-soft:#f6e3da;--ok:#3f7a52;--ok-soft:#e1efe4;--warn:#9a6a12;--warn-soft:#f6ecd5;--no:#8a8079;
@@ -92,6 +92,81 @@ a{color:var(--accent)}
 .glist{margin:0;padding:0;list-style:none;display:grid;gap:6px}
 .glist li{display:flex;justify-content:space-between;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:6px;font-size:14px}
 @media (prefers-reduced-motion:reduce){.gbar span{transition:none}}
+/* Slicing (2026-11-23): every bar, chip, star, status and town narrows the list. A facet's counts apply every other filter. */
+.bar div.f{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.bar .count{font-size:13px;font-weight:700;color:var(--fg);font-variant-numeric:tabular-nums;align-self:center;padding-top:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;font-size:14px;padding:6px 12px;border:0;background:none;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.tchip{font:inherit;font-size:13px;border:0;cursor:pointer}
+.tchip:hover{background:var(--accent-soft);color:var(--fg)}
+.slice{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:12px;scroll-margin-top:110px}
+.slice-top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.showing{margin:0;font:600 24px/1.2 var(--display);font-variant-numeric:tabular-nums}
+.showing span{font:400 14px var(--body);color:var(--muted)}
+.slice-top .push{margin-left:auto;display:flex;gap:8px}
+.btn:disabled{opacity:.5;cursor:default;border-color:var(--line)}
+.actives,.quick{display:flex;flex-wrap:wrap;gap:6px}
+.actives[hidden]{display:none}
+.pill{font:inherit;font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pill:hover{border-color:var(--fg)}
+.pill[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.pill.x{background:var(--accent-soft);border-color:transparent}
+.pill.x::after{content:"\00d7";font-size:16px;line-height:1;color:var(--muted)}
+.facets{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px 20px}
+.facets[hidden]{display:none}
+.facet{display:grid;gap:1px;align-content:start;min-width:0}
+.facet h3{margin:0 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fv{font:inherit;font-size:13px;display:grid;grid-template-columns:minmax(0,9.5rem) minmax(20px,1fr) 2.4em;gap:8px;align-items:center;padding:4px 6px;border:1px solid transparent;border-radius:6px;background:none;color:var(--fg);cursor:pointer;text-align:left;min-height:32px}
+.fv:hover{border-color:var(--line);background:var(--bg)}
+.fv[aria-pressed="true"]{background:var(--accent-soft);font-weight:700}
+.fv:disabled{cursor:default;color:var(--muted);opacity:.5}
+.fv:disabled:hover{border-color:transparent;background:none}
+.fv .fl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px;min-width:0}
+.fv .fb{height:8px;border-radius:0 4px 4px 0;overflow:hidden}
+.fv .fb i{display:block;height:100%;min-width:0;background:var(--accent);opacity:.7;border-radius:0 4px 4px 0}
+.facet.on .fv:not([aria-pressed="true"]) .fb i{opacity:.25}
+.fv[aria-pressed="true"] .fb i{opacity:1}
+.fv .fn{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.fv[aria-pressed="true"] .fn{color:var(--fg)}
+.stx{color:var(--warn);letter-spacing:1px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none;display:inline-block}
+.dot[data-s="sent"],.dot[data-s="vm"]{background:var(--warn)}
+.dot[data-s="talked"],.dot[data-s="listed"],.dot[data-s="replied"]{background:var(--ok)}
+.dot[data-s="booked"]{background:var(--accent)}
+.dot[data-s="no"],.dot[data-s="skip"]{background:var(--no)}
+.lk{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline dotted;text-underline-offset:3px;text-decoration-color:var(--line)}
+.lk:hover{text-decoration-color:currentColor;color:var(--accent)}
+.kindtag{font-weight:700;color:var(--accent)}
+.stars .sv.lk{text-decoration:none}
+.grp{display:grid;gap:8px}
+.sub2{margin:6px 0 0;font:600 15px var(--body);display:flex;gap:8px;align-items:center}
+.sub2 span{color:var(--muted);font-weight:400}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,232px),1fr));grid-auto-flow:row dense;gap:12px}
+.tiles>.lead{grid-column:1/-1}
+.tile{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:6px;align-content:start;min-width:0;transition:box-shadow .15s,transform .15s}
+.tile:hover{box-shadow:0 6px 18px rgba(0,0,0,.13);transform:translateY(-1px)}
+.tile:has(.topen:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.tile[data-s="no"],.tile[data-s="skip"]{opacity:.62}
+.t1{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.t1 .sv{color:var(--warn);font-size:16px;letter-spacing:1px;text-decoration:none}
+.spill{font:inherit;font-size:12px;padding:2px 9px;border:0;border-radius:999px;background:var(--sunk);color:var(--fg);display:inline-flex;align-items:center;gap:5px;white-space:nowrap;cursor:pointer}
+.spill:hover{background:var(--accent-soft)}
+.tile h3{margin:0;font:600 17px/1.25 var(--display);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.topen{font:inherit;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.topen:focus-visible{outline:none}
+.topen::after{content:"";position:absolute;inset:0;border-radius:14px}
+.tile .lk,.tile .spill,.tile .phone{position:relative;z-index:1}
+.tile .meta{margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .due{margin:0;justify-self:start}
+.tile .flag{justify-self:start}
+.tile .rank{margin:0}
+.treach{font-size:14px;margin:2px 0 0;overflow-wrap:anywhere}
+.tlog{font-size:12px;color:var(--muted);margin:0}
+.lead{scroll-margin-top:110px}
+.lead .close{margin-left:auto}
+.empty .btn{margin-left:8px}
+@media (prefers-reduced-motion:reduce){.tile{transition:none}.tile:hover{transform:none}}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
@@ -173,21 +248,31 @@ a{color:var(--accent)}
       <option value="linkedin">LinkedIn: people near us</option>
       <option value="network">LinkedIn: referral network</option>
     </select></label>
-    <label class="f" for="fStatus">Status<select id="fStatus">
-      <option value="all">Any status</option>
-      <option value="open">Still to call or follow up</option>
-      <option value="todo">Not called</option>
-      <option value="sent">Messaged</option>
-      <option value="replied">Replied</option>
-      <option value="vm">Left voicemail</option>
-      <option value="talked">Talked</option>
-      <option value="listed">On their list</option>
-      <option value="booked">Booked</option>
-      <option value="no">Not a fit</option>
+    <label class="f" for="fSort">Sort<select id="fSort">
+      <option value="urgency">Recommended: dated first</option>
+      <option value="starsDesc">Stars, high to low</option>
+      <option value="starsAsc">Stars, low to high</option>
+      <option value="status">Status: not called first</option>
+      <option value="progress">Status: furthest along first</option>
+      <option value="recent">Last logged first</option>
+      <option value="name">Name, A to Z</option>
+      <option value="town">Town, A to Z</option>
     </select></label>
     <label class="f" for="fQ">Search<input type="search" id="fQ" placeholder="Name, city, contact"></label>
+    <div class="f"><span id="viewL">View</span><div class="seg" role="group" aria-labelledby="viewL"><button type="button" data-view="grid" aria-pressed="true">Grid</button><button type="button" data-view="list" aria-pressed="false">Full cards</button></div></div>
+    <span class="count" id="barCount"></span>
     <span class="note-sync" id="sync">Loading the call log…</span>
   </div>
+
+  <section class="slice" id="slice" aria-label="Slice the list">
+    <div class="slice-top">
+      <p class="showing" id="showing" aria-live="polite"></p>
+      <div class="push"><button class="btn" type="button" id="clearAll" data-clear="all" data-key="clearAll">Clear all</button><button class="btn" type="button" id="facetToggle" data-key="facetToggle" aria-expanded="true" aria-controls="facets">Hide filters</button></div>
+    </div>
+    <div class="actives" id="actives"></div>
+    <div class="quick" id="quick" role="group" aria-label="Quick filters"></div>
+    <div class="facets" id="facets"></div>
+  </section>
 
   <div id="lists"></div>
 
@@ -712,9 +797,10 @@ $("#meNum").addEventListener("input",()=>{saveMe();renderScripts();render()});
 renderScripts();
 $("#scripts").addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if(b)copy(voice(SCRIPTS[+b.dataset.copy][1]),b)});
 
-function prepHtml(p){
+const openPrep=new Set(); // a redraw (every 15s) must not snap open pitch prep shut
+function prepHtml(p,id){
   const ul=(a)=>`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
-  return `<details class="prep"><summary>Pitch prep</summary>
+  return `<details class="prep"${openPrep.has(id)?" open":""}><summary>Pitch prep</summary>
    <h4>The ask</h4><p>${esc(p.ask)}</p>
    <h4>What we know</h4>${ul(p.know)}
    <h4>What we bring</h4>${ul(p.bring)}
@@ -874,16 +960,16 @@ function card(l){
   const st=starsOf(l);
   return `<article class="lead" data-s="${s}" data-id="${l.id}" data-stars="${st.n}">
    <div>
-    <p class="stars"><span class="sv" aria-label="${st.n} of 5 stars">${starTxt(st.n)}</span> <span class="sw">${esc(st.why)}${st.mine&&st.by?` (rated by ${esc(st.by)})`:""}</span></p>
-    <div class="top">${l.best!=null?`<span class="rank">${l.best===0?"Call first":"#"+l.best+" today"}</span>`:""}<span class="name">${esc(l.name)}</span>${dueChip(l)}${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}</div>
-    <div class="meta">${esc(l.type)}${l.city?" · "+esc(l.city):""}</div>
+    <p class="stars"><button type="button" class="sv lk" data-only="stars" data-v="${st.n}" title="Show only ${st.n}-star leads" aria-label="${st.n} of 5 stars. Show only ${st.n}-star leads">${starTxt(st.n)}</button> <span class="sw">${esc(st.why)}${st.mine&&st.by?` (rated by ${esc(st.by)})`:""}</span></p>
+    <div class="top">${l.best!=null?`<span class="rank">${l.best===0?"Call first":"#"+l.best+" today"}</span>`:""}<span class="name">${esc(l.name)}</span>${dueChip(l)}${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}${view==="grid"?`<button class="btn close" type="button" data-open="${l.id}" data-key="close:${l.id}" aria-label="Close ${esc(l.name)}">Close</button>`:""}</div>
+    <div class="meta">${metaHtml(l)}</div>
     <dl class="kv">
      ${l.contact?`<dt>Ask for</dt><dd>${esc(l.contact)}</dd>`:""}
      ${l.li?`<dt>Reach</dt><dd>${esc(l.li)}</dd>`:`<dt>Phone</dt><dd>${l.phone?`<span class="phone">${esc(l.phone)}</span>`:"Not listed"}</dd>`}
      ${l.email?`<dt>Email</dt><dd>${esc(l.email)}</dd>`:""}
     </dl>
     <p class="why">${esc(l.why)}</p>
-    ${PREP[l.id]?prepHtml(PREP[l.id]):""}
+    ${PREP[l.id]?prepHtml(PREP[l.id],l.id):""}
     ${(LEAD_SCRIPTS[l.id]||[]).map(([h,t],i)=>`<div class="lscript"><h3>${esc(h)}</h3><p>${esc(voice(t))}</p><button class="btn" data-lcopy="${l.id}:${i}">Copy</button></div>`).join("")}
     ${(l.srcs||(l.src?[l.src]:[])).map((u,i,a)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${a.length>1?"Source "+(i+1):"Source"}</a>`).join(" · ")}
    </div>
@@ -892,23 +978,138 @@ function card(l){
      <label class="f" for="st-${l.id}">Status<select id="st-${l.id}" data-f="status"${canWrite?"":" disabled"}>${opts}</select></label>
      <label class="f" for="fu-${l.id}">Follow up<input type="date" id="fu-${l.id}" data-f="followUp" value="${esc(e.followUp||"")}"${canWrite?"":" disabled"}></label>
     </div>
-    <div class="f"><span>Your rating</span><div class="starpick" role="group" aria-label="Rate this lead">${[1,2,3,4,5].map(n=>`<button type="button" class="sp${n<=st.n?" on":""}" data-star="${n}" aria-label="${n} star${n>1?"s":""}"${canWrite?"":" disabled"}>\u2605</button>`).join("")}</div></div>
+    <div class="f"><span>Your rating</span><div class="starpick" role="group" aria-label="Rate this lead">${[1,2,3,4,5].map(n=>`<button type="button" class="sp${n<=st.n?" on":""}" data-star="${n}" data-key="star:${l.id}:${n}" aria-label="${n} star${n>1?"s":""}"${canWrite?"":" disabled"}>\u2605</button>`).join("")}</div></div>
     <label class="f" for="sy-${l.id}">Why this rating<input id="sy-${l.id}" data-f="starWhy" value="${esc(st.mine?st.why:"")}" placeholder="Confirmed no DJ, saw a Craigslist post, budget set..."${canWrite?"":" disabled"}></label>
     <label class="f" for="nt-${l.id}">Notes from the call<textarea id="nt-${l.id}" data-f="note" placeholder="${l.li?"What they said, next step":"Who you talked to, what they said, next step"}"${canWrite?"":" disabled"}>${esc(e.note||"")}</textarea></label>
     <span class="stamp">${when?"Updated "+(e.by?"by "+esc(e.by)+", ":"")+when:"No calls logged"}</span>
    </div>
   </article>`;
 }
-function matches(l){
-  const list=$("#fList").value, st=$("#fStatus").value, q=$("#fQ").value.trim().toLowerCase(), s=statusOf(l.id);
-  if(list==="best"&&l.best==null)return false;
-  if(list==="fresh"&&!l.fresh)return false;
-  if(list==="fresh23"&&!l.fresh23)return false;
-  if(!["all","best","hot","fresh","fresh23"].includes(list)&&l.sec!==list&&!(l.also||[]).includes(list))return false;
-  if(st==="open"&&!["todo","sent","replied","vm","talked"].includes(s))return false;
-  if(!["all","open"].includes(st)&&s!==st)return false;
-  if(q&&!(l.name+" "+l.city+" "+l.contact+" "+l.type).toLowerCase().includes(q))return false;
-  return true;
+// Slicing (Jacob, 2026-11-23: "sort these by the stars and by status ... you click on one thing and it drills down").
+// Inside one facet the values are OR; facets together are AND. Each facet's counts apply every OTHER filter,
+// so a number on a bar is exactly what clicking it shows.
+const STATUS_LABEL=Object.fromEntries(STATUSES);
+const OPEN_ST=["todo","sent","replied","vm","talked"];
+const WHEN=[["late","Overdue or today"],["week","Next 7 days"],["later","Later"],["none","No date"],["gone","Event passed"]];
+const WHEN_LABEL=Object.fromEntries(WHEN);
+const REACH=[["phone","Phone listed"],["email","Email listed"],["li","LinkedIn"],["none","Nothing listed"]];
+const REACH_LABEL=Object.fromEntries(REACH);
+const KIND_LABEL={partner:"Partners",venue:"Venues and planners",event:"Nov to Dec events",chamber:"Chamber members",linkedin:"LinkedIn near us",network:"LinkedIn network","c:dated":"Columbus: dated","c:corp":"Columbus employers","c:venue":"Columbus venues","c:gala":"Columbus galas","c:youth":"Columbus proms","c:partner":"Columbus connectors"};
+const KIND_ORDER=SECS.flatMap(([k])=>k==="columbus"?CBUS_GRPS.map(([g])=>"c:"+g):[k]);
+const kindOf=l=>l.grp?"c:"+l.grp:l.sec;
+// Towns: "Indianapolis (south)" and "Indianapolis area" are Indianapolis; a town with fewer than 3 leads is "Elsewhere".
+const townRaw=l=>(l.city||"").replace(/\s*\(.*?\)\s*/g," ").split(/[\/,]/)[0].replace(/\s+area\b/i,"").trim();
+const TOWN_N={};for(const l of LEADS){const t=townRaw(l);if(t)TOWN_N[t]=(TOWN_N[t]||0)+1}
+const TOWN=new Map(LEADS.map(l=>{const t=townRaw(l);return [l.id,!t?"Not listed":TOWN_N[t]>=3?t:"Elsewhere"]}));
+const townOf=l=>TOWN.get(l.id);
+const reachOf=l=>{const r=[];if(l.phone)r.push("phone");if(l.email)r.push("email");if(l.li)r.push("li");return r.length?r:["none"]};
+function whenOf(l){const d=dueOf(l);if(!d)return "none";if(d.gone)return "gone";const n=Math.round((new Date(d.d+"T12:00")-new Date(todayStr()+"T12:00"))/864e5);return n<=0?"late":n<=7?"week":"later"}
+const plural=(n,w)=>n+" "+w+(n===1?"":"s");
+const FACETS=[
+ {k:"stars",h:"Stars",vals:()=>["5","4","3","2","1"],of:l=>[String(starsOf(l).n)],text:v=>plural(+v,"star"),label:v=>`<span class="stx" aria-hidden="true">${starTxt(+v)}</span>`},
+ {k:"status",h:"Status",vals:()=>STATUSES.map(([v])=>v),of:l=>[statusOf(l.id)],text:v=>STATUS_LABEL[v]||v,label:v=>`<span class="dot" data-s="${v}"></span>${esc(STATUS_LABEL[v]||v)}`},
+ {k:"when",h:"When",vals:()=>WHEN.map(([v])=>v),of:l=>[whenOf(l)],text:v=>WHEN_LABEL[v]||v},
+ {k:"kind",h:"Kind of lead",vals:()=>KIND_ORDER,of:l=>[kindOf(l)],text:v=>KIND_LABEL[v]||v},
+ {k:"town",h:"Town",vals:rows=>{const c={};for(const l of rows){const t=townOf(l);c[t]=(c[t]||0)+1}const last=t=>t==="Elsewhere"?1:t==="Not listed"?2:0;return Object.keys(c).sort((a,b)=>last(a)-last(b)||c[b]-c[a]||a.localeCompare(b))},of:l=>[townOf(l)],text:v=>v},
+ {k:"reach",h:"How to reach them",vals:()=>REACH.map(([v])=>v),of:reachOf,text:v=>REACH_LABEL[v]||v},
+];
+const FACET=Object.fromEntries(FACETS.map(f=>[f.k,f]));
+const PRESETS=[["open","Still open",{status:OPEN_ST}],["hot","4 stars and up",{stars:["4","5"]}],["soon","Due in the next 7 days",{when:["late","week"]}],["todo","Not called yet",{status:["todo"]}],["phone","Has a phone number",{reach:["phone"]}]];
+const presetOn=set=>Object.entries(set).every(([k,a])=>F[k].size===a.length&&a.every(v=>F[k].has(v)));
+
+const ST_I=Object.fromEntries(STATUSES.map(([v],i)=>[v,i]));
+const PROG_I=Object.fromEntries(["booked","listed","talked","replied","vm","sent","todo","no","skip"].map((v,i)=>[v,i]));
+const townKey=l=>{const t=townOf(l);return t==="Elsewhere"?"￿0":t==="Not listed"?"￿1":t};
+const byStarGl=n=>`<span class="stx" aria-hidden="true">${starTxt(n)}</span>${plural(n,"star")}`;
+const byStatusGl=v=>`<span class="dot" data-s="${v}"></span>${esc(STATUS_LABEL[v]||v)}`;
+const loggedAt=l=>(log[l.id]||{}).at||0;
+const SORTS={
+ urgency:{},
+ starsDesc:{cmp:(a,b)=>starsOf(b).n-starsOf(a).n||byUrgency(a,b),grp:l=>starsOf(l).n,gl:byStarGl},
+ starsAsc:{cmp:(a,b)=>starsOf(a).n-starsOf(b).n||byUrgency(a,b),grp:l=>starsOf(l).n,gl:byStarGl},
+ status:{cmp:(a,b)=>(ST_I[statusOf(a.id)]??99)-(ST_I[statusOf(b.id)]??99)||byUrgency(a,b),grp:l=>statusOf(l.id),gl:byStatusGl},
+ progress:{cmp:(a,b)=>(PROG_I[statusOf(a.id)]??99)-(PROG_I[statusOf(b.id)]??99)||byUrgency(a,b),grp:l=>statusOf(l.id),gl:byStatusGl},
+ recent:{cmp:(a,b)=>loggedAt(b)-loggedAt(a)||byUrgency(a,b),grp:l=>loggedAt(l)?"y":"n",gl:v=>v==="y"?"Logged, newest first":"Not logged yet"},
+ name:{cmp:(a,b)=>a.name.localeCompare(b.name)},
+ town:{cmp:(a,b)=>townKey(a).localeCompare(townKey(b))||byUrgency(a,b),grp:townOf,gl:v=>esc(v)},
+};
+
+const F=Object.fromEntries(FACETS.map(f=>[f.k,new Set()]));
+let sortBy="urgency", view="grid", facetsOpen=null, flat=false, wantFocus=null, wantScroll=false;
+const openTiles=new Set();
+try{const f=JSON.parse(localStorage.getItem("cr_filters")||"{}")||{};
+  if(f.list&&[...$("#fList").options].some(o=>o.value===f.list))$("#fList").value=f.list;
+  if(SORTS[f.sort])sortBy=f.sort;
+  if(f.view==="grid"||f.view==="list")view=f.view;
+  if(typeof f.facetsOpen==="boolean")facetsOpen=f.facetsOpen;
+  if(f.facets&&typeof f.facets==="object"){for(const x of FACETS){const ok=new Set(x.vals(LEADS));const a=f.facets[x.k];if(Array.isArray(a))for(const v of a)if(ok.has(String(v)))F[x.k].add(String(v))}}
+  else if(f.status&&f.status!=="all")(f.status==="open"?OPEN_ST:[f.status]).forEach(v=>{if(STATUS_LABEL[v])F.status.add(v)}); // the old Status menu
+}catch{}
+if(facetsOpen===null)facetsOpen=matchMedia("(min-width:721px)").matches;
+function saveFilters(){try{localStorage.setItem("cr_filters",JSON.stringify({list:$("#fList").value,sort:sortBy,view,facetsOpen,facets:Object.fromEntries(FACETS.map(f=>[f.k,[...F[f.k]]]))}))}catch{}}
+
+function inList(l){const list=$("#fList").value;
+  if(list==="best")return l.best!=null;
+  if(list==="fresh")return !!l.fresh;
+  if(list==="fresh23")return !!l.fresh23;
+  if(list==="all"||list==="hot")return true;
+  return l.sec===list||(l.also||[]).includes(list)}
+function inSearch(l){const q=$("#fQ").value.trim().toLowerCase();return !q||(l.name+" "+l.city+" "+l.contact+" "+l.type).toLowerCase().includes(q)}
+function passFacets(l,skip){for(const f of FACETS){if(f.k===skip)continue;const s=F[f.k];if(s.size&&!f.of(l).some(v=>s.has(v)))return false}return true}
+function matches(l){return inList(l)&&inSearch(l)&&passFacets(l)}
+
+function townBtn(l){const t=townOf(l);return `<button type="button" class="lk" data-only="town" data-v="${esc(t)}" title="Show only: ${esc(t)}">${esc(l.city)}</button>`}
+function kindBtn(l){const k=kindOf(l);return `<button type="button" class="lk kindtag" data-only="kind" data-v="${esc(k)}" title="Show only: ${esc(KIND_LABEL[k]||k)}">${esc(KIND_LABEL[k]||k)}</button>`}
+function metaHtml(l){return (flat?kindBtn(l)+" · ":"")+esc(l.type)+(l.city?" · "+townBtn(l):"")}
+function tile(l){
+  const s=statusOf(l.id), e=log[l.id]||{}, st=starsOf(l);
+  const when=e.at?new Date(e.at).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Indiana/Indianapolis"}):"";
+  const reach=l.phone?`<span class="phone">${esc(l.phone)}</span>`:l.email?esc(l.email):l.li?"On LinkedIn":"No phone listed";
+  return `<article class="tile" data-s="${s}" data-id="${l.id}">
+   <div class="t1"><button type="button" class="lk sv" data-only="stars" data-v="${st.n}" title="Show only ${st.n}-star leads" aria-label="${st.n} of 5 stars. Show only ${st.n}-star leads">${starTxt(st.n)}</button><button type="button" class="spill" data-only="status" data-v="${s}" title="Show only: ${esc(STATUS_LABEL[s]||s)}"><span class="dot" data-s="${s}"></span>${esc(STATUS_LABEL[s]||s)}</button></div>
+   ${l.best!=null?`<span class="rank">${l.best===0?"Call first":"#"+l.best+" today"}</span>`:""}
+   <h3><button type="button" class="topen" data-open="${l.id}" data-key="open:${l.id}" aria-expanded="false">${esc(l.name)}</button></h3>
+   <p class="meta">${metaHtml(l)}</p>
+   ${dueChip(l)}${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}
+   <p class="treach">${reach}</p>
+   <p class="tlog">${when?`Logged by ${esc(e.by||"someone")}, ${when}${e.note?" · has notes":""}`:"No calls logged"}</p>
+  </article>`;
+}
+const cell=l=>view==="grid"&&!openTiles.has(l.id)?tile(l):card(l);
+const box=rows=>`<div class="${view==="grid"?"tiles":"leads"}">${rows.map(cell).join("")}</div>`;
+const EMPTY='<p class="empty">Nothing here matches these filters.<button class="btn" type="button" data-clear="all">Clear all filters</button></p>';
+
+function renderTally(){
+  const c={};for(const l of LEADS){const s=statusOf(l.id);c[s]=(c[s]||0)+1}
+  $("#tally").innerHTML=`<button type="button" class="chip tchip" data-tally="all" data-key="t:all" title="Show every lead"><b>${LEADS.length}</b> leads</button>`+STATUSES.filter(([v])=>c[v]).map(([v,t])=>`<button type="button" class="chip tchip" data-tally="${v}" data-key="t:${v}" title="Show only: ${esc(t)}"><b>${c[v]}</b> ${esc(t.toLowerCase())}</button>`).join("");
+}
+function renderSlice(){
+  const listRows=LEADS.filter(inList), base=listRows.filter(inSearch);
+  const shown=base.filter(l=>passFacets(l)).length;
+  const q=$("#fQ").value.trim();
+  const nF=FACETS.reduce((n,f)=>n+F[f.k].size,0)+(q?1:0);
+  $("#showing").innerHTML=`${shown}<span> of ${plural(listRows.length,"lead")} in this list${nF?` · ${plural(nF,"filter")} on`:""}</span>`;
+  $("#barCount").textContent=`${shown} shown`;
+  let a=q?`<button type="button" class="pill x" data-clear="q" data-key="x:q" aria-label="Remove search: ${esc(q)}">Search: ${esc(q)}</button>`:"";
+  for(const f of FACETS)for(const v of F[f.k])a+=`<button type="button" class="pill x" data-slice="${f.k}" data-v="${esc(v)}" data-key="x:${f.k}:${esc(v)}" aria-label="Remove filter: ${esc(f.text(v))}">${esc(f.h)}: ${esc(f.text(v))}</button>`;
+  $("#actives").innerHTML=a;$("#actives").hidden=!a;
+  $("#clearAll").disabled=!nF;
+  $("#quick").innerHTML=PRESETS.map(([id,label,set])=>`<button type="button" class="pill" data-preset="${id}" data-key="p:${id}" aria-pressed="${presetOn(set)}">${esc(label)}</button>`).join("");
+  let h="";
+  for(const f of FACETS){
+    const sel=F[f.k], c={}, inBase={};
+    for(const l of base){const vs=f.of(l);for(const v of vs)inBase[v]=1;if(passFacets(l,f.k))for(const v of vs)c[v]=(c[v]||0)+1}
+    const vals=f.vals(base).filter(v=>inBase[v]||sel.has(v));
+    for(const v of sel)if(!vals.includes(v))vals.push(v);
+    if(vals.length<2&&!sel.size)continue; // one value can't slice anything
+    const max=Math.max(1,...vals.map(v=>c[v]||0));
+    h+=`<div class="facet${sel.size?" on":""}" role="group" aria-labelledby="fh-${f.k}"><h3 id="fh-${f.k}">${esc(f.h)}</h3>${vals.map(v=>{const n=c[v]||0,on=sel.has(v);
+      return `<button type="button" class="fv" data-slice="${f.k}" data-v="${esc(v)}" data-key="f:${f.k}:${esc(v)}" aria-pressed="${on}" aria-label="${esc(f.text(v))}: ${n}" title="${esc(f.text(v))}: ${plural(n,"lead")}"${!n&&!on?" disabled":""}><span class="fl">${f.label?f.label(v):esc(f.text(v))}</span><span class="fb" aria-hidden="true"><i style="width:${(n/max*100).toFixed(1)}%"></i></span><span class="fn" aria-hidden="true">${n}</span></button>`}).join("")}</div>`;
+  }
+  $("#facets").innerHTML=h;$("#facets").hidden=!facetsOpen;
+  $("#facetToggle").setAttribute("aria-expanded",String(facetsOpen));$("#facetToggle").textContent=facetsOpen?"Hide filters":"Show filters";
+  $("#fSort").value=sortBy;
+  document.querySelectorAll("[data-view]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.view===view)));
 }
 // Urgency: anything with a date goes first, most urgent at the top (Jacob, 2026-11-02).
 // A lead's date is its follow-up date (overdue follow-ups lead) or its event date, whichever comes first.
@@ -926,45 +1127,82 @@ function dueChip(l){const d=dueOf(l);if(!d)return "";const t=todayStr();const da
   let txt,cls="due";if(d.gone){txt="Event passed "+nice;cls+=" gone"}else if(days<0){txt=what+" overdue ("+nice+")";cls+=" late"}else if(days===0){txt=what+" today";cls+=" late"}else if(days===1){txt=what+" tomorrow";cls+=" soon"}else{txt=what+" "+nice+" · in "+days+" days";if(days<=7)cls+=" soon"}
   return `<span class="${cls}">${txt}</span>`}
 function render(){
-  const focus=document.activeElement&&document.activeElement.closest(".lead")?document.activeElement.id:null;
-  if(focus)return; // don't redraw under someone typing
+  const ae=document.activeElement;
+  if(ae&&ae.closest&&ae.closest(".lead")&&ae.matches("input,textarea,select"))return; // don't redraw under someone typing
+  const key=wantFocus||(ae&&ae.dataset?ae.dataset.key:null), scroll=wantScroll;wantFocus=null;wantScroll=false;
   let html="";
-  if($("#fList").value==="hot"){
+  flat=sortBy!=="urgency";
+  if(flat){
+    const S=SORTS[sortBy], rows=LEADS.filter(matches).sort(S.cmp);
+    html=`<section class="sec"><header><h2>${esc($("#fList").selectedOptions[0].text)}</h2><span>${esc($("#fSort").selectedOptions[0].text)} · ${rows.length}</span></header>`;
+    if(!rows.length)html+=EMPTY;
+    else if(S.grp){for(let i=0;i<rows.length;){const g=S.grp(rows[i]);let j=i;while(j<rows.length&&S.grp(rows[j])===g)j++;html+=`<div class="grp"><h3 class="sub2">${S.gl(g)}<span>· ${j-i}</span></h3>${box(rows.slice(i,j))}</div>`;i=j}}
+    else html+=box(rows);
+    html+=`</section>`;
+  } else if($("#fList").value==="hot"){
     const rows=LEADS.filter(matches).sort(byUrgency);
-    html=`<section class="sec"><header><h2>Hottest first</h2><span>Dated leads first (most urgent on top), then 5 stars down · ${rows.length}</span></header><div class="leads">${rows.map(card).join("")||'<p class="empty">Nothing here matches these filters.</p>'}</div></section>`;
+    html=`<section class="sec"><header><h2>Hottest first</h2><span>Dated leads first (most urgent on top), then 5 stars down · ${rows.length}</span></header>${rows.length?box(rows):EMPTY}</section>`;
   } else if($("#fList").value==="fresh23"){
     const rows=LEADS.filter(matches);
     html=`<section class="sec"><header><h2>New as of 11.23.26: Columbus</h2><span>Every Columbus lead added Nov 23, grouped. Dated ones first in each group · ${rows.length}</span></header></section>`;
     for(const [k,h,sub] of CBUS_GRPS){
       const g=rows.filter(l=>l.grp===k).sort(byUrgency);
       if(!g.length)continue;
-      html+=`<section class="sec"><header><h2>${h}</h2><span>${sub} · ${g.length}</span></header><div class="leads">${g.map(card).join("")}</div></section>`;
+      html+=`<section class="sec"><header><h2>${h}</h2><span>${sub} · ${g.length}</span></header>${box(g)}</section>`;
     }
-    if(!rows.length)html+='<p class="empty">Nothing here matches these filters.</p>';
+    if(!rows.length)html+=EMPTY;
   } else if($("#fList").value==="fresh"){
     const rows=LEADS.filter(matches).sort(byUrgency);
-    html=`<section class="sec"><header><h2>New as of 11.6.26</h2><span>Leads added or given direct contacts on Nov 6 · ${rows.length}</span></header><div class="leads">${rows.map(card).join("")||'<p class="empty">Nothing here matches these filters.</p>'}</div></section>`;
+    html=`<section class="sec"><header><h2>New as of 11.6.26</h2><span>Leads added or given direct contacts on Nov 6 · ${rows.length}</span></header>${rows.length?box(rows):EMPTY}</section>`;
   } else if($("#fList").value==="best"){
     const rows=LEADS.filter(l=>l.best!=null&&matches(l)).sort((a,b)=>a.best-b.best);
-    html=`<section class="sec"><header><h2>Best calls for the next two hours</h2><span>Valle Vista first, then the research list's top ten</span></header><div class="leads">${rows.map(card).join("")||'<p class="empty">Nothing here matches these filters.</p>'}</div></section>`;
+    html=`<section class="sec"><header><h2>Best calls for the next two hours</h2><span>Valle Vista first, then the research list's top ten</span></header>${rows.length?box(rows):EMPTY}</section>`;
   } else {
     const only=$("#fList").value;
     for(const [k,h,sub] of SECS){
       if(only!=="all"&&only!==k)continue;
       const rows=LEADS.filter(l=>(l.sec===k||($("#fList").value===k&&(l.also||[]).includes(k)))&&matches(l)).sort(byUrgency);
       if(!rows.length)continue;
-      html+=`<section class="sec"><header><h2>${h}</h2><span>${sub} · ${rows.length}</span></header><div class="leads">${rows.map(card).join("")}</div></section>`;
+      html+=`<section class="sec"><header><h2>${h}</h2><span>${sub} · ${rows.length}</span></header>${box(rows)}</section>`;
     }
-    if(!html)html='<p class="empty">Nothing here matches these filters.</p>';
+    if(!html)html=EMPTY;
   }
   $("#lists").innerHTML=html;
-  const c={};for(const l of LEADS){const s=statusOf(l.id);c[s]=(c[s]||0)+1}
-  $("#tally").innerHTML=`<span class="chip"><b>${LEADS.length}</b> leads</span>`+STATUSES.filter(([v])=>c[v]).map(([v,t])=>`<span class="chip"><b>${c[v]}</b> ${t.toLowerCase()}</span>`).join("");
+  renderTally();renderSlice();
+  if(key){const el=[...document.querySelectorAll("[data-key]")].find(x=>x.dataset.key===key&&!x.disabled);
+    if(el){el.focus({preventScroll:true});if(scroll)(el.closest(".lead,.tile")||el).scrollIntoView({block:"nearest",behavior:REDUCE?"auto":"smooth"})}}
 }
-["#fList","#fStatus"].forEach(s=>$(s).addEventListener("change",render));
+const REDUCE=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function rerender(){saveFilters();render()}
+function toSlice(){$("#slice").scrollIntoView({block:"start",behavior:REDUCE?"auto":"smooth"})}
+$("#fList").addEventListener("change",rerender);
+$("#fSort").addEventListener("change",()=>{sortBy=$("#fSort").value;rerender()});
 $("#fQ").addEventListener("input",render);
-try{const f=JSON.parse(localStorage.getItem("cr_filters")||"{}");if(f.list)$("#fList").value=f.list;if(f.status)$("#fStatus").value=f.status}catch{}
-["#fList","#fStatus"].forEach(s=>$(s).addEventListener("change",()=>{try{localStorage.setItem("cr_filters",JSON.stringify({list:$("#fList").value,status:$("#fStatus").value}))}catch{}}));
+$("#facetToggle").addEventListener("click",()=>{facetsOpen=!facetsOpen;rerender()});
+// One handler for every slice: facet bars and active pills toggle; stars, status pills, towns and kinds on a lead show "only this";
+// the tally at the top shows one status across every list.
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-slice],[data-only],[data-preset],[data-tally],[data-clear],[data-open],[data-view]");
+  if(!b||b.disabled)return;
+  const d=b.dataset;
+  if(d.slice){const s=F[d.slice];if(!s)return;
+    if(b.classList.contains("x")){const nb=b.nextElementSibling||b.previousElementSibling;wantFocus=nb?nb.dataset.key:"facetToggle"}
+    s.has(d.v)?s.delete(d.v):s.add(d.v);rerender();
+  }else if(d.only){const s=F[d.only];if(!s)return;const was=s.size===1&&s.has(d.v);s.clear();if(!was)s.add(d.v);
+    wantFocus=was?"facetToggle":"x:"+d.only+":"+d.v;rerender();toSlice();
+    toast(was?"Filter removed":"Showing only: "+FACET[d.only].text(d.v));
+  }else if(d.preset){const p=PRESETS.find(x=>x[0]===d.preset);if(!p)return;const on=presetOn(p[2]);
+    for(const [k,a] of Object.entries(p[2])){F[k].clear();if(!on)a.forEach(v=>F[k].add(v))}rerender();
+  }else if(d.tally){$("#fList").value="all";for(const k in F)F[k].clear();$("#fQ").value="";if(d.tally!=="all")F.status.add(d.tally);
+    wantFocus=d.tally==="all"?"facetToggle":"x:status:"+d.tally;rerender();toSlice();
+  }else if(d.clear){if(d.clear!=="q")for(const k in F)F[k].clear();$("#fQ").value="";wantFocus="facetToggle";rerender();
+  }else if(d.open){const id=d.open, was=openTiles.has(id);was?openTiles.delete(id):openTiles.add(id);wantFocus=(was?"open:":"close:")+id;wantScroll=true;render();
+  }else if(d.view){if(d.view===view)return;view=d.view;rerender()}
+});
+// Escape closes an opened tile (not while typing in it).
+document.addEventListener("keydown",e=>{if(e.key!=="Escape"||view!=="grid")return;const ae=document.activeElement,lead=ae&&ae.closest&&ae.closest(".lead");
+  if(!lead||ae.matches("input,textarea,select")||!openTiles.has(lead.dataset.id))return;openTiles.delete(lead.dataset.id);wantFocus="open:"+lead.dataset.id;render()});
+$("#lists").addEventListener("toggle",e=>{const d=e.target;if(!d.matches||!d.matches("details.prep"))return;const id=d.closest(".lead")?.dataset.id;if(id)(d.open?openPrep.add(id):openPrep.delete(id))},true);
 
 async function save(id,field,value){
   const prev=log[id]||{};
@@ -982,7 +1220,9 @@ async function save(id,field,value){
 $("#lists").addEventListener("click",e=>{const p=e.target.closest("[data-star]");if(!p)return;const id=p.closest(".lead").dataset.id;const n=+p.dataset.star;const cur=log[id]||{};log[id]={...cur,starBy:$("#meName").value||"Jake"};save(id,"stars",n).then(render)});
 $("#lists").addEventListener("click",e=>{const b=e.target.closest("[data-lcopy]");if(!b)return;const [id,i]=b.dataset.lcopy.split(":");copy(voice(LEAD_SCRIPTS[id][+i][1]),b)});
 $("#lists").addEventListener("change",e=>{const el=e.target.closest("[data-f]");if(!el)return;const id=el.closest(".lead").dataset.id;save(id,el.dataset.f,el.value);if(el.dataset.f==="status")el.closest(".lead").dataset.s=el.value});
-$("#lists").addEventListener("focusout",()=>setTimeout(()=>{if(!document.activeElement||!document.activeElement.closest(".lead"))render()},0));
+// Leaving a card's note, date or menu is when its queued redraw can happen. Only those: a redraw removes the focused
+// element, and Chrome reports that as a focusout too, so reacting to every focusout would redraw forever.
+$("#lists").addEventListener("focusout",e=>{if(!e.target.matches("input,textarea,select"))return;setTimeout(()=>{const a=document.activeElement;if(!a||!a.closest(".lead")||!a.matches("input,textarea,select"))render()},0)});
 
 // Weekly deposit goal: 2 weddings at $500 + 4 corporate events at $1,000 = $5,000.
 const GOAL=5000, DEP={wedding:500,corporate:1000}, TARGET={wedding:2,corporate:4};
