@@ -28,6 +28,9 @@ export default function Footer() {
           <a href="/reviews" className="font-semibold text-cream/70 hover:text-cream">
             Reviews
           </a>
+          <a href="/brochures" className="font-semibold text-cream/70 hover:text-cream">
+            Brochures
+          </a>
           <a href="/past-events" className="font-semibold text-cream/70 hover:text-cream">
             Past Events
           </a>

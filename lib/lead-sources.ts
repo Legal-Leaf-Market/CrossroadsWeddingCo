@@ -75,6 +75,10 @@ export const SRC_TAGS: Record<string, LeadSource> = {
   // Corporate outreach (2026-11-01 holiday party calls): a venue or planner
   // who puts us on their list gets /events?src=venue or ?src=planner to pass on.
   planner: "vendor",
+  // Brochure sharing (2026-11-03): links passed along from /brochures carry
+  // ?src=share-<audience> (share-boss, share-bride...). A forwarded brochure is
+  // a referral, so the prefix maps to "A friend or past couple".
+  share: "friend",
 };
 
 /** Accepts a raw ?src= value; returns a safe tag or null. */
