@@ -16,11 +16,14 @@ import { randomUUID } from "node:crypto";
 import { audit } from "@/lib/audit";
 import {
   ACCRUAL_ACCOUNTS,
-  claimEntry,
-  jobCostEntry,
-  jobRevenueEntry,
+  crewSub,
+  handPaymentEntry,
+  handPayments,
+  jobEntries,
+  keyedClaimEntry,
   LOCKED_STATUSES,
-  matchedBankAccount,
+  matchedBankEntry,
+  payoutEntry,
   periodOf,
   planPosting,
   type AccrualKey,
@@ -152,7 +155,7 @@ async function insertEntry(
   tx: Tx,
   tenantId: string,
   e: { entryDate: string; memo: string; sourceType: string; sourceId: string; fingerprint: string; createdBy?: string | null; sourceRef?: string; adjustsPeriod?: string | null },
-  lines: LineInput[],
+  lines: (LineInput & { sub?: string | null })[],
 ): Promise<string> {
   const d = lines.reduce((s, l) => s + l.debitCents, 0);
   const c = lines.reduce((s, l) => s + l.creditCents, 0);
@@ -171,7 +174,16 @@ async function insertEntry(
       createdBy: e.createdBy ?? null,
     })
     .returning({ id: journalEntries.id });
-  await tx.insert(journalLines).values(lines.map((l) => ({ ...l, entryId: entry.id, tenantId })));
+  await tx.insert(journalLines).values(
+    lines.map((l) => ({
+      entryId: entry.id,
+      tenantId,
+      accountId: l.accountId,
+      debitCents: l.debitCents,
+      creditCents: l.creditCents,
+      subRef: l.sub ? l.sub.slice(0, 80) : null,
+    })),
+  );
   return entry.id;
 }
 
@@ -186,7 +198,7 @@ async function lockTenant(tx: Tx, tenantId: string) {
 // repost it, or, once its month is locked, post a dated correction instead.
 // The database refuses any write into a locked month regardless.
 
-const DERIVED_TYPES = ["bank_transaction", "job_revenue", "job_cost", "expense_claim", "adjustment"];
+const DERIVED_TYPES = ["bank_transaction", "job_revenue", "job_cost", "expense_claim", "hand_deposit", "hand_balance", "adjustment"];
 
 async function accrualAccounts(ex: Exec, tenantId: string): Promise<Record<AccrualKey, string>> {
   const existing = await ex.select({ code: ledgerAccounts.code }).from(ledgerAccounts).where(eq(ledgerAccounts.tenantId, tenantId));
@@ -248,8 +260,13 @@ export async function postLedger(
     const lockedSet = new Set(lockedRows.map((r) => r.p));
     const locked = (d: string) => lockedSet.has(periodOf(d));
 
-    const jobs = await tx.select().from(weddings).where(eq(weddings.tenantId, tenantId));
+    // A booking the owner marked "not a real job" (a test) is left out of the
+    // books entirely: its entries void, and money matched to it posts as an
+    // ordinary sorted line.
+    const jobs = (await tx.select().from(weddings).where(eq(weddings.tenantId, tenantId))).filter((j) => !j.booksExcludedAt);
     const jobById = new Map(jobs.map((j) => [j.id, j]));
+    const venueDate = (t: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Indiana/Indianapolis" }).format(t);
+    const bankIn = new Map<string, { cents: number; depositLines: number }>();
     const cancelledOn = (j: (typeof jobs)[number]) =>
       j.cancelledAt ? new Intl.DateTimeFormat("en-CA", { timeZone: "America/Indiana/Indianapolis" }).format(j.cancelledAt) : null;
 
@@ -274,17 +291,23 @@ export async function postLedger(
       .where(eq(bankTransactions.tenantId, tenantId));
 
     // Expense reports (built alongside; the table may not exist on an older database).
-    type Claim = { id: string; amount_cents: number; spent_on: string; merchant: string; claimant_name: string; cat_ledger_id: string | null; wedding_id: string | null; reimbursed_bank_transaction_id: string | null };
+    type Claim = { id: string; amount_cents: number; spent_on: string; merchant: string; claimant_name: string; cat_ledger_id: string | null; wedding_id: string | null; reimbursed_bank_transaction_id: string | null; crew_member_id: string | null };
     const claims: Claim[] = (await tableExists(tx, "expense_claims"))
       ? ((
           await tx.execute(sql`
             select c.id, c.amount_cents, c.spent_on::text as spent_on, c.merchant, c.claimant_name, lc.ledger_account_id as cat_ledger_id,
-                   c.wedding_id, c.reimbursed_bank_transaction_id
+                   c.wedding_id, c.reimbursed_bank_transaction_id, c.crew_member_id
             from expense_claims c left join ledger_categories lc on lc.id = c.category_id
-            where c.tenant_id = ${tenantId} and c.kind = 'reimbursement' and c.status = 'approved'`)
+            where c.tenant_id = ${tenantId} and c.kind = 'reimbursement' and c.status = 'approved'
+            order by c.submitted_at, c.id`)
         ).rows as Claim[])
       : [];
-    const reimbursing = new Set(claims.map((c) => c.reimbursed_bank_transaction_id).filter((x): x is string => !!x));
+    // Whose money a claim is: the crew member (crew rows are never deleted, so the id holds).
+    const personKey = (c: Claim) => (c.crew_member_id ? crewSub(c.crew_member_id) : null);
+    const reimbursing = new Map<string, Claim[]>();
+    for (const c of claims) {
+      if (c.reimbursed_bank_transaction_id) reimbursing.set(c.reimbursed_bank_transaction_id, [...(reimbursing.get(c.reimbursed_bank_transaction_id) ?? []), c]);
+    }
 
     const sources: Source[] = [];
     const payments = new Map<string, { date: string; cents: number }[]>();
@@ -296,17 +319,29 @@ export async function postLedger(
       const job = l.bookingId ? jobById.get(l.bookingId) : undefined;
       let desired: Desired = null;
       if (live && job) {
-        const key = matchedBankAccount(l, { eventDate: job.eventDate, cancelled: job.status === "cancelled" });
-        const other = acct[key];
-        desired = {
-          date: l.postedDate,
-          memo: `${l.merchant || l.description || "Bank transaction"} (${job.coupleNames}, ${l.amountCents > 0 ? (l.paymentKind === "deposit" ? "deposit" : "payment") : "job cost"})`,
-          lines: bankLinePosting(l.amountCents, l.bankLedgerId!, other),
-        };
-        if (l.amountCents > 0) push(payments, job.id, { date: l.postedDate, cents: l.amountCents });
+        desired = matchedBankEntry(
+          {
+            amountCents: l.amountCents,
+            postedDate: l.postedDate,
+            memo: `${l.merchant || l.description || "Bank transaction"} (${job.coupleNames}, ${l.amountCents > 0 ? (l.paymentKind === "deposit" ? "deposit" : "payment") : "job cost"})`,
+          },
+          { id: job.id, eventDate: job.eventDate, cancelled: job.status === "cancelled" },
+          l.bankLedgerId!,
+          acct,
+        );
+        if (l.amountCents > 0) {
+          push(payments, job.id, { date: l.postedDate, cents: l.amountCents });
+          const b = bankIn.get(job.id) ?? { cents: 0, depositLines: 0 };
+          bankIn.set(job.id, { cents: b.cents + l.amountCents, depositLines: b.depositLines + (l.paymentKind === "deposit" ? 1 : 0) });
+        }
         else if (l.postedDate <= job.eventDate) push(prepaid, job.id, { date: l.postedDate, cents: -l.amountCents });
       } else if (live && reimbursing.has(l.id)) {
-        desired = { date: l.postedDate, memo: `${l.merchant || l.description || "Reimbursement"} (expense reimbursement)`, lines: bankLinePosting(l.amountCents, l.bankLedgerId!, acct.reimbursements_payable) };
+        desired = payoutEntry(
+          { amountCents: l.amountCents, postedDate: l.postedDate, memo: `${l.merchant || l.description || "Reimbursement"} (expense reimbursement)` },
+          (reimbursing.get(l.id) ?? []).map((c) => ({ amountCents: c.amount_cents, personKey: personKey(c) })),
+          l.bankLedgerId!,
+          acct,
+        );
       } else if (live && l.reviewStatus === "categorized" && l.catLedgerId) {
         desired = { date: l.postedDate, memo: l.merchant || l.description || "Bank transaction", lines: bankLinePosting(l.amountCents, l.bankLedgerId!, l.catLedgerId) };
       }
@@ -321,7 +356,10 @@ export async function postLedger(
         ref: `expense_claim:${c.id}`,
         type: "expense_claim",
         id: c.id,
-        desired: claimEntry({ amountCents: c.amount_cents, spentOn: c.spent_on, merchant: c.merchant, claimant: c.claimant_name, categoryAccountId: c.cat_ledger_id, job }, acct),
+        desired: keyedClaimEntry(
+          { amountCents: c.amount_cents, spentOn: c.spent_on, merchant: c.merchant, claimant: c.claimant_name, categoryAccountId: c.cat_ledger_id, job, jobId: j ? j.id : null, personKey: personKey(c) },
+          acct,
+        ),
       });
     }
 
@@ -353,6 +391,28 @@ export async function postLedger(
       planCost.set(r.weddingId, (planCost.get(r.weddingId) ?? 0) + (line.actualCostCents ?? c.actual ?? c.planned ?? 0));
     }
     for (const j of jobs) {
+      // Cash and checks marked paid by hand (deposits are cash and check for now).
+      const bank = bankIn.get(j.id) ?? { cents: 0, depositLines: 0 };
+      const hand = handPayments(
+        {
+          totalCents: Math.round(Number(j.totalAmount) * 100) || 0,
+          depositCents: Math.round(Number(j.depositAmount) * 100) || 0,
+          isDepositPaid: !!j.isDepositPaid,
+          isBalancePaid: !!j.isBalancePaid,
+          bankCents: bank.cents,
+          bankDepositLines: bank.depositLines,
+          createdOn: venueDate(j.createdAt),
+          eventDate: j.eventDate,
+          depositPaidOn: j.depositPaidOn,
+          balancePaidOn: j.balancePaidOn,
+        },
+        today,
+      );
+      const handJob = { id: j.id, eventDate: j.eventDate, cancelled: j.status === "cancelled" };
+      for (const [kind, part] of [["deposit", hand.deposit], ["balance", hand.balance]] as const) {
+        if (part) push(payments, j.id, { date: part.date, cents: part.cents });
+        sources.push({ ref: `hand_${kind}:${j.id}`, type: `hand_${kind}`, id: j.id, desired: handPaymentEntry(part, kind, handJob, j.coupleNames, acct) });
+      }
       const jobClaims = claims.filter((c) => c.wedding_id === j.id && c.spent_on <= j.eventDate).reduce((s, c) => s + c.amount_cents, 0);
       const facts: JobFacts = {
         totalCents: Math.round(Number(j.totalAmount) * 100) || 0,
@@ -363,8 +423,9 @@ export async function postLedger(
         costCents: (planCost.get(j.id) ?? 0) + (j.status === "cancelled" ? 0 : jobClaims),
         prepaid: prepaid.get(j.id) ?? [],
       };
-      sources.push({ ref: `job_revenue:${j.id}`, type: "job_revenue", id: j.id, desired: jobRevenueEntry(facts, j.coupleNames, acct, today) });
-      sources.push({ ref: `job_cost:${j.id}`, type: "job_cost", id: j.id, desired: jobCostEntry(facts, j.coupleNames, acct, today) });
+      const entries = jobEntries(facts, j.id, j.coupleNames, acct, today);
+      sources.push({ ref: `job_revenue:${j.id}`, type: "job_revenue", id: j.id, desired: entries.revenue });
+      sources.push({ ref: `job_cost:${j.id}`, type: "job_cost", id: j.id, desired: entries.cost });
     }
 
     // Everything already posted from these sources, with its lines.
@@ -374,12 +435,12 @@ export async function postLedger(
       .where(and(eq(journalEntries.tenantId, tenantId), eq(journalEntries.status, "posted"), inArray(journalEntries.sourceType, DERIVED_TYPES)));
     const entryLines = liveEntries.length
       ? await tx
-          .select({ entryId: journalLines.entryId, accountId: journalLines.accountId, debitCents: journalLines.debitCents, creditCents: journalLines.creditCents })
+          .select({ entryId: journalLines.entryId, accountId: journalLines.accountId, debitCents: journalLines.debitCents, creditCents: journalLines.creditCents, sub: journalLines.subRef })
           .from(journalLines)
           .where(and(eq(journalLines.tenantId, tenantId), inArray(journalLines.entryId, liveEntries.map((e) => e.id))))
       : [];
     const linesByEntry = new Map<string, Line[]>();
-    for (const l of entryLines) linesByEntry.set(l.entryId, [...(linesByEntry.get(l.entryId) ?? []), { accountId: l.accountId, debitCents: l.debitCents, creditCents: l.creditCents }]);
+    for (const l of entryLines) linesByEntry.set(l.entryId, [...(linesByEntry.get(l.entryId) ?? []), { accountId: l.accountId, debitCents: l.debitCents, creditCents: l.creditCents, sub: l.sub }]);
     const liveByRef = new Map<string, LiveEntry[]>();
     for (const e of liveEntries) {
       const ref = e.ref ?? "";

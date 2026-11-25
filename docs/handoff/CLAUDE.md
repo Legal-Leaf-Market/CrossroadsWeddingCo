@@ -45,11 +45,11 @@ Logins are their `@crossroadsweddingco.shop` addresses (default house books list
    open `/app/books` as jake@ and confirm the conversion posted (journal entries now carry
    `source_ref`; job revenue and cost entries exist for held jobs), and that `/app/books/audit`
    says the chain is intact.
-2. **Make `/admin/[key]/jobs` tie to the ledger.** It still computes prepaid and accrued from the
+2. **DONE 2026-11-13 (subledger slice).** **Make `/admin/[key]/jobs` tie to the ledger.** It still computes prepaid and accrued from the
    cost lines' "Paid" box. Read the same facts `postLedger` uses (matched bank lines and approved
    receipts), or better, read the posted journal by `source_ref`. Add a test that the page's
    totals equal the GL balances of 1100, 1300, 2300, 2400.
-3. **Drill-down to true subledgers.** Report line -> GL account register (running balance) ->
+3. **DONE 2026-11-13 (subledger slice; see FINANCIALS_SPEC "Subledgers and the tie-out").** **Drill-down to true subledgers.** Report line -> GL account register (running balance) ->
    subledger for control accounts (1100, 1300, 2300, 2400 by job; 2500 by person; vendors by
    1099 vendor) -> journal entry -> lines -> source record -> that source's audit history.
    Pages under `/app/books/accounts/<id>` and `/app/books/entries/<id>`. Add a tie-out report

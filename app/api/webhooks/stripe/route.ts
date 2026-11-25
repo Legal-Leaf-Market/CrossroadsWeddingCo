@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
+import { ledgerToday } from "@/lib/books/ledger";
 import { applyCheckout, applySubscription } from "@/lib/billing";
 import { markOfficiantPaidByCard } from "@/lib/service-agreements";
 
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
       if (weddingId && session.payment_status === "paid") {
         await db
           .update(weddings)
-          .set({ isDepositPaid: true, status: "deposit_paid", updatedAt: new Date() })
+          .set({ isDepositPaid: true, depositPaidOn: ledgerToday(), status: "deposit_paid", updatedAt: new Date() })
           .where(eq(weddings.id, weddingId));
         console.log(`[stripe] deposit recorded for wedding ${weddingId}`);
       }
