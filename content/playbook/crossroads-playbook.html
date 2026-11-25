@@ -164,6 +164,7 @@ a{color:var(--accent)}
 .treach{font-size:14px;margin:2px 0 0;overflow-wrap:anywhere}
 .tlog{font-size:12px;color:var(--muted);margin:0}
 .lead{scroll-margin-top:110px}
+.hoc{margin:8px 0 0;font-size:14px}
 .lead .close{margin-left:auto}
 .empty .btn{margin-left:8px}
 @media (prefers-reduced-motion:reduce){.tile{transition:none}.tile:hover{transform:none}}
@@ -771,7 +772,9 @@ const LEADS=[
 {id:"cbus-gracie-mae",sec:"columbus",also:["venue"],grp:"partner",name:"Gracie Mae Events (Maggie Sturgill, florist)",type:"Wedding florist and day-of coordination",city:"Columbus",contact:"Maggie Sturgill, owner",why:"Family-owned floral design studio in rural Columbus serving weddings within about 90 miles: venue visits, delivery, setup and day-of coordination; 25 five-star WeddingWire reviews. Florists sit in every wedding planning meeting: trade referrals and cross-post each other's work.",srcs:["https://www.theknot.com/marketplace/gracie-mae-events-columbus-in-2039768", "https://www.weddingwire.com/biz/gracie-mae-events/5435fdb0cece9dfc.html"],fresh23:1},
 {id:"cbus-wildflower",sec:"columbus",also:["venue"],grp:"partner",name:"Wildflower Creations and Rentals, LLC (A Luminous Yuletide)",type:"Event producer and rental company",city:"Columbus",contact:"Owner, through their Eventbrite organizer page",why:"Produced A Luminous Yuletide at The Commons on Thu Dec 18, 2025: a dressy holiday night with soulful music, small bites and artisan vendors. If it returns this December, offer DJ, sound or an MC. Either way, a rental company is a referral partner: trade leads both ways.",srcs:["https://www.eventbrite.com/e/a-luminous-yuletide-tickets-1474663902429", "https://thecommonscolumbus.com/event/a-luminous-yuletide"],fresh23:1},
 {id:"cbus-gypsy-rose",sec:"columbus",also:["venue"],grp:"partner",name:"Gypsy Rose Events",type:"Wedding and event planner (South Central Indiana)",city:"Columbus",contact:"Owner, through their The Knot listing",why:"An event planning and coordination company based in South Central Indiana. Ask to be on their recommended DJ list and offer the venue/planner link: crossroadsweddingco.shop/events?src=planner.",srcs:["https://www.theknot.com/marketplace/gypsy-rose-events-columbus-in-2047928"],fresh23:1},
-{id:"cbus-qmix",sec:"columbus",grp:"partner",name:"QMIX 107.3 (Columbus radio)",type:"Radio station and event producer",city:"Columbus",contact:"Promotions or events director",phone:"(812) 378-1073 (station line on qmix.com)",why:"Produces the QMIX Christmas Musical Fireworks downtown after the Festival of Lights (Lohmeyer Plumbing, powered by RE/MAX) and runs community event promos. Pitch sound and DJ for station remotes and events, and a trade for on-air mentions.",srcs:["https://www.qmix.com/?p=3446", "https://www.qmix.com/?p=47703", "https://www.qmix.com/news/latest-news-test/united-way-bartholomew-county-honors-community-leaders/"],fresh23:1}
+{id:"cbus-qmix",sec:"columbus",grp:"partner",name:"QMIX 107.3 (Columbus radio)",type:"Radio station and event producer",city:"Columbus",contact:"Promotions or events director",phone:"(812) 378-1073 (station line on qmix.com)",why:"Produces the QMIX Christmas Musical Fireworks downtown after the Festival of Lights (Lohmeyer Plumbing, powered by RE/MAX) and runs community event promos. Pitch sound and DJ for station remotes and events, and a trade for on-air mentions.",srcs:["https://www.qmix.com/?p=3446", "https://www.qmix.com/?p=47703", "https://www.qmix.com/news/latest-news-test/united-way-bartholomew-county-honors-community-leaders/"],fresh23:1},
+{id:"cbus-clarity",sec:"columbus",grp:"gala",name:"Clarity of Central Indiana (Clarity Pregnancy Services, Columbus Care Hub)",type:"Nonprofit: pregnancy services, testing clinic, education",city:"Columbus",contact:"The director Jake knows (name and background in the call notes)",phone:"(812) 378-4114 (office)",why:"Faith-based nonprofit headquartered in Columbus, with centers in Franklin, Greenwood, Greensburg, Mooresville, Shelbyville, North Vernon and Seymour. The Columbus Care Hub at 3203 Middle Road holds pregnancy services, the testing clinic and the main office (center (812) 378-4730). Jake talked with them Nov 23 about smaller events and a discounted rate for nonprofits, and for Clarity in particular. No nonprofit rate is published yet, so agree any number with Jake before quoting it.",srcs:["https://claritycares.org/locations/", "https://www.ecfa.org/MemberProfile.aspx?ID=35721"],fresh23:1},
+{id:"cbus-gather",sec:"columbus",also:["venue"],grp:"venue",when:"2026-12-12",name:"Gather Columbus",type:"Venue (rustic event space, Chamber member)",city:"Columbus",contact:"The owner or event manager (by appointment)",phone:"(812) 375-1234",why:"2508 25th St, Suite B, near the Circle K Fieldhouse. Weddings, receptions, showers, meetings and galas for 6 to 150+ guests, with a coffee bar and a smart TV on an AV cart. ATC licensed with its own bar and bartender, so the pitch here is DJ and sound, not bar staff. Hosted the NAACP Freedom Fund Gala (Jan 2025). Our pending Dec 12 wedding is here, and they are adding us to their preferred vendor list. Meet the coordinator at that wedding.",srcs:["https://business.columbusareachamber.com/list/member/gather-columbus-6426", "https://naacp-3071.org/event/naacp-freedom-fund-gala/"],fresh23:1}
 ];
 const DEF=Object.fromEntries(LEADS.filter(l=>l.def).map(l=>[l.id,l.def]));
 const CBUS_GRPS=[["dated","Columbus: this week to Dec 10","Rooms to walk into and dated events."],["corp","Columbus employers","Holiday parties, Q1 kickoffs, quarterly town halls, plant milestones."],["venue","Columbus venues and hotels","The ask: put us on your list."],["gala","Columbus nonprofits and galas","Book 2027 now."],["youth","Columbus proms and teen nights","Spring 2027 dances that hire a DJ every year."],["partner","Columbus connectors and referral partners","People who hear about events first."]];
@@ -950,10 +953,20 @@ const STARS={"andrew-sutherland":[4, "Personal connection: Jake worked for him, 
 "cbus-gracie-mae":[3, "A Columbus wedding florist couples love; trade referrals."],
 "cbus-wildflower":[3, "Produces ticketed holiday events at The Commons; a natural partner."],
 "cbus-gypsy-rose":[2, "Local planner; planners recommend DJs."],
-"cbus-qmix":[2, "Local radio that produces the downtown fireworks show."]};
+"cbus-qmix":[2, "Local radio that produces the downtown fireworks show."],
+"cbus-clarity":[4, "Warm: Jake talked with them Nov 23 about smaller events and a nonprofit rate."],
+"cbus-gather":[5, "Active: our Dec 12 wedding is here and they are adding us to their preferred vendor list."]};
 const STAR_DEFAULT={columbus:[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],chamber:[1,"Member listing only. No event or contact info beyond the main line."],network:[2,"Referral ask. They hear about events but don't plan them."],linkedin:[2,"A cold LinkedIn message."],venue:[2,"Real contact and a plausible fit, but nothing yet shows they need a DJ."],event:[2,"A dated event, need not confirmed."],partner:[3,"Partner."]};
 function starsOf(l){const e=log[l.id]||{};const n=+e.stars;if(n>=1&&n<=5)return {n,why:e.starWhy||"",by:e.starBy||e.by||"",mine:true};const d=STARS[l.id]||STAR_DEFAULT[l.sec]||[2,""];return {n:d[0],why:d[1],mine:false}}
 const starTxt=n=>"\u2605".repeat(n)+"\u2606".repeat(5-n);
+// Heart of Columbus (Jacob's Columbus directory) already has a page for some of these leads (2026-11-23, Jacob:
+// "if you find any of these Columbus pages on the Heart of Columbus repo, link in their page and site").
+// HOC: lead id -> [path on Heart of Columbus, label when the page is a guide rather than the business's own
+// listing, the business's own website as Heart of Columbus lists it].
+const HOC_ORIGIN="https://heartofcolumbus.netlify.app/";
+const HOC={"ryan-furr-creative":["b/ryan-furr-creative/","","http://www.ryanfurr.com/"],"forge-on-4th":["b/the-forge-english-pub/","","https://forgeon4th.com/"],"crump-theatre":["b/crump-center-for-the-performing-arts/","",""],"matty-o-entertainment":["b/matty-o-entertainment/","","https://www.mattyoentertainment.com/"],"li-alex-thatcher":["b/lhp-engineering-solutions/","","https://www.lhpes.com/"],"cbus-taylor-bros":["b/taylor-bros-construction-co-inc/","","http://www.tbcci.com/"],"cbus-upland":["b/upland-columbus-pump-house/","","https://uplandbeer.com/columbus/"],"cbus-irwin-gardens":["b/inn-at-irwin-gardens/","","https://www.irwingardens.com/"],"cbus-harrison-lake":["b/harrison-lake-country-club/","","http://www.harrisonlakeclub.com/"],"cbus-ceraland":["b/ceraland-park/","",""],"cbus-henry-social":["b/henry-social-club/","","http://www.henrysocialclub.com/"],"cbus-simmons":["b/simmons-winery-450-north-brewery/","","http://450northbrewing.com/"],"cbus-gracie-mae":["b/gracie-mae-events-llc/","","http://www.graciemaeevents.com/"],"cbus-gather":["b/gather-columbus/","","http://gathercolumbus.com/"],"cbus-clarity":["b/clarity-of-central-indiana/","","https://www.claritycares.org/"],"cbus-centra":["b/centra-credit-union/","","https://www.centra.org/"],"cbus-gypsy-rose":["b/gypsy-rose-events/","",""],"jcbank-columbus":["b/jcbank-central-avenue/","","https://www.jcbank.com/"],"cbus-siho":["b/siho-insurance-services/","","https://www.siho.org/"],"cbus-qmix":["b/qmix-107-3/","","https://www.qmix.com/"],"cbus-fairgrounds":["b/bartholomew-county-4-h-fairgrounds/","","https://bartholomewcountyfair.com/"],"cbus-cummins":["cummins/","Cummins guide","https://www.cummins.com/"],"cbus-su-casa":["help/#su-casa","Help page: Su Casa",""],"cbus-jackpot-generations":["help/#mill-race-center","Help page: Mill Race Center",""],"cbus-festival-of-lights":["events/","Events","https://columbusfestivaloflights.com/"],"cbus-caac":["events/","Events (their calendar)","https://www.artsincolumbus.org/"],"cbus-landmark":["arts/","Arts guide (Exhibit Columbus)","https://landmarkcolumbusfoundation.org/"]};
+function hocLinks(l){const x=HOC[l.id];if(!x)return "";const [path,label,site]=x;
+  return `<p class="hoc"><a href="${esc(HOC_ORIGIN+path)}" target="_blank" rel="noopener">Heart of Columbus ${label?esc(label):"page"}</a>${site?` · <a href="${esc(site)}" target="_blank" rel="noopener">Their website</a>`:""}</p>`}
 function card(l){
   const s=statusOf(l.id), e=log[l.id]||{};
   const opts=STATUSES.map(([v,t])=>`<option value="${v}"${v===s?" selected":""}>${t}</option>`).join("");
@@ -973,6 +986,7 @@ function card(l){
     ${PREP[l.id]?prepHtml(PREP[l.id],l.id):""}
     ${(LEAD_SCRIPTS[l.id]||[]).map(([h,t],i)=>`<div class="lscript"><h3>${esc(h)}</h3><p>${esc(voice(t))}</p><button class="btn" data-lcopy="${l.id}:${i}">Copy</button></div>`).join("")}
     ${(l.srcs||(l.src?[l.src]:[])).map((u,i,a)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${a.length>1?"Source "+(i+1):"Source"}</a>`).join(" · ")}
+    ${hocLinks(l)}
    </div>
    <div class="log">
     <div class="row">
@@ -999,7 +1013,7 @@ const STATUS_LABEL=Object.fromEntries(STATUSES);
 const OPEN_ST=["todo","sent","replied","vm","talked"];
 const WHEN=[["late","Overdue or today"],["week","Next 7 days"],["later","Later"],["none","No date"],["gone","Event passed"]];
 const WHEN_LABEL=Object.fromEntries(WHEN);
-const REACH=[["phone","Phone listed"],["email","Email listed"],["li","LinkedIn"],["none","Nothing listed"]];
+const REACH=[["phone","Phone listed"],["email","Email listed"],["li","LinkedIn"],["site","Website listed"],["hoc","On Heart of Columbus"],["none","Nothing listed"]];
 const REACH_LABEL=Object.fromEntries(REACH);
 const KIND_LABEL={partner:"Partners",venue:"Venues and planners",event:"Nov to Dec events",chamber:"Chamber members",linkedin:"LinkedIn near us",network:"LinkedIn network","c:dated":"Columbus: dated","c:corp":"Columbus employers","c:venue":"Columbus venues","c:gala":"Columbus galas","c:youth":"Columbus proms","c:partner":"Columbus connectors"};
 const KIND_ORDER=SECS.flatMap(([k])=>k==="columbus"?CBUS_GRPS.map(([g])=>"c:"+g):[k]);
@@ -1009,7 +1023,7 @@ const townRaw=l=>(l.city||"").replace(/\s*\(.*?\)\s*/g," ").split(/[\/,]/)[0].re
 const TOWN_N={};for(const l of LEADS){const t=townRaw(l);if(t)TOWN_N[t]=(TOWN_N[t]||0)+1}
 const TOWN=new Map(LEADS.map(l=>{const t=townRaw(l);return [l.id,!t?"Not listed":TOWN_N[t]>=3?t:"Elsewhere"]}));
 const townOf=l=>TOWN.get(l.id);
-const reachOf=l=>{const r=[];if(l.phone)r.push("phone");if(l.email)r.push("email");if(l.li)r.push("li");return r.length?r:["none"]};
+const reachOf=l=>{const r=[];if(l.phone)r.push("phone");if(l.email)r.push("email");if(l.li)r.push("li");if(HOC[l.id]&&HOC[l.id][2])r.push("site");if(!r.length)r.push("none");if(HOC[l.id])r.push("hoc");return r};
 function whenOf(l){const d=dueOf(l);if(!d)return "none";if(d.gone)return "gone";const n=Math.round((new Date(d.d+"T12:00")-new Date(todayStr()+"T12:00"))/864e5);return n<=0?"late":n<=7?"week":"later"}
 const plural=(n,w)=>n+" "+w+(n===1?"":"s");
 const FACETS=[
@@ -1079,6 +1093,7 @@ function tile(l){
    <p class="meta">${metaHtml(l)}</p>
    ${dueChip(l)}${l.flag?`<span class="flag${l.warn?" warn":""}">${esc(l.flag)}</span>`:""}
    <p class="treach">${reach}</p>
+   ${HOC[l.id]?`<p class="tlog"><a class="lk" href="${esc(HOC_ORIGIN+HOC[l.id][0])}" target="_blank" rel="noopener">On Heart of Columbus</a>${HOC[l.id][2]?` · <a class="lk" href="${esc(HOC[l.id][2])}" target="_blank" rel="noopener">Website</a>`:""}</p>`:""}
    <p class="tlog">${when?`Logged by ${esc(e.by||"someone")}, ${when}${e.note?" · has notes":""}`:"No calls logged"}</p>
   </article>`;
 }
