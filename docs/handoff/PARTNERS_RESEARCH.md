@@ -63,6 +63,9 @@ for the facts only the owners can give.
 - Process: tell her the vibe, design and quote before ordering, setup on time, breakdown.
 - Sister business: Turtle's Flowers (https://www.turtlesflowers.com/), run by her sister.
 - The page's balloon arch picture is our illustration, captioned as not her work.
+- Since 2026-11-25 the page (`app/partners/rabbits-balloons`) carries the Color Studio and a
+  working inquiry form from her Heart of Columbus preview site. Inquiries come to Crossroads
+  (saved as leads, emailed to the owner) to pass on until she has her own inbox.
 
 ## Your tasks
 

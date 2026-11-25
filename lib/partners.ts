@@ -17,6 +17,9 @@
 // to plain statements; her personal story waits for her OK to quote. The
 // "ask" lists are ours: questions a couple should bring, not their policies.
 // docs/handoff/PARTNERS_RESEARCH.md is the brief for researching the rest.
+// Since 2026-11-25 Rabbit's Balloons also has its own page file
+// (app/partners/rabbits-balloons): the Color Studio and a real inquiry form,
+// ported from the preview site Heart of Columbus built for Rachael.
 
 import { CONTACT_EMAIL } from "@/lib/site";
 
@@ -105,6 +108,8 @@ export const PARTNERS: Partner[] = [
       "Set up and broken down for you, with minimal waste.",
     ],
     links: [{ label: "Ask us to connect you", href: ask("Rabbit's Balloons for our event"), primary: true }],
+    customPage: true,
+    badge: "Build your palette and send an inquiry here",
     art: {
       src: "/partners/rabbits-balloons/arch.webp",
       alt: "Illustration of an organic balloon arch in soft pastel colors",

@@ -1297,6 +1297,31 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Rabbit's Balloons gets its own page, Color Studio and a real inquiry (2026-11-25, Jacob:
+  "now do that same for rabbit's balloons").** `/partners/rabbits-balloons` is its own page
+  file (`customPage`), ported from the preview site Heart of Columbus built for Rachael Starr
+  (Legal-Leaf-Market/RabbitsBalloons, rabbits-balloons.netlify.app) with its own scoped look
+  (`components/partners/rabbits-balloons.module.css`, Fraunces and Instrument Sans): services,
+  install styles, how a project runs, her low-waste practices and her own caveat. Every picture
+  is inspiration art from the Round Two pack (`public/partners/rabbits-balloons/`), tagged as
+  such; her "Why Rabbit?" story is still NOT quoted (waits for her OK), and weddings are
+  offered with no wedding history claimed (she has not done one yet). **Color Studio**
+  (`lib/balloon-studio.ts`, pure): 58 Sempertex colors by real name with our approximate screen
+  hex, curated palettes, a six-color palette, "match any color" by CIELAB distance, and a
+  deterministic arch, garland or columns preview so server and browser draw the same picture.
+  **She has no store or inbox, so the "order" is the inquiry, made real**: her preview's form
+  sends nothing; here `POST /api/partners/inquiry` saves a `leads` row (house tenant, source
+  `rabbits_balloons`, shown under "Recent inquiries" on the dashboard) AND emails the owner
+  (`sendPartnerInquiry`, reply-to the asker's email) to pass to Rachael; either landing is a
+  success, both failing shows our address. The Color Studio palette and the occasion picked on
+  a service card ride along. Rules are pure in `lib/partner-inquiry.ts` (name and an email or
+  phone required, occasion and budget from fixed lists, a past date dropped, caps, a honeypot
+  answered like a person, five per IP per hour). Added here: where balloons land on a Crossroads
+  run sheet (labeled as our suggestions) and Cookie Paradise linked to its own page.
+  `node --experimental-strip-types scripts/verify-balloon-studio.mjs` (35 checks). Checked in
+  headless Chromium at 360/390/768/1024/1280 on a local build (no sideways scroll, no console
+  errors, palette edits, color match, occasion link, browser-required name, error fallback,
+  the posted payload, the sent state).
 - **Cookie Paradise becomes an orderable store (2026-11-25, Jacob: "build up on Heart of
   Columbus, how we did cookie paradise on there, and try to replicate as much as you can here
   ... make their page orderable on this site, just like it is on Heart of Columbus ... make it
