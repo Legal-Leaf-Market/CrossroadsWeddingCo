@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Nunito } from "next/font/google";
+import localFont from "next/font/local";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import s from "@/components/partners/cookie-paradise.module.css";
@@ -10,8 +10,21 @@ import { PARTNERS } from "@/lib/partners";
 
 export const revalidate = 900;
 
-const head = Fraunces({ subsets: ["latin"], weight: ["500", "600", "700"], style: ["normal", "italic"], variable: "--cp-head", display: "swap" });
-const body = Nunito({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--cp-body", display: "swap" });
+const head = localFont({
+  src: [
+    { path: "./fonts/fraunces-normal.woff2", weight: "500 700", style: "normal" },
+    { path: "./fonts/fraunces-italic.woff2", weight: "500 700", style: "italic" },
+  ],
+  variable: "--cp-head",
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
+});
+const body = localFont({
+  src: "./fonts/nunito-normal.woff2",
+  weight: "400 700",
+  variable: "--cp-body",
+  display: "swap",
+});
 
 const cdn = "https://cdn.shopify.com/s/files/1/0947/6073/0918/files/";
 const photography = {
