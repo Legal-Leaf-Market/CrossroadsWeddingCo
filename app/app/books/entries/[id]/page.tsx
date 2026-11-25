@@ -123,7 +123,7 @@ export default async function EntryPage({ params }: { params: Promise<{ id: stri
                 {house ? (
                   str(s.row.bookingName)
                 ) : (
-                  <Link href={`/app/bookings/${str(s.row.bookingId)}`} className="text-terracotta underline">
+                  <Link href={`/app/books/jobs/${str(s.row.bookingId)}`} className="text-terracotta underline">
                     {str(s.row.bookingName)}
                   </Link>
                 )}{" "}
@@ -144,7 +144,7 @@ export default async function EntryPage({ params }: { params: Promise<{ id: stri
               {house ? (
                 str(s.row.names)
               ) : (
-                <Link href={`/app/bookings/${s.id}`} className="text-terracotta underline">
+                <Link href={`/app/books/jobs/${s.id}`} className="text-terracotta underline">
                   {str(s.row.names)}
                 </Link>
               )}

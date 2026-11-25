@@ -50,13 +50,22 @@ export async function auditQuietly(e: AuditEvent): Promise<void> {
  */
 export async function verifyAudit(tenantId: string): Promise<{ rows: number; brokenAt: number | null; why: string | null }> {
   const res = await db.execute(sql`
-    select id, prev_hash = lag(hash) over (order by id) or (prev_hash is null and lag(hash) over (order by id) is null) as linked,
-           hash = audit_digest(prev_hash, a) as intact
-    from audit_log a where tenant_id = ${tenantId} order by id`);
-  const rows = res.rows as { id: string; linked: boolean; intact: boolean }[];
-  for (const r of rows) {
-    if (!r.intact) return { rows: rows.length, brokenAt: Number(r.id), why: "This row was changed after it was written" };
-    if (!r.linked) return { rows: rows.length, brokenAt: Number(r.id), why: "A row before this one was changed or removed" };
-  }
-  return { rows: rows.length, brokenAt: null, why: null };
+    with chain as (
+      select id, prev_hash, lag(hash) over (order by id) as previous_hash,
+             hash = audit_digest(prev_hash, a) as intact
+      from audit_log a where tenant_id = ${tenantId}
+    ), first_issue as (
+      select id, intact from chain
+      where intact is not true or prev_hash is distinct from previous_hash
+      order by id limit 1
+    )
+    select (select count(*) from chain) as rows, id as "brokenAt", intact
+    from (select 1) summary left join first_issue on true`);
+  const row = res.rows[0];
+  const rows = Number(row?.rows ?? 0);
+  if (row?.brokenAt == null) return { rows, brokenAt: null, why: null };
+  const why = row.intact
+    ? "A row before this one was changed or removed"
+    : "This row was changed after it was written";
+  return { rows, brokenAt: Number(row.brokenAt), why };
 }
