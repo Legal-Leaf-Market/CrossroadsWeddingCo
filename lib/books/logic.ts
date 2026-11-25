@@ -140,3 +140,44 @@ export function bankLinePosting(amountCents: number, bankAccountLedgerId: string
         { accountId: bankAccountLedgerId, debitCents: 0, creditCents: abs },
       ];
 }
+
+// ── Split transactions ──────────────────────────────────────────────────────
+export const MAX_SPLIT_PARTS = 20;
+
+/**
+ * Can this bank line be split this way? Null when it can, else the reason in
+ * plain words. Every part has the line's sign and is not zero, there are at
+ * least two parts, and they add up to the line to the cent.
+ */
+export function splitProblem(amountCents: number, parts: { amountCents: number }[]): string | null {
+  if (amountCents === 0) return "A zero line can't be split.";
+  if (parts.length < 2) return "A split needs at least two parts.";
+  if (parts.length > MAX_SPLIT_PARTS) return `A split can have at most ${MAX_SPLIT_PARTS} parts.`;
+  for (const p of parts) {
+    if (!Number.isSafeInteger(p.amountCents) || p.amountCents === 0) return "Every part needs an amount.";
+    if (Math.sign(p.amountCents) !== Math.sign(amountCents)) {
+      return amountCents > 0 ? "Every part of money coming in is money in." : "Every part of money going out is money out.";
+    }
+  }
+  const sum = parts.reduce((s, p) => s + p.amountCents, 0);
+  if (sum !== amountCents) {
+    const diff = Math.abs(amountCents - sum);
+    return `The parts are ${(diff / 100).toFixed(2)} ${Math.abs(sum) < Math.abs(amountCents) ? "short of" : "over"} the transaction.`;
+  }
+  return null;
+}
+
+/** One balanced entry for a split line: the bank side once, a category line per part. */
+export function splitPosting(amountCents: number, bankAccountLedgerId: string, parts: { accountId: string; amountCents: number }[]): LineInput[] {
+  const bank = Math.abs(amountCents);
+  const cats = parts.map((p) => ({ accountId: p.accountId, abs: Math.abs(p.amountCents) }));
+  return amountCents > 0
+    ? [
+        { accountId: bankAccountLedgerId, debitCents: bank, creditCents: 0 },
+        ...cats.map((c) => ({ accountId: c.accountId, debitCents: 0, creditCents: c.abs })),
+      ]
+    : [
+        ...cats.map((c) => ({ accountId: c.accountId, debitCents: c.abs, creditCents: 0 })),
+        { accountId: bankAccountLedgerId, debitCents: 0, creditCents: bank },
+      ];
+}

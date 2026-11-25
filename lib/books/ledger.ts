@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   bankAccounts,
+  bankTransactionSplits,
   bankTransactions,
   eventResources,
   journalEntries,
@@ -34,7 +35,7 @@ import {
   type LiveEntry,
 } from "@/lib/books/accrual";
 import { ACCOUNT_RANGES, accountTypeForBank, type AccountType } from "@/lib/books/ledger-constants";
-import { bankLinePosting, type LineInput } from "@/lib/books/logic";
+import { bankLinePosting, splitPosting, splitProblem, type LineInput } from "@/lib/books/logic";
 import { isPayMethod, lineCost } from "@/lib/costing-logic";
 import { commissionsFor } from "@/lib/sales-logic";
 export { bankLinePosting } from "@/lib/books/logic";
@@ -286,11 +287,32 @@ export async function postLedger(
         catLedgerId: ledgerCategories.ledgerAccountId,
         bookingId: bankTransactions.bookingId,
         paymentKind: bankTransactions.paymentKind,
+        isSplit: bankTransactions.isSplit,
       })
       .from(bankTransactions)
       .innerJoin(bankAccounts, eq(bankTransactions.bankAccountId, bankAccounts.id))
       .leftJoin(ledgerCategories, eq(bankTransactions.categoryId, ledgerCategories.id))
       .where(eq(bankTransactions.tenantId, tenantId));
+
+    // Parts of split lines, mapped to their ledger accounts, in the order saved.
+    const splitRows = await tx
+      .select({
+        transactionId: bankTransactionSplits.transactionId,
+        accountId: ledgerCategories.ledgerAccountId,
+        amountCents: bankTransactionSplits.amountCents,
+      })
+      .from(bankTransactionSplits)
+      .innerJoin(ledgerCategories, eq(bankTransactionSplits.categoryId, ledgerCategories.id))
+      .where(eq(bankTransactionSplits.tenantId, tenantId))
+      .orderBy(asc(bankTransactionSplits.position));
+    const partsBy = new Map<string, { accountId: string | null; amountCents: number }[]>();
+    for (const r of splitRows) partsBy.set(r.transactionId, [...(partsBy.get(r.transactionId) ?? []), r]);
+    // A split posts only when its parts still fit the line and every part has an account.
+    const partsOf = (l: { id: string; amountCents: number }) => {
+      const parts = partsBy.get(l.id) ?? [];
+      if (splitProblem(l.amountCents, parts) || parts.some((p) => !p.accountId)) return null;
+      return parts as { accountId: string; amountCents: number }[];
+    };
 
     // Expense reports (built alongside; the table may not exist on an older database).
     type Claim = { id: string; amount_cents: number; spent_on: string; merchant: string; claimant_name: string; cat_ledger_id: string | null; wedding_id: string | null; reimbursed_bank_transaction_id: string | null; crew_member_id: string | null };
@@ -344,6 +366,9 @@ export async function postLedger(
           l.bankLedgerId!,
           acct,
         );
+      } else if (live && l.reviewStatus === "categorized" && l.isSplit) {
+        const parts = partsOf(l);
+        if (parts) desired = { date: l.postedDate, memo: l.merchant || l.description || "Bank transaction", lines: splitPosting(l.amountCents, l.bankLedgerId!, parts) };
       } else if (live && l.reviewStatus === "categorized" && l.catLedgerId) {
         desired = { date: l.postedDate, memo: l.merchant || l.description || "Bank transaction", lines: bankLinePosting(l.amountCents, l.bankLedgerId!, l.catLedgerId) };
       }
