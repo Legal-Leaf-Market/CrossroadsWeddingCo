@@ -1306,6 +1306,10 @@ DROP TRIGGER IF EXISTS audit_log_no_truncate ON audit_log;
 CREATE TRIGGER audit_log_no_truncate BEFORE TRUNCATE ON audit_log
     FOR EACH STATEMENT EXECUTE FUNCTION audit_log_no_truncate();
 
+-- ── Plaid: new accounts at the bank (2026-11-13) ────────────────────────────
+-- Set when Plaid sends NEW_ACCOUNTS_AVAILABLE, cleared once the person picks
+-- the accounts in Plaid Link (update mode with account selection).
+ALTER TABLE integration_connections ADD COLUMN IF NOT EXISTS new_accounts_at TIMESTAMPTZ;
 -- ── True subledgers and the tie-out (2026-11-13, docs/handoff task 3) ──────
 -- Every journal line on a control account names whose it is: job:<booking id>
 -- on 1100, 1300, 2300, 2400 (and the job's 4500 and 5000 lines),
