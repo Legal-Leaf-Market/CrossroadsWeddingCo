@@ -21,6 +21,7 @@ export const CONTROL_ACCOUNTS = {
   deferred_revenue: "job",
   accrued_job_costs: "job",
   reimbursements_payable: "crew",
+  commissions_payable: "crew",
 } as const;
 export type ControlKey = keyof typeof CONTROL_ACCOUNTS;
 export type SubKind = (typeof CONTROL_ACCOUNTS)[ControlKey];
@@ -123,6 +124,7 @@ const JOB_FIELD: Record<string, keyof Omit<JobBalance, "jobId">> = {
   accrued_job_costs: "accruedCost",
   job_revenue: "revenue",
   job_costs: "cost",
+  sales_commissions: "cost",
 };
 
 /** Every job's balances, read from the journal lines keyed to it. */

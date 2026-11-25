@@ -140,7 +140,7 @@ export default async function EntryPage({ params }: { params: Promise<{ id: stri
         )}
         {s.kind === "job" && s.row && (
           <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-            <Field label={s.which === "revenue" ? "Revenue recognized for" : s.which === "cost" ? "Direct cost matched to" : "Paid by hand on"}>
+            <Field label={s.which === "revenue" ? "Revenue recognized for" : s.which === "cost" ? "Direct cost matched to" : s.which === "commission" ? "Commission earned on" : "Paid by hand on"}>
               {house ? (
                 str(s.row.names)
               ) : (

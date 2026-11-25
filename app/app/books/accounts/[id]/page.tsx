@@ -23,6 +23,8 @@ const SOURCE_LABEL: Record<string, string> = {
   opening_balance: "Opening balance",
   hand_deposit: "Deposit paid by hand",
   hand_balance: "Balance paid by hand",
+  commission_closer: "Closing commission",
+  commission_mgmt: "Account management commission",
 };
 
 function ranges(today: string) {

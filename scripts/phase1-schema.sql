@@ -1330,3 +1330,40 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS balance_paid_on DATE;
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_at TIMESTAMPTZ;
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_reason TEXT;
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_by VARCHAR(255);
+
+-- ── Sales pipeline, CRM and commissions (2026-11-13, Jake: "can the playbook
+-- play into like sales orders and such and be a direct pipeline into
+-- invoicing and CRM"; "commissions per playbook deal per event commission
+-- direct and account management commissions ongoing") ───────────────────────
+-- An account is who sends us work: a venue, planner, company, vendor or a
+-- family. A sales order is a booking (weddings row) tied to its account, who
+-- closed it and who manages the account, with the commission terms COPIED onto
+-- it at sale time (lib/sales-logic.ts), so changing a rate later never rewrites
+-- a deal. Commissions post on the event day (lib/books/accrual.ts).
+CREATE TABLE IF NOT EXISTS crm_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(160) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'other',      -- venue | planner | company | vendor | couple | other
+    playbook_lead_id VARCHAR(100),                  -- the lead's id in the playbook, when it came from there
+    manager_crew_id UUID REFERENCES crew_members(id) ON DELETE RESTRICT,
+    contact_name VARCHAR(160) NOT NULL DEFAULT '',
+    contact_email VARCHAR(255) NOT NULL DEFAULT '',
+    contact_phone VARCHAR(50) NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    archived_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_crm_accounts_lead ON crm_accounts (tenant_id, playbook_lead_id) WHERE playbook_lead_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_crm_accounts_tenant ON crm_accounts (tenant_id, name);
+DROP TRIGGER IF EXISTS crm_accounts_no_delete ON crm_accounts;
+CREATE TRIGGER crm_accounts_no_delete BEFORE DELETE ON crm_accounts FOR EACH ROW EXECUTE FUNCTION forbid_delete();
+
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS crm_account_id UUID REFERENCES crm_accounts(id) ON DELETE RESTRICT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS closer_crew_id UUID REFERENCES crew_members(id) ON DELETE RESTRICT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS account_manager_crew_id UUID REFERENCES crew_members(id) ON DELETE RESTRICT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS commission_direct_cents INTEGER;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS commission_mgmt_bps INTEGER;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS playbook_lead_id VARCHAR(100);
+CREATE INDEX IF NOT EXISTS idx_weddings_crm_account ON weddings (crm_account_id) WHERE crm_account_id IS NOT NULL;

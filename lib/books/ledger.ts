@@ -16,6 +16,7 @@ import { randomUUID } from "node:crypto";
 import { audit } from "@/lib/audit";
 import {
   ACCRUAL_ACCOUNTS,
+  commissionEntry,
   crewSub,
   handPaymentEntry,
   handPayments,
@@ -35,6 +36,7 @@ import {
 import { ACCOUNT_RANGES, accountTypeForBank, type AccountType } from "@/lib/books/ledger-constants";
 import { bankLinePosting, type LineInput } from "@/lib/books/logic";
 import { isPayMethod, lineCost } from "@/lib/costing-logic";
+import { commissionsFor } from "@/lib/sales-logic";
 export { bankLinePosting } from "@/lib/books/logic";
 
 // The ledger: double entry, ACCRUAL basis under US GAAP (2026-11-13; it was cash
@@ -198,7 +200,7 @@ async function lockTenant(tx: Tx, tenantId: string) {
 // repost it, or, once its month is locked, post a dated correction instead.
 // The database refuses any write into a locked month regardless.
 
-const DERIVED_TYPES = ["bank_transaction", "job_revenue", "job_cost", "expense_claim", "hand_deposit", "hand_balance", "adjustment"];
+const DERIVED_TYPES = ["bank_transaction", "job_revenue", "job_cost", "expense_claim", "hand_deposit", "hand_balance", "commission_closer", "commission_mgmt", "adjustment"];
 
 async function accrualAccounts(ex: Exec, tenantId: string): Promise<Record<AccrualKey, string>> {
   const existing = await ex.select({ code: ledgerAccounts.code }).from(ledgerAccounts).where(eq(ledgerAccounts.tenantId, tenantId));
@@ -426,6 +428,20 @@ export async function postLedger(
       const entries = jobEntries(facts, j.id, j.coupleNames, acct, today);
       sources.push({ ref: `job_revenue:${j.id}`, type: "job_revenue", id: j.id, desired: entries.revenue });
       sources.push({ ref: `job_cost:${j.id}`, type: "job_cost", id: j.id, desired: entries.cost });
+      // Sales commissions on the terms copied onto the sale, matched to the event (lib/sales-logic.ts).
+      const comm = commissionsFor({
+        contractCents: facts.totalCents,
+        cancelled: facts.cancelled,
+        excluded: false,
+        closerId: j.closerCrewId,
+        managerId: j.accountManagerCrewId,
+        directCents: j.commissionDirectCents,
+        mgmtBps: j.commissionMgmtBps,
+      });
+      for (const [role, type] of [["closer", "commission_closer"], ["account_manager", "commission_mgmt"]] as const) {
+        const c = comm.find((x) => x.role === role) ?? null;
+        sources.push({ ref: `${type}:${j.id}`, type, id: j.id, desired: commissionEntry(c, handJob, j.coupleNames, acct, today) });
+      }
     }
 
     // Everything already posted from these sources, with its lines.
