@@ -116,13 +116,17 @@ function WeddingCard({
         {wedding.packageType !== "corporate" && (
         <span
           className={
-            wedding.contractAcceptedAt
+            wedding.contractStale
+              ? "rounded-full bg-terracotta/20 px-2 py-0.5 font-semibold text-terracotta-dark"
+              : wedding.contractAcceptedAt
               ? "rounded-full bg-sage/25 px-2 py-0.5 font-semibold text-ink"
               : "rounded-full bg-gold/20 px-2 py-0.5 font-semibold text-ink"
           }
         >
           {wedding.officiant ? "DJ agreement" : "agreement"}{" "}
-          {agreementState(wedding.contractAcceptedAt, wedding.contractCountersignedAt)}
+          {wedding.contractStale
+            ? "out of date: reissue it"
+            : agreementState(wedding.contractAcceptedAt, wedding.contractCountersignedAt)}
         </span>
         )}
         {wedding.officiant && (
@@ -419,6 +423,7 @@ export default function Dashboard({ data, basePath, platform = null }: { data: A
     { href: "/app/vendors", label: "Vendors" },
   ];
   const tools = [
+    { href: `${basePath}/sales`, label: "Sales" },
     { href: `${basePath}/jobs`, label: "Job costing" },
     { href: `${basePath}/crew`, label: "Crew and materials" },
     { href: `${basePath}/hours`, label: "Call times" },

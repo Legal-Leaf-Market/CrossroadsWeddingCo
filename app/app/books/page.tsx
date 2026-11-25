@@ -46,13 +46,22 @@ function dayBefore(date: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-function Row({ label, amount, strong = false, code }: { label: string; amount: number; strong?: boolean; code?: string }) {
+function Row({ label, amount, strong = false, code, href }: { label: string; amount: number; strong?: boolean; code?: string; href?: string }) {
+  const name = (
+    <>
+      {code && <span className="mr-2 tabular-nums text-xs text-ink/45">{code}</span>}
+      {label}
+    </>
+  );
   return (
     <li className={`flex flex-wrap items-baseline justify-between gap-x-4 py-1.5 ${strong ? "font-semibold text-charcoal" : "text-ink/80"}`}>
-      <span className="min-w-0 break-words">
-        {code && <span className="mr-2 tabular-nums text-xs text-ink/45">{code}</span>}
-        {label}
-      </span>
+      {href ? (
+        <Link href={href} className="min-w-0 break-words underline decoration-parchment underline-offset-2 hover:text-terracotta">
+          {name}
+        </Link>
+      ) : (
+        <span className="min-w-0 break-words">{name}</span>
+      )}
       <span className="tabular-nums">{usd(amount)}</span>
     </li>
   );
@@ -92,6 +101,8 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
       <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
         <span className="font-semibold text-charcoal">Accrual basis, US GAAP</span>
         <Link href="/app/books/close" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Close the books</Link>
+        <Link href="/app/books/accounts" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Trial balance</Link>
+        <Link href="/app/books/tie-out" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Tie-out</Link>
         <Link href="/app/books/audit" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Audit log</Link>
       </p>
       {ws.tenant.kind !== "house" && (
@@ -103,8 +114,9 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
         <div className="min-w-0">
           <h1 className="text-3xl text-charcoal">Books</h1>
           <p className="mt-2 max-w-xl text-ink/70">
-            Built from the transactions you sort, on a cash basis: money counts when it moves. A starting point for your
-            accountant, not tax advice.
+            Built from the transactions you sort, your jobs and approved expense reports, on an accrual basis: a job&apos;s
+            revenue and its direct costs count on the event date, whenever the cash moves. Every line opens down to its source. A
+            starting point for your accountant, not tax advice.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm font-semibold">
@@ -152,7 +164,7 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-ink/55">Income</h3>
                   <ul className="mt-1 divide-y divide-parchment text-sm">
                     {data.pl.income.map((a) => (
-                      <Row key={a.id} label={a.name} code={a.code} amount={a.amount} />
+                      <Row key={a.id} label={a.name} code={a.code} amount={a.amount} href={`/app/books/accounts/${a.id}?from=${range.from}&to=${range.to}`} />
                     ))}
                     <Row label="Total income" amount={data.pl.totalIncome} strong />
                   </ul>
@@ -161,7 +173,7 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-ink/55">Expenses</h3>
                   <ul className="mt-1 divide-y divide-parchment text-sm">
                     {data.pl.expense.map((a) => (
-                      <Row key={a.id} label={a.name} code={a.code} amount={a.amount} />
+                      <Row key={a.id} label={a.name} code={a.code} amount={a.amount} href={`/app/books/accounts/${a.id}?from=${range.from}&to=${range.to}`} />
                     ))}
                     <Row label="Total expenses" amount={data.pl.totalExpense} strong />
                   </ul>
@@ -252,7 +264,7 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-ink/55">What you have</h3>
                 <ul className="mt-1 divide-y divide-parchment text-sm">
                   {data.bal.assets.map((a) => (
-                    <Row key={a.id} label={a.name} code={a.code} amount={a.amount} />
+                    <Row key={a.id} label={a.name} code={a.code} amount={a.amount} href={`/app/books/accounts/${a.id}`} />
                   ))}
                   <Row label="Total" amount={data.bal.totalAssets} strong />
                 </ul>
@@ -261,10 +273,10 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-ink/55">What you owe, and what is yours</h3>
                 <ul className="mt-1 divide-y divide-parchment text-sm">
                   {data.bal.liabilities.map((a) => (
-                    <Row key={a.id} label={a.name} code={a.code} amount={a.amount} />
+                    <Row key={a.id} label={a.name} code={a.code} amount={a.amount} href={`/app/books/accounts/${a.id}`} />
                   ))}
                   {data.bal.equity.map((a) => (
-                    <Row key={a.id} label={a.name} code={a.code} amount={a.amount} />
+                    <Row key={a.id} label={a.name} code={a.code} amount={a.amount} href={`/app/books/accounts/${a.id}`} />
                   ))}
                   <Row label="Earnings to date" amount={data.bal.earnings} />
                   <Row label="Total" amount={data.bal.totalLiabilities + data.bal.totalEquity} strong />

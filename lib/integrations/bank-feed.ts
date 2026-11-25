@@ -14,6 +14,7 @@ import {
   type PlaidTransaction,
   type SyncPage,
 } from "@/lib/integrations/plaid-client";
+import { dailySyncEligible } from "@/lib/integrations/plaid-webhook-logic";
 
 // Bank and card feed for a business account, via Plaid. The flow:
 //   1. createLinkToken  -> the browser opens Plaid Link with it
@@ -25,8 +26,12 @@ import {
 
 const WEBHOOK_URL = () => process.env.PLAID_WEBHOOK_URL ?? `${SITE_URL}/api/webhooks/plaid`;
 
-/** Short-lived token for Plaid Link. Pass a connection id to repair a login (update mode). */
-export async function createLinkToken(tenantId: string, userId: string, repairConnectionId?: string): Promise<string> {
+/**
+ * Short-lived token for Plaid Link. Pass a connection id to repair a login
+ * (update mode); add selectAccounts to let the person add the new accounts
+ * their bank reported (NEW_ACCOUNTS_AVAILABLE).
+ */
+export async function createLinkToken(tenantId: string, userId: string, repairConnectionId?: string, opts: { selectAccounts?: boolean } = {}): Promise<string> {
   const body: Record<string, unknown> = {
     user: { client_user_id: userId },
     client_name: PLATFORM_NAME.slice(0, 30),
@@ -38,6 +43,7 @@ export async function createLinkToken(tenantId: string, userId: string, repairCo
     const conn = await getConnection(tenantId, repairConnectionId);
     if (!conn?.secretCiphertext) throw new PlaidError("NOT_FOUND", "APP", "That connection isn't yours.", 404);
     body.access_token = decryptSecret(conn.secretCiphertext);
+    if (opts.selectAccounts) body.update = { account_selection_enabled: true };
   } else {
     body.products = ["transactions"];
     body.transactions = { days_requested: 730 };
@@ -297,6 +303,11 @@ export async function markConnection(connectionId: string, status: "needs_reauth
 export async function disconnect(tenantId: string, connectionId: string): Promise<boolean> {
   const conn = await getConnection(tenantId, connectionId);
   if (!conn) return false;
+  await forget(conn, null);
+  return true;
+}
+
+async function forget(conn: { id: string; secretCiphertext: string | null }, note: string | null) {
   if (conn.secretCiphertext) {
     await plaidPost("/item/remove", { access_token: decryptSecret(conn.secretCiphertext) }).catch((err) => {
       console.error("[plaid] item/remove failed, forgetting the token anyway:", err instanceof Error ? err.message : err);
@@ -304,10 +315,59 @@ export async function disconnect(tenantId: string, connectionId: string): Promis
   }
   await db
     .update(integrationConnections)
-    .set({ status: "disconnected", secretCiphertext: null, syncCursor: null, updatedAt: new Date() })
+    .set({ status: "disconnected", secretCiphertext: null, syncCursor: null, newAccountsAt: null, lastError: note, updatedAt: new Date() })
+    .where(eq(integrationConnections.id, conn.id));
+  await db.update(bankAccounts).set({ isActive: false, updatedAt: new Date() }).where(eq(bankAccounts.connectionId, conn.id));
+}
+
+/**
+ * The person withdrew access (USER_PERMISSION_REVOKED): the token no longer
+ * works. Remove the item at Plaid, forget the token and say why. Every bank
+ * line already pulled stays, and so do the books built from them.
+ */
+export async function revokeConnection(connectionId: string, note: string): Promise<void> {
+  const [conn] = await db.select().from(integrationConnections).where(eq(integrationConnections.id, connectionId)).limit(1);
+  if (conn) await forget(conn, note.slice(0, 500));
+}
+
+/** The bank has accounts the person hasn't shared yet (NEW_ACCOUNTS_AVAILABLE), or they have now picked them (null). */
+export async function setNewAccounts(connectionId: string, available: boolean): Promise<void> {
+  await db
+    .update(integrationConnections)
+    .set({ newAccountsAt: available ? new Date() : null, updatedAt: new Date() })
     .where(eq(integrationConnections.id, connectionId));
-  await db.update(bankAccounts).set({ isActive: false, updatedAt: new Date() }).where(eq(bankAccounts.connectionId, connectionId));
-  return true;
+}
+
+/**
+ * The daily backup for missed webhooks: refresh every live connection. Plaid
+ * retries a failed webhook, but one that never arrives would leave lines
+ * missing until someone pressed Refresh. Stops starting new syncs after
+ * `budgetMs` so the job finishes inside its function's time limit; whatever
+ * is left runs tomorrow, or on the next webhook.
+ */
+export async function syncAllConnections(budgetMs = 20_000): Promise<{ synced: number; failed: number; skipped: number; left: number }> {
+  const started = Date.now();
+  const conns = await db
+    .select({ id: integrationConnections.id, status: integrationConnections.status, secret: integrationConnections.secretCiphertext, lastSyncedAt: integrationConnections.lastSyncedAt })
+    .from(integrationConnections)
+    .where(eq(integrationConnections.provider, "plaid"));
+  const due = conns
+    .filter((c) => dailySyncEligible({ status: c.status, hasToken: !!c.secret }))
+    .sort((a, b) => (a.lastSyncedAt?.getTime() ?? 0) - (b.lastSyncedAt?.getTime() ?? 0)); // stalest first
+  let synced = 0;
+  let failed = 0;
+  let i = 0;
+  for (; i < due.length && Date.now() - started < budgetMs; i++) {
+    try {
+      const r = await syncConnection(due[i].id);
+      if ("error" in r) failed++;
+      else synced++;
+    } catch (err) {
+      failed++;
+      console.error("[plaid] daily sync failed for a connection:", err instanceof Error ? err.message : err);
+    }
+  }
+  return { synced, failed, skipped: conns.length - due.length, left: due.length - i };
 }
 
 export type ConnectionView = {
@@ -316,6 +376,8 @@ export type ConnectionView = {
   status: string;
   lastSyncedAt: string | null;
   lastError: string | null;
+  /** When the bank reported accounts the person hasn't shared yet. */
+  newAccountsAt: string | null;
   accounts: { id: string; name: string; mask: string | null; subtype: string | null; currentBalanceCents: number | null; isActive: boolean }[];
 };
 
@@ -333,6 +395,7 @@ export async function listConnections(tenantId: string): Promise<ConnectionView[
     status: c.status,
     lastSyncedAt: c.lastSyncedAt?.toISOString() ?? null,
     lastError: c.lastError,
+    newAccountsAt: c.newAccountsAt?.toISOString() ?? null,
     accounts: accts
       .filter((a) => a.connectionId === c.id)
       .map((a) => ({ id: a.id, name: a.name, mask: a.mask, subtype: a.subtype, currentBalanceCents: a.currentBalanceCents, isActive: a.isActive })),
