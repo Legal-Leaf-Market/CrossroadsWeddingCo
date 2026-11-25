@@ -11,7 +11,9 @@ import { BROCHURES, shareUrl } from "@/lib/brochures";
 // page) and can be shrunk back to the pill, never removed. It stays off the
 // pages where a visitor is mid-task or the page is private: booking, the
 // planning hub, admin, live and guest views, and the brochure pages themselves.
-const HIDDEN_ON = ["/admin", "/hub", "/live", "/schedule", "/book", "/brochures", "/ig-studio", "/messaging"];
+// /partners/cookie-paradise is a shopping cart (2026-11-25): its order button
+// owns the bottom right corner there.
+const HIDDEN_ON = ["/admin", "/hub", "/live", "/schedule", "/book", "/brochures", "/ig-studio", "/messaging", "/partners/cookie-paradise"];
 
 const LINES = [
   "Share with your boss",

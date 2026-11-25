@@ -7,6 +7,9 @@
 // Cookie Paradise: cookieparadise.co, its contact page and its Weddings &
 // Private Parties page, read 2026-11-13 (recorded in Heart of Columbus,
 // src/data/own-facts.mjs). The owner asked to cross promote the wedding page.
+// Since 2026-11-25 its page is its own file (app/partners/cookie-paradise),
+// an orderable store built from lib/cookie-paradise.ts; this entry still
+// feeds the partner list, the menu and the sitemap.
 // Rabbit's Balloons: from its owner, Rachael Starr, 2026-11-15. It has no
 // public website yet (her draft is under review), so no address, phone or
 // prices are shown, and the way in is through us. Her steps and practices are
@@ -41,6 +44,13 @@ export type Partner = {
   liveMenu?: { origin: string };
   /** Questions to bring when you contact them (ours, not theirs). */
   ask?: string[];
+  /**
+   * The partner has its own page file at app/partners/<slug>/page.tsx instead
+   * of the shared template (Cookie Paradise, 2026-11-25: an orderable store).
+   */
+  customPage?: boolean;
+  /** One short line on the partner list card, e.g. that you can order here. */
+  badge?: string;
   source: string;
   checked: string;
 };
@@ -70,6 +80,8 @@ export const PARTNERS: Partner[] = [
       { label: "Their website", href: "https://cookieparadise.co/" },
     ],
     liveMenu: { origin: "https://cookieparadise.co" },
+    customPage: true,
+    badge: "Order online right here",
     ask: [
       "Your date, the venue and whether it is indoors or outdoors.",
       "Guest count, and whether you want a dessert table, favors, or both.",

@@ -44,7 +44,9 @@ for the facts only the owners can give.
   whether the yellow cookie trailer can come to your venue, a quote form.
   https://cookieparadise.co/pages/weddings-private-parties
 - Corporate catering page: https://cookieparadise.co/pages/corporate-catering
-- Live menu on our page is read from their store feed every six hours (names and prices only).
+- Since 2026-11-25 the page is an orderable store (`app/partners/cookie-paradise`): the menu is
+  read from their store feed every 15 minutes with product photos, and the cart checks out on
+  their own Shopify checkout. Photo permission from the owner is still worth getting in writing.
   As of 2026-11-18 it included Thanksgiving Cookie Boxes ($25 for 8, $35 for 12), S'mores ($5),
   Pumpkin Spice, Pretzel Perfect, Coconut Dream ($4 each), Birthday Cake and Peanut Butter
   Chocolate Chip ($3.50), Chocolate Chip ($3).

@@ -1297,6 +1297,43 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Cookie Paradise becomes an orderable store (2026-11-25, Jacob: "build up on Heart of
+  Columbus, how we did cookie paradise on there, and try to replicate as much as you can here
+  ... make their page orderable on this site, just like it is on Heart of Columbus ... make it
+  really sing").** `/partners/cookie-paradise` is now its own page file (the `[slug]` template
+  skips any partner with `customPage`), ported from the draft website Heart of Columbus built
+  for them (`sites/cookie-paradise/` there) with its own scoped look
+  (`components/partners/cookie-paradise.module.css`, Josefin Sans and Nunito; header, footer
+  and every other page unchanged). Facts live in `lib/cookie-paradise.ts`, each from their own
+  site as recorded in Heart of Columbus on 2026-11-13: address, hours, phone, email, pickup,
+  Columbus delivery, Indiana-only shipping, next-business-day fulfillment, wedding and catering
+  services, "Winner, Taste of Columbus 2025", the catered list, and the Lê family's story
+  quoted from their About page. **The menu is NOT typed in**: `getShopifyCatalog` reads their
+  `/products.json` every 15 minutes, in stock AND photographed only (Jacob's Heart of Columbus
+  rule), with product photos shown from their own CDN. This replaces the 2026-11-18 "no photos"
+  line because Heart of Columbus shows them and Jacob asked for the same; a written photo OK
+  from Trung is still worth having. **Ordering never happens here**: the cart lives in the
+  visitor's browser (`cw.cookie-paradise.cart`) and checkout is one Shopify cart permalink to
+  their store with an order note ("Pickup at the trailer, please." when ticked, the shopper's
+  own note, "Sent from Crossroads Wedding and Event Co."), `ref=crossroadsweddingco` and a
+  `crossroads_ref` cart attribute so Trung can see where orders came from. Right before the
+  handoff `POST /api/partners/stock` asks their store (`/products/<handle>.js`, origin on file,
+  never from the browser) what sold out, and those lines come out first; no answer in 7
+  seconds counts as nothing sold out. Added beyond Heart of Columbus: a dessert table planner
+  (guests and cookies each in, the fewest-waste mix of their counted gift boxes out, one tap
+  into the order, labeled as our math with their quote form for real weddings), "Where cookies
+  land in your day" on a Crossroads run sheet (labeled as our suggestions), holiday boxes drawn
+  from whatever their store lists, the Thanksgiving box hidden after its November 25 pickup
+  day (`itemNotes.until`), open-now and today's hours row in Columbus time, and a FAQ. The
+  share pop-up (`BrochurePopup`) stays off this page: it is a cart, and the order button owns
+  the corner. Logic is pure in `lib/cookie-order.ts`:
+  `node --experimental-strip-types scripts/verify-cookie-order.mjs` (36 checks: menu filter,
+  dash cleanup, planner, permalink, note, stored cart sanitizing, open-now across DST and the
+  Saturday-evening UTC rollover). Verified in headless Chromium at 360/390/768/1024/1280 on a
+  local build fed the Heart of Columbus catalog snapshot of 2026-11-24 (no sideways scroll, no
+  console errors, add, planner, sold-out removal, the exact checkout URL, cart kept across a
+  reload); this session had no package install, so the Netlify deploy preview is the
+  type-check and build.
 - **Partner pages, deeper (2026-11-18, Jacob: "work way harder on the rabbits, balloons and
   cookie paradise pages ... an MD for chat to research and make better").** Cookie Paradise
   shows its live menu, read server-side from its public Shopify `/products.json`
