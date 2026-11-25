@@ -73,7 +73,10 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
         <p className="mt-3 text-ink/70">
           {left > 0
             ? `${left} ${left === 1 ? "day" : "days"} left in your free trial.`
-            : "Your free trial has ended."}
+            : "Your free trial has ended."}{" "}
+          <Link href="/app/billing" className="font-semibold text-terracotta-dark underline underline-offset-2">
+            {left > 0 ? "Set up billing" : "Start your plan"}
+          </Link>
         </p>
       )}
 

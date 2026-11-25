@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { BUSINESS_TYPES } from "@/lib/tenant-constants";
+import { SRC_STORAGE_KEY } from "@/lib/lead-sources";
 
 const field =
   "w-full rounded-lg border border-parchment bg-cream/40 px-3 py-2 text-base font-normal text-ink focus:border-terracotta focus:outline-none";
@@ -15,7 +16,14 @@ export default function SignupForm() {
     e.preventDefault();
     setError("");
     setState("sending");
-    const body = Object.fromEntries(new FormData(e.currentTarget).entries());
+    const body: Record<string, unknown> = Object.fromEntries(new FormData(e.currentTarget).entries());
+    // First-touch ?src= tag (expo QR, meetup card, ad) that SourceCapture kept.
+    try {
+      const held = JSON.parse(window.localStorage.getItem(SRC_STORAGE_KEY) ?? "null") as { tag?: string } | null;
+      if (held?.tag) body.src = held.tag;
+    } catch {
+      /* storage blocked: attribution is best-effort */
+    }
     try {
       const res = await fetch("/api/signup", {
         method: "POST",

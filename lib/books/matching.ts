@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { bankAccounts, bankTransactions, ledgerCategories, weddings } from "@/lib/db/schema";
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
 import { clearSplits } from "@/lib/books/splits";
+import { auditQuietly } from "@/lib/audit";
 import { creditFor, type OpenBooking, type PaymentKind } from "@/lib/books/logic";
 export { PAYMENT_KINDS, suggestFor, creditFor, type OpenBooking, type PaymentKind, type Suggestion } from "@/lib/books/logic";
 
@@ -54,7 +55,7 @@ export async function openBookings(tenantId: string): Promise<OpenBooking[]> {
       isBalancePaid: weddings.isBalancePaid,
     })
     .from(weddings)
-    .where(and(eq(weddings.tenantId, tenantId), isNull(weddings.archivedAt), ne(weddings.status, "cancelled")))
+    .where(and(eq(weddings.tenantId, tenantId), isNull(weddings.archivedAt), isNull(weddings.booksExcludedAt), ne(weddings.status, "cancelled")))
     .orderBy(asc(weddings.eventDate));
   const received = await receivedByBooking(tenantId);
   return rows.map((r) => {
@@ -155,7 +156,8 @@ export async function matchLine(
 
   await clearSplits(tenantId, [input.transactionId]); // a match replaces any split
   await markPaidFromReceipts(tenantId, booking.id);
-  await postBankLedgerQuietly(tenantId);
+  await auditQuietly({ tenantId, actor: `user:${userId}`, action: "bank.match", entityType: "bank_transaction", entityId: input.transactionId, after: { bookingId: booking.id, kind: input.kind, categoryId } });
+  await postBankLedgerQuietly(tenantId, { actor: `user:${userId}`, cause: "bank line matched to a job" });
   return { ok: true };
 }
 

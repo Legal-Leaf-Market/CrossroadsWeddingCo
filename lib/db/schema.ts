@@ -62,6 +62,16 @@ export const tenants = pgTable("tenants", {
   businessType: varchar("business_type", { length: 40 }),
   plan: varchar("plan", { length: 20 }).notNull().default("trial"),
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  /** First-touch ?src= tag the owner arrived with (expo, card, ad). lib/lead-sources.ts cleanSrcTag. */
+  signupSrc: varchar("signup_src", { length: 40 }),
+  /** Platform billing (Stripe). See lib/billing.ts. */
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  /** Stripe's subscription status as last reported: trialing, active, past_due, canceled... */
+  billingStatus: varchar("billing_status", { length: 30 }),
+  billingPeriodEnd: timestamp("billing_period_end", { withTimezone: true }),
+  /** Created time of the last Stripe event applied, so an older event never overwrites a newer one. */
+  billingEventAt: timestamp("billing_event_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -137,6 +147,8 @@ export const weddings = pgTable(
     hubSpeakers: text("hub_speakers").array().notNull().default([]),
     // Set when the wedding is hidden from the dashboard. Never deleted: see
     // the note in phase1-schema.sql.
+    /** When the booking was cancelled; a kept deposit is earned that day (accrual, 2026-11-13). */
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     contactEmail: varchar("contact_email", { length: 255 }),
     contactPhone: varchar("contact_phone", { length: 50 }),
@@ -176,10 +188,32 @@ export const weddings = pgTable(
     weddingSiteUrl: varchar("wedding_site_url", { length: 500 }),
     /** What guests were told to wear, in the couple's own words. */
     dressCode: varchar("dress_code", { length: 200 }),
+    /** Public wedding website at /w/<siteSlug>: off until the couple turns it on. */
+    siteEnabled: boolean("site_enabled").notNull().default(false),
+    siteSlug: varchar("site_slug", { length: 90 }),
+    siteStory: text("site_story"),
+    /** [{label, url}] registry, hotel block, their own site. lib/wedding-site-constants.ts */
+    siteLinks: jsonb("site_links").notNull().default([]),
+    /** [{q, a}] answers to guest questions. */
+    siteFaq: jsonb("site_faq").notNull().default([]),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).notNull().default("1000.00"),
     depositAmount: numeric("deposit_amount", { precision: 10, scale: 2 }).notNull().default("500.00"),
     isDepositPaid: boolean("is_deposit_paid").default(false),
     isBalancePaid: boolean("is_balance_paid").default(false),
+    /** The day each box was ticked (2026-11-13): when cash or a check came in by hand. */
+    depositPaidOn: date("deposit_paid_on"),
+    balancePaidOn: date("balance_paid_on"),
+    /** A booking that was never a real job (a test). Kept, audited, left out of the books. */
+    booksExcludedAt: timestamp("books_excluded_at", { withTimezone: true }),
+    booksExcludedReason: text("books_excluded_reason"),
+    booksExcludedBy: varchar("books_excluded_by", { length: 255 }),
+    /** Sales order fields (2026-11-13, lib/sales-logic.ts): the account that sent it, who closed it, who manages the account, and the commission terms copied at sale time. */
+    crmAccountId: uuid("crm_account_id"),
+    closerCrewId: uuid("closer_crew_id"),
+    accountManagerCrewId: uuid("account_manager_crew_id"),
+    commissionDirectCents: integer("commission_direct_cents"),
+    commissionMgmtBps: integer("commission_mgmt_bps"),
+    playbookLeadId: varchar("playbook_lead_id", { length: 100 }),
     status: eventStatus("status").notNull().default("inquiry"),
     assignedTalentId: uuid("assigned_talent_id").references(() => talentProfiles.id, {
       onDelete: "set null",
@@ -410,6 +444,10 @@ export const guestbookEntries = pgTable(
     featured: boolean("featured").notNull().default(false),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    /** Signed on an event page (REVIEW_EVENTS slug). */
+    eventSlug: varchar("event_slug", { length: 80 }),
+    /** Written by the couple from their own hub: that hub's wedding. */
+    weddingId: uuid("wedding_id").references(() => weddings.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("idx_guestbook_created").on(t.createdAt)],
@@ -460,6 +498,8 @@ export const integrationConnections = pgTable(
     syncCursor: text("sync_cursor"),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     lastError: text("last_error"),
+    /** Set by Plaid's NEW_ACCOUNTS_AVAILABLE; cleared once the person picks accounts. */
+    newAccountsAt: timestamp("new_accounts_at", { withTimezone: true }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -586,6 +626,8 @@ export const journalEntries = pgTable("journal_entries", {
   voidedAt: timestamp("voided_at", { withTimezone: true }),
   voidReason: varchar("void_reason", { length: 200 }),
   fingerprint: varchar("fingerprint", { length: 200 }),
+  sourceRef: varchar("source_ref", { length: 80 }),
+  adjustsPeriod: date("adjusts_period"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -597,6 +639,8 @@ export const journalLines = pgTable("journal_lines", {
   accountId: uuid("account_id").notNull().references(() => ledgerAccounts.id, { onDelete: "restrict" }),
   debitCents: bigint("debit_cents", { mode: "number" }).notNull().default(0),
   creditCents: bigint("credit_cents", { mode: "number" }).notNull().default(0),
+  // Subledger key (2026-11-13): job:<booking id> on job accounts, crew:<crew member id> on 2500.
+  subRef: varchar("sub_ref", { length: 80 }),
 });
 export type LedgerAccount = typeof ledgerAccounts.$inferSelect;
 
@@ -611,3 +655,265 @@ export const bankTransactionSplits = pgTable("bank_transaction_splits", {
   position: integer("position").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+// 16. Engagement photos on the wedding website (2026-11-11). lib/site-photos.ts
+export const sitePhotos = pgTable(
+  "site_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+    mimeType: varchar("mime_type", { length: 40 }).notNull(),
+    byteSize: integer("byte_size").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    caption: varchar("caption", { length: 200 }).notNull().default(""),
+    orderIndex: integer("order_index").notNull().default(0),
+    data: customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" })("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_site_photos_wedding").on(t.weddingId, t.orderIndex)],
+);
+
+// 17. Vendors (2026-11-11). lib/vendors.ts; pure rules in lib/books/vendor-logic.ts.
+export const vendors = pgTable(
+  "vendors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    kind: varchar("kind", { length: 20 }).notNull().default("contractor"),
+    email: varchar("email", { length: 255 }),
+    phone: varchar("phone", { length: 50 }),
+    matchText: varchar("match_text", { length: 400 }).notNull().default(""),
+    is1099: boolean("is_1099").notNull().default(false),
+    w9OnFile: boolean("w9_on_file").notNull().default(false),
+    notes: text("notes").notNull().default(""),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_vendors_tenant").on(t.tenantId)],
+);
+export type Vendor = typeof vendors.$inferSelect;
+
+// Separate agreements in a couple's hub (officiating by Compass Events). See
+// scripts/phase1-schema.sql and lib/compass.ts.
+export const serviceAgreements = pgTable(
+  "service_agreements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 30 }).notNull().default("officiant"),
+    brand: varchar("brand", { length: 30 }).notNull().default("compass"),
+    details: jsonb("details").notNull().default({}),
+    feeUsd: numeric("fee_usd", { precision: 10, scale: 2 }).notNull(),
+    depositUsd: numeric("deposit_usd", { precision: 10, scale: 2 }).notNull(),
+    balanceDueHours: integer("balance_due_hours").notNull().default(48),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    acceptedName: varchar("accepted_name", { length: 255 }),
+    snapshot: jsonb("snapshot"),
+    countersignedAt: timestamp("countersigned_at", { withTimezone: true }),
+    countersignedName: varchar("countersigned_name", { length: 255 }),
+    countersignedTitle: varchar("countersigned_title", { length: 255 }),
+    depositPaidAt: timestamp("deposit_paid_at", { withTimezone: true }),
+    balancePaidAt: timestamp("balance_paid_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_service_agreements_wedding").on(t.weddingId)],
+);
+export type ServiceAgreement = typeof serviceAgreements.$inferSelect;
+
+// Project costing and resource planning (2026-11-13). See scripts/phase1-schema.sql,
+// lib/costing-logic.ts (pure) and lib/costing.ts (server).
+export const crewMembers = pgTable(
+  "crew_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    defaultRole: varchar("default_role", { length: 80 }).notNull().default(""),
+    payMethod: varchar("pay_method", { length: 10 }).notNull().default("project"),
+    rateCents: integer("rate_cents"),
+    percentBps: integer("percent_bps"),
+    shareBps: integer("share_bps"),
+    vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+    email: varchar("email", { length: 255 }),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_crew_members_tenant").on(t.tenantId)],
+);
+export type CrewMember = typeof crewMembers.$inferSelect;
+
+export const resourceItems = pgTable(
+  "resource_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    category: varchar("category", { length: 60 }).notNull().default(""),
+    unit: varchar("unit", { length: 30 }).notNull().default("each"),
+    unitCostCents: integer("unit_cost_cents"),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    retiredAt: timestamp("retired_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_resource_items_tenant").on(t.tenantId)],
+);
+export type ResourceItem = typeof resourceItems.$inferSelect;
+
+export const eventResources = pgTable(
+  "event_resources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    weddingId: uuid("wedding_id").notNull().references(() => weddings.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 10 }).notNull().default("labor"),
+    crewMemberId: uuid("crew_member_id").references(() => crewMembers.id, { onDelete: "set null" }),
+    resourceItemId: uuid("resource_item_id").references(() => resourceItems.id, { onDelete: "set null" }),
+    label: varchar("label", { length: 160 }).notNull().default(""),
+    role: varchar("role", { length: 80 }).notNull().default(""),
+    payMethod: varchar("pay_method", { length: 10 }),
+    rateCents: integer("rate_cents"),
+    percentBps: integer("percent_bps"),
+    plannedMinutes: integer("planned_minutes"),
+    actualMinutes: integer("actual_minutes"),
+    unit: varchar("unit", { length: 30 }).notNull().default(""),
+    unitCostCents: integer("unit_cost_cents"),
+    plannedQty: numeric("planned_qty", { precision: 10, scale: 2 }),
+    actualQty: numeric("actual_qty", { precision: 10, scale: 2 }),
+    actualCostCents: integer("actual_cost_cents"),
+    notes: text("notes").notNull().default(""),
+    sort: integer("sort").notNull().default(0),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_event_resources_wedding").on(t.weddingId), index("idx_event_resources_crew").on(t.crewMemberId)],
+);
+export type EventResource = typeof eventResources.$inferSelect;
+
+// Accrual basis, audit log and period close (2026-11-13). scripts/phase1-schema.sql
+// carries the triggers that make the close a hard cutoff and the log append-only.
+export const financeRoles = pgTable("finance_roles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  email: varchar("email", { length: 255 }).notNull(),
+  name: varchar("name", { length: 120 }).notNull().default(""),
+  role: varchar("role", { length: 12 }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ledgerPeriods = pgTable("ledger_periods", {
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  periodStart: date("period_start").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("open"),
+  preparedBy: varchar("prepared_by", { length: 255 }),
+  preparedAt: timestamp("prepared_at", { withTimezone: true }),
+  preparedHash: varchar("prepared_hash", { length: 64 }),
+  preparedNote: text("prepared_note").notNull().default(""),
+  acknowledged: jsonb("acknowledged").notNull().default([]),
+  decidedBy: varchar("decided_by", { length: 255 }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  decisionNote: text("decision_note").notNull().default(""),
+  closedHash: varchar("closed_hash", { length: 64 }),
+  closedSnapshot: jsonb("closed_snapshot"),
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+  reopenRequestedBy: varchar("reopen_requested_by", { length: 255 }),
+  reopenRequestedAt: timestamp("reopen_requested_at", { withTimezone: true }),
+  reopenReason: text("reopen_reason").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type LedgerPeriod = typeof ledgerPeriods.$inferSelect;
+
+export const auditLog = pgTable("audit_log", {
+  id: bigint("id", { mode: "number" }).primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  actor: varchar("actor", { length: 255 }).notNull(),
+  action: varchar("action", { length: 60 }).notNull(),
+  entityType: varchar("entity_type", { length: 40 }).notNull(),
+  entityId: varchar("entity_id", { length: 80 }),
+  before: jsonb("before"),
+  after: jsonb("after"),
+  reason: text("reason"),
+  cause: text("cause"),
+  prevHash: varchar("prev_hash", { length: 64 }),
+  hash: varchar("hash", { length: 64 }).notNull(),
+});
+export type AuditRow = typeof auditLog.$inferSelect;
+
+// Expense capture (2026-11-13). See scripts/phase1-schema.sql, lib/expense-logic.ts
+// (pure) and lib/expenses.ts (server).
+export const receipts = pgTable(
+  "receipts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    fileName: varchar("file_name", { length: 255 }).notNull().default(""),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    byteSize: integer("byte_size").notNull(),
+    data: customType<{ data: Buffer; driverData: Buffer }>({
+      dataType: () => "bytea",
+    })("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_receipts_tenant").on(t.tenantId)],
+);
+
+export const expenseClaims = pgTable(
+  "expense_claims",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    crewMemberId: uuid("crew_member_id").references(() => crewMembers.id, { onDelete: "set null" }),
+    claimantName: varchar("claimant_name", { length: 120 }).notNull(),
+    kind: varchar("kind", { length: 20 }).notNull().default("reimbursement"),
+    bankTransactionId: uuid("bank_transaction_id").references(() => bankTransactions.id, { onDelete: "set null" }),
+    merchant: varchar("merchant", { length: 160 }).notNull().default(""),
+    description: text("description").notNull().default(""),
+    amountCents: integer("amount_cents").notNull(),
+    spentOn: date("spent_on").notNull(),
+    categoryId: uuid("category_id").references(() => ledgerCategories.id, { onDelete: "restrict" }),
+    weddingId: uuid("wedding_id").references(() => weddings.id, { onDelete: "set null" }),
+    receiptId: uuid("receipt_id").references(() => receipts.id, { onDelete: "set null" }),
+    status: varchar("status", { length: 12 }).notNull().default("submitted"),
+    decidedBy: varchar("decided_by", { length: 255 }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note").notNull().default(""),
+    reimbursedBankTransactionId: uuid("reimbursed_bank_transaction_id").references(() => bankTransactions.id, { onDelete: "set null" }),
+    payoutStatus: varchar("payout_status", { length: 12 }).notNull().default("none"),
+    payoutDecidedBy: varchar("payout_decided_by", { length: 255 }),
+    payoutDecidedAt: timestamp("payout_decided_at", { withTimezone: true }),
+    payoutNote: text("payout_note").notNull().default(""),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_expense_claims_status").on(t.tenantId, t.status), index("idx_expense_claims_wedding").on(t.weddingId)],
+);
+export type ExpenseClaim = typeof expenseClaims.$inferSelect;
+
+// 17. CRM accounts (2026-11-13): who sends us work. lib/sales.ts
+export const crmAccounts = pgTable("crm_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  name: varchar("name", { length: 160 }).notNull(),
+  kind: varchar("kind", { length: 20 }).notNull().default("other"),
+  playbookLeadId: varchar("playbook_lead_id", { length: 100 }),
+  managerCrewId: uuid("manager_crew_id"),
+  contactName: varchar("contact_name", { length: 160 }).notNull().default(""),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull().default(""),
+  contactPhone: varchar("contact_phone", { length: 50 }).notNull().default(""),
+  notes: text("notes").notNull().default(""),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type CrmAccount = typeof crmAccounts.$inferSelect;

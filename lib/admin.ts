@@ -1,10 +1,13 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { appointments, leads, weddingMessages, weddings } from "@/lib/db/schema";
+import { appointments, leads, serviceAgreements, weddingMessages, weddings } from "@/lib/db/schema";
 import { nameSlug } from "@/lib/hub-constants";
 import { CORPORATE_PACKAGE } from "@/lib/invoice";
+import { contractIsStale } from "@/lib/contract";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
+import { auditQuietly } from "@/lib/audit";
+import { ledgerToday, postBankLedgerQuietly } from "@/lib/books/ledger";
 
 // This dashboard is Crossroads' own (the house account). Every query below is
 // scoped to HOUSE_TENANT_ID, so a business that signs up for the platform can
@@ -55,6 +58,8 @@ export type AdminWedding = {
   contractAcceptedAt: string | null;
   /** ISO timestamp we countersigned the agreement, null if not yet. */
   contractCountersignedAt: string | null;
+  /** The couple accepted money terms that have since changed (contractIsStale). */
+  contractStale: boolean;
   /** Bespoke arrangement that replaces the agreement's cost section. */
   customTerms: string | null;
   /** Folder slug under public/wedding-art/, or null for the plain look. */
@@ -65,6 +70,8 @@ export type AdminWedding = {
   leadSource: string | null;
   leadSourceDetail: string | null;
   leadSrcTag: string | null;
+  /** The separate Compass Events officiant agreement, when one is set up. */
+  officiant?: { acceptedAt: string | null; countersignedAt: string | null; depositPaidAt: string | null } | null;
 };
 
 export type AdminLead = {
@@ -99,7 +106,13 @@ export type AdminData = {
   calls: AdminCall[];
 };
 
-function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): AdminWedding {
+type OfficiantRow = { acceptedAt: Date | null; countersignedAt: Date | null; depositPaidAt: Date | null };
+
+function toAdminWedding(
+  w: typeof weddings.$inferSelect,
+  unreadMessages = 0,
+  officiant: OfficiantRow | null = null,
+): AdminWedding {
   const addons = Array.isArray(w.addons)
     ? (w.addons as { type: string; fee: number | null; minFee?: number }[])
     : [];
@@ -107,6 +120,13 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     ? (w.checkinsSent as unknown[]).filter((m): m is number => typeof m === "number")
     : [];
   return {
+    officiant: officiant
+      ? {
+          acceptedAt: officiant.acceptedAt?.toISOString() ?? null,
+          countersignedAt: officiant.countersignedAt?.toISOString() ?? null,
+          depositPaidAt: officiant.depositPaidAt?.toISOString() ?? null,
+        }
+      : null,
     id: w.id,
     archivedAt: w.archivedAt ? w.archivedAt.toISOString() : null,
     coupleNames: w.coupleNames,
@@ -131,6 +151,7 @@ function toAdminWedding(w: typeof weddings.$inferSelect, unreadMessages = 0): Ad
     contractCountersignedAt: w.contractCountersignedAt
       ? w.contractCountersignedAt.toISOString()
       : null,
+    contractStale: contractIsStale(w),
     customTerms: w.customTerms,
     artTheme: w.artTheme,
     leadSource: w.leadSource,
@@ -156,15 +177,17 @@ export async function getAdminWeddingRow(
 }
 
 /**
- * Sign the agreement for the company. Only after the couple has accepted,
- * and only once: the WHERE carries both conditions, so two taps from two
- * devices cannot both write, and the second one learns it lost.
+ * Sign the agreement for the company, before or after the couple accepts
+ * (2026-11-12, Jake: "the company should be able to sign first, always"), and
+ * only once: the WHERE carries that condition, so two taps from two devices
+ * cannot both write, and the second one learns it lost. Signing first does not
+ * freeze the terms; the couple's acceptance snapshot does, as it always has.
  */
 export async function countersignContract(
   weddingId: string,
   name: string,
   title: string,
-): Promise<"ok" | "not_accepted" | "already_signed" | "not_found"> {
+): Promise<"ok" | "already_signed" | "not_found"> {
   const at = new Date();
   const updated = await db
     .update(weddings)
@@ -178,7 +201,6 @@ export async function countersignContract(
       and(
         eq(weddings.id, weddingId),
         isHouse,
-        isNotNull(weddings.contractAcceptedAt),
         isNull(weddings.contractCountersignedAt),
       ),
     )
@@ -186,8 +208,75 @@ export async function countersignContract(
   if (updated.length > 0) return "ok";
   const w = await getAdminWeddingRow(weddingId);
   if (!w) return "not_found";
-  if (!w.contractAcceptedAt) return "not_accepted";
   return "already_signed";
+}
+
+/**
+ * Clear an accepted agreement whose terms no longer match the booking, so it
+ * regenerates from the current money and the couple accepts it again. Same
+ * clearing as clearClientSignature, logged as a reissue. Exported for the
+ * admin agreement page's "Reissue with current terms" button.
+ */
+export async function reissueContract(
+  weddingId: string,
+  reason = "Agreement reissued with current terms from the admin agreement page.",
+): Promise<"ok" | "not_signed" | "not_found"> {
+  return clearAcceptance(weddingId, "contract.reissued", reason);
+}
+
+/**
+ * Undo the couple's acceptance, for when it was typed by someone other than the
+ * couple (2026-11-23: signed by mistake from the admin side while viewing their
+ * hub). Clears only the couple's side so the accept box comes back in their hub;
+ * the company's signature stays, since signing first is allowed. The cleared
+ * name, time and frozen terms go into the audit log, so nothing is lost.
+ */
+export async function clearClientSignature(
+  weddingId: string,
+): Promise<"ok" | "not_signed" | "not_found"> {
+  return clearAcceptance(
+    weddingId,
+    "contract.client_signature_cleared",
+    "Client signature cleared from the admin agreement page so the couple can sign it themselves.",
+  );
+}
+
+async function clearAcceptance(
+  weddingId: string,
+  action: string,
+  reason: string,
+): Promise<"ok" | "not_signed" | "not_found"> {
+  const w = await getAdminWeddingRow(weddingId);
+  if (!w) return "not_found";
+  if (!w.contractAcceptedAt) return "not_signed";
+  const updated = await db
+    .update(weddings)
+    .set({
+      contractVersion: null,
+      contractAcceptedAt: null,
+      contractAcceptedName: null,
+      contractSnapshot: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(weddings.id, weddingId), isHouse, isNotNull(weddings.contractAcceptedAt)))
+    .returning({ id: weddings.id });
+  if (updated.length === 0) return "not_signed";
+  await auditQuietly({
+    tenantId: HOUSE_TENANT_ID,
+    actor: "owner dashboard",
+    action,
+    entityType: "job",
+    entityId: weddingId,
+    before: {
+      contractVersion: w.contractVersion,
+      contractAcceptedAt: w.contractAcceptedAt.toISOString(),
+      contractAcceptedName: w.contractAcceptedName,
+      contractSnapshot: w.contractSnapshot,
+    },
+    after: null,
+    reason,
+  });
+  return "ok";
 }
 
 export async function getAdminData(): Promise<AdminData> {
@@ -216,6 +305,16 @@ export async function getAdminData(): Promise<AdminData> {
       .limit(50),
   ]);
   const unreadByWedding = new Map(unreadRows.map((r) => [r.weddingId, r.count]));
+  const officiantRows = await db
+    .select({
+      weddingId: serviceAgreements.weddingId,
+      acceptedAt: serviceAgreements.acceptedAt,
+      countersignedAt: serviceAgreements.countersignedAt,
+      depositPaidAt: serviceAgreements.depositPaidAt,
+    })
+    .from(serviceAgreements)
+    .where(and(eq(serviceAgreements.kind, "officiant"), isNull(serviceAgreements.cancelledAt)));
+  const officiantByWedding = new Map(officiantRows.map((r) => [r.weddingId, r]));
 
   const todayRow = await db.execute(sql`select current_date::text as today`);
   const today = String(todayRow.rows[0]?.today ?? new Date().toISOString().slice(0, 10));
@@ -224,7 +323,7 @@ export async function getAdminData(): Promise<AdminData> {
   const past: AdminWedding[] = [];
   for (const w of allWeddings) {
     const target = w.eventDate >= today && w.status !== "cancelled" ? upcoming : past;
-    target.push(toAdminWedding(w, unreadByWedding.get(w.id) ?? 0));
+    target.push(toAdminWedding(w, unreadByWedding.get(w.id) ?? 0, officiantByWedding.get(w.id) ?? null));
   }
   // Past reads newest-first; upcoming keeps soonest-first from the query.
   past.reverse();
@@ -282,6 +381,48 @@ export async function setWeddingArchived(weddingId: string, archived: boolean): 
 }
 
 /**
+ * Leave a booking out of the books, or put it back (2026-11-13, Jake: "make
+ * sure our bookings convert over correctly"). For a booking that was never a
+ * real job: a test, a demo. Nothing is deleted; the live sync voids its
+ * entries (a dated correction once a month is closed) and puts them back if it
+ * is restored. Refused while real money is tied to it: bank lines matched to
+ * the booking or approved expense reports on it. A reason is required and
+ * every change is audited.
+ */
+export async function setBooksExcluded(weddingId: string, exclude: boolean, reason: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!/^[0-9a-f-]{36}$/.test(weddingId)) return { ok: false, error: "Not found" };
+  const why = reason.trim();
+  if (exclude && why.length < 10) return { ok: false, error: "Say why it isn't a real job, in at least a sentence." };
+  const [before] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
+  if (!before) return { ok: false, error: "Not found" };
+  if (exclude) {
+    const tied = await db.execute(sql`
+      select (select count(*) from bank_transactions where booking_id = ${weddingId}::uuid and removed_at is null)::int as bank,
+             (select count(*) from expense_claims where wedding_id = ${weddingId}::uuid and status = 'approved')::int as claims`);
+    const t = tied.rows[0] as { bank: number; claims: number } | undefined;
+    if (t && (t.bank > 0 || t.claims > 0)) {
+      return { ok: false, error: "Real money is tied to this booking (matched bank lines or approved receipts). Unmatch those first." };
+    }
+  }
+  await db
+    .update(weddings)
+    .set(exclude ? { booksExcludedAt: new Date(), booksExcludedReason: why.slice(0, 500), booksExcludedBy: "owner dashboard", updatedAt: new Date() } : { booksExcludedAt: null, booksExcludedReason: null, booksExcludedBy: null, updatedAt: new Date() })
+    .where(and(eq(weddings.id, weddingId), isHouse));
+  await auditQuietly({
+    tenantId: HOUSE_TENANT_ID,
+    actor: "owner dashboard",
+    action: exclude ? "booking.books_excluded" : "booking.books_included",
+    entityType: "job",
+    entityId: weddingId,
+    before: { booksExcludedAt: before.booksExcludedAt, reason: before.booksExcludedReason },
+    after: { excluded: exclude },
+    reason: why || null,
+  });
+  await postBankLedgerQuietly(HOUSE_TENANT_ID, { actor: "owner dashboard", cause: exclude ? "booking left out of the books" : "booking put back in the books" });
+  return { ok: true };
+}
+
+/**
  * The one write the owner dashboard allows: the money and status fields no
  * couple-facing surface can set. Everything else about a wedding still comes
  * from the couple's own hub. Undefined fields are left alone.
@@ -304,12 +445,40 @@ export async function updateAdminWedding(
   if (patch.totalAmount !== undefined) set.totalAmount = patch.totalAmount;
   if (patch.depositAmount !== undefined) set.depositAmount = patch.depositAmount;
   if (patch.isDepositPaid !== undefined) set.isDepositPaid = patch.isDepositPaid;
+  // The day the box was ticked is the day the cash or check came in (the books post it then).
+  // Already ticked: keep the date it had; unticked: no date.
+  if (patch.isDepositPaid !== undefined)
+    set.depositPaidOn = patch.isDepositPaid ? sql`case when coalesce(${weddings.isDepositPaid}, false) then ${weddings.depositPaidOn} else ${ledgerToday()}::date end` : null;
   if (patch.isBalancePaid !== undefined) set.isBalancePaid = patch.isBalancePaid;
+  if (patch.isBalancePaid !== undefined)
+    set.balancePaidOn = patch.isBalancePaid ? sql`case when coalesce(${weddings.isBalancePaid}, false) then ${weddings.balancePaidOn} else ${ledgerToday()}::date end` : null;
   if (patch.customTerms !== undefined) set.customTerms = patch.customTerms;
   if (patch.artTheme !== undefined) set.artTheme = patch.artTheme;
   if (patch.addons !== undefined) set.addons = patch.addons;
   if (patch.status !== undefined) set.status = patch.status;
+  const [before] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
+  if (!before) return false;
+  // The day it was cancelled is when a kept deposit is earned (accrual, ASC 606).
+  if (patch.status === "cancelled" && before.status !== "cancelled") set.cancelledAt = new Date();
+  if (patch.status !== undefined && patch.status !== "cancelled" && before.status === "cancelled") set.cancelledAt = null;
   await db.update(weddings).set(set).where(and(eq(weddings.id, weddingId), isHouse));
+  const pick = (w: typeof before) => ({
+    status: w.status,
+    totalAmount: w.totalAmount,
+    depositAmount: w.depositAmount,
+    isDepositPaid: w.isDepositPaid,
+    isBalancePaid: w.isBalancePaid,
+    addons: w.addons,
+    customTerms: w.customTerms,
+    cancelledAt: w.cancelledAt,
+  });
+  const [after] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
+  await auditQuietly({ tenantId: HOUSE_TENANT_ID, actor: "owner dashboard", action: "booking.money", entityType: "job", entityId: weddingId, before: pick(before), after: after ? pick(after) : null });
+  // New money on a signed agreement: the couple's frozen copy no longer
+  // matches the invoice. Reissue it so the hub shows the current terms and
+  // asks them to accept again; the old signature and terms go to the audit log.
+  if (after && contractIsStale(after)) await reissueContract(weddingId, "booking money edited after the couple accepted");
+  await postBankLedgerQuietly(HOUSE_TENANT_ID, { actor: "owner dashboard", cause: "booking money or status edited" });
   return true;
 }
 
@@ -353,6 +522,7 @@ export async function createCorporateBooking(input: {
       totalAmount: input.totalUsd.toFixed(2),
       depositAmount: Math.min(input.depositUsd, input.totalUsd).toFixed(2),
       isDepositPaid: input.depositReceived,
+      depositPaidOn: input.depositReceived ? ledgerToday() : null,
       status: input.depositReceived ? "deposit_paid" : "inquiry",
       notes,
     })

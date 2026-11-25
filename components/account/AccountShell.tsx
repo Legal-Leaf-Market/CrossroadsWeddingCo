@@ -29,15 +29,29 @@ export default function AccountShell({
                   Bookings
                 </Link>
               )}
+              <Link href="/app/money" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Money
+              </Link>
               <Link href="/app/transactions" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Transactions
               </Link>
               <Link href="/app/books" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Books
               </Link>
+              <Link href="/app/vendors" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Vendors
+              </Link>
+              <Link href="/app/books/expenses" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                Expenses
+              </Link>
               <Link href="/app/integrations" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Integrations
               </Link>
+              {!house && (
+                <Link href="/app/billing" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
+                  Billing
+                </Link>
+              )}
             <form action="/api/auth/logout" method="post">
               <button type="submit" className="text-sm font-semibold text-ink/70 hover:text-terracotta-dark">
                 Sign out

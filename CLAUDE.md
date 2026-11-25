@@ -614,7 +614,23 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   reaches through `window.CR_PLAYBOOK_API` and polls every 15 seconds. It is separate from the
   claude.ai copy's log, which this repo cannot read. Notes saved on a device before it connected
   are uploaded once. The "New as of 11.6.26" list filter shows leads with `fresh:1`; `also`
-  puts a lead in a second section's filter. Steven is in the "Calling as" picker (2026-11-02), number (336) 684-8418 in `NUMS`. Every list puts dated leads first, most urgent on top (Jacob, 2026-11-02: "if there is ever a date associated, place this in the most urgent to least urgent order"): a lead's date is the earlier of its follow-up date (overdue follow-ups lead) and its upcoming `when` event date; undated leads follow by stars; past event dates sink to the bottom. Each dated card shows a chip (overdue/today in red, within a week in amber). "Best 10 for today" keeps its fixed call order. The "Nov to Dec events" section leaves out anything on Nov 6 or 7 because the Kat and Tanis wedding has the crew and gear that weekend (Jacob, 2026-11-02). Every lead carries a 1 to 5 star rating (Jacob, 2026-11-02, "that's totally a sales thing"): 5 = confirmed they need a DJ (they told us or posted it), 4 = warm or entertainment not set, 3 = their page shows a fit, 2 = real contact with no sign of need, 1 = long shot. Starting ratings live in `STARS` in the playbook and come only from what each listing says; a caller's rating and reason, saved in the log as `stars`/`starWhy`/`starBy`, replace them. Sections sort by stars (events stay in date order) and "Hottest first" lists everything by stars. Personal-connection leads (Jacob, 2026-11-02): Andrew Sutherland (Sutherland's Exteriors, LLC, confirmed on the NC registry) and Tim (Victory Roofing, unconfirmed, marked "Needs verification") sit in Partners; the Crump Theatre and the Tony Stewart Foundation (reported closing at the end of 2024, flagged) sit in Venues. Their cards carry business facts only: no personal phone numbers (Jake has them), nothing about anyone's private life, and the year and details of the Crump fundraiser stay out of public copy until Jacob confirms. Scripts say "Jake", never "Jake Kennedy", because the Calling-as picker swaps the first name. `docs/EVENT_LEAD_RESEARCH_BRIEF.md` is the Claude in Chrome research brief for the event leads; its results come back in a fixed block format meant to update `STARS` and each lead's `why`. **The call list IS in git, in a public repo, on purpose**
+  puts a lead in a second section's filter. The "New as of 11.23.26: Columbus" filter (2026-11-23, Jacob: "max
+  out Columbus") shows the 46 leads with `fresh23:1`, grouped by `grp` (dated, corp, venue, gala, youth, partner;
+  headings in `CBUS_GRPS`). They live in the "columbus" section; only the dated Nov to Dec ones also sit in
+  "Nov to Dec events". Picking one section in the List filter now renders only that section, so a lead with `also`
+  is never listed twice. **Sort, grid and slicing (2026-11-23, Jacob: "sort these by the stars and by status ... Airbnb style ...
+  you click on one thing and it drills down").** The Status menu became the Status facet; a Sort menu (stars either
+  way, status either way, last logged, name, town) renders one flat list with a subheading per star level, status or
+  town, while "Recommended" keeps the sections. The default view is a tile grid; a tile opens into the full card in
+  place (Close or Escape) and "Full cards" restores the old view. The slice panel holds six facets (stars, status,
+  when, kind of lead, town, how to reach them) as clickable bars, five quick pills, removable active pills and Clear
+  all. Values inside a facet are OR and facets are AND, and each bar's count applies every other filter, so the number
+  on a bar is what clicking it shows (checked for every bar). Stars, status pill, town and kind on a lead, and the
+  tally chips at the top, show "only this". Towns: parentheticals and "area" stripped, first of a "/" or "," pair, and
+  any town with fewer than 3 leads is "Elsewhere". List, sort, view and facets persist per device in `cr_filters`; an
+  old saved Status choice migrates into the facet. A redraw now waits only while someone is in a card's text box, date
+  or menu (not on buttons), open pitch prep stays open across redraws, and focus returns to the same control by
+  `data-key`. Steven is in the "Calling as" picker (2026-11-02), number (336) 684-8418 in `NUMS`. Every list puts dated leads first, most urgent on top (Jacob, 2026-11-02: "if there is ever a date associated, place this in the most urgent to least urgent order"): a lead's date is the earlier of its follow-up date (overdue follow-ups lead) and its upcoming `when` event date; undated leads follow by stars; past event dates sink to the bottom. Each dated card shows a chip (overdue/today in red, within a week in amber). "Best 10 for today" keeps its fixed call order. The "Nov to Dec events" section leaves out anything on Nov 6 or 7 because the Kat and Tanis wedding has the crew and gear that weekend (Jacob, 2026-11-02). Every lead carries a 1 to 5 star rating (Jacob, 2026-11-02, "that's totally a sales thing"): 5 = confirmed they need a DJ (they told us or posted it), 4 = warm or entertainment not set, 3 = their page shows a fit, 2 = real contact with no sign of need, 1 = long shot. Starting ratings live in `STARS` in the playbook and come only from what each listing says; a caller's rating and reason, saved in the log as `stars`/`starWhy`/`starBy`, replace them. Sections sort by stars (events stay in date order) and "Hottest first" lists everything by stars. Personal-connection leads (Jacob, 2026-11-02): Andrew Sutherland (Sutherland's Exteriors, LLC, confirmed on the NC registry) and Tim (Victory Roofing, unconfirmed, marked "Needs verification") sit in Partners; the Crump Theatre and the Tony Stewart Foundation (reported closing at the end of 2024, flagged) sit in Venues. Their cards carry business facts only: no personal phone numbers (Jake has them), nothing about anyone's private life, and the year and details of the Crump fundraiser stay out of public copy until Jacob confirms. Scripts say "Jake", never "Jake Kennedy", because the Calling-as picker swaps the first name. `docs/EVENT_LEAD_RESEARCH_BRIEF.md` is the Claude in Chrome research brief for the event leads; its results come back in a fixed block format meant to update `STARS` and each lead's `why`. **The call list IS in git, in a public repo, on purpose**
   (Jacob, 2026-11-01, asked and answered after being told it would be readable on
   GitHub): every entry came from a public listing. This supersedes the earlier rule that
   contact data stays out of git. Do not delete or scrub the file as a leak; editing a
@@ -935,6 +951,241 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   row identical apart from a test row with no share link, which the long-standing share-token
   backfill filled in as designed).
 
+- **Wedding website, replacing Zola / The Knot / WeddingWire (2026-11-11, Jacob: "mock up a
+  public site for Lauren and Clay ... this would be to replace Zola or Wedding Wire ... not
+  RSVP type ... engagement pictures ... map integration with the venue address ... a checkbox
+  for using internal Crossroads website, and then an optional box for existing Zola, Wedding
+  Wire, the Knot").** `/w/<site_slug>`, switched on from the hub's "Your wedding website"
+  section ("Use the <brand> wedding website?"), which also holds engagement photos, story,
+  links (registry, hotel block), guest Q&A and the optional outside-site link (it edits the
+  same `weddings.wedding_site_url` as Details, and the public page lists it as "Our wedding
+  site"). No RSVP. Columns `site_enabled` (default false), `site_slug` (names + 6 random hex,
+  minted on first switch-on and kept), `site_story`, `site_links`, `site_faq`. **Nothing is
+  public until it is switched on; switched off, the page and every photo URL 404 at once.**
+  Schedule shows times and titles only, never MC notes. Map: Google's keyless embed of
+  venue name + address, plus a directions link; no API key. Never indexed. Branded with the
+  booking's own account. Photos (`site_photos`, bytes in Postgres, max 12, 3 MB): the hub
+  resizes to a 2000px long edge and re-encodes to JPEG in the browser, which strips EXIF and
+  GPS (verified: no Exif in stored bytes); the server trusts magic bytes, not the label
+  (JPEG/PNG/WebP), counts under a row lock, and serves with nosniff + CSP sandbox; the hub
+  reads its own photos even while the site is off. `/w/preview` is the dev-only twin. The
+  Lauren and Clay mockup was rendered from a LOCAL test booking with sample details and
+  placeholder photos; nothing about them is in the repo. Verified against a real Postgres
+  and headless Chromium at 390 and 1280.
+- **Event pages and the couple's own note (2026-11-11, Jacob: "a page up for Kat and Tanis
+  ... like you have for Adam's Valle Vista wedding and a place for the bride and groom to
+  comment their experience").** `REVIEW_EVENTS` entries gain `slug` and `eventDate`; each
+  gets `/weddings/<slug>` (gallery, approved notes, a sign form tagged with the slug) and is
+  in the sitemap; `/reviews` and the homepage gallery link to them. Pages are titled by venue
+  and date, never the couple's names. Kat and Tanis is `forge-on-4th-2026-11-07` with NO
+  its own look (`theme: "goth"`, Jacob 2026-11-11: "emo pop punk Gothic"): black and
+  violet from their day, their own "'Til We Are Ghosts" sign as the headline, and each photo
+  a tarot card (`GothGallery`, after their tarot-named tables) taped at a fixed tilt. Seven
+  photos, prepared like Valle Vista (long edge 1600, EXIF/GPS stripped). Deliberately left
+  out: the seating-chart mirror (about 90 guests' full names legible) and a photo of two
+  guests, who are not covered by the couple's marketing-photo consent. The couple writes from their
+  own hub: a "How was your day?" card appears on house weddings once the event date has
+  come (Indiana time), posts to `/api/hub/[token]/review` (relation "Our wedding",
+  `guestbook_entries.wedding_id`, three a day), emails the owner, and waits for approval like
+  every note; the moderation screen says where each note came from. An event page shows
+  approved notes tagged with its slug or written from a house wedding's hub on its date.
+
+- **Operations and growth batch (2026-11-11, Jacob: "think wedding ERP", "Accounting",
+  "Vendors", "market heavy", "price it at $50 flat a month").**
+  - **`/venues`**: "Your in-house DJ, without the payroll." Crossroads' own DJ service pitched
+    to venues: published prices from `lib/site.ts`, the live timeline and printed run sheet
+    for the coordinator, real event pages as proof, `/?src=venue` to hand couples. Promises
+    no insurance paperwork, exclusivity or referral fee (none decided). Footer and sitemap.
+  - **Platform price: `PLAN_PRICE_USD = 50`**, one plan, every feature (owner decision). The
+    signup page leads with "Your books are built in. No QuickBooks.", Jake in his own words
+    ("a seasoned accountant, technologist and DJ"; quote: "You don't need anyone but me."),
+    and tax filing "through Smart CFO, under confidentiality" with no price shown. Do not call
+    Jake a CPA. Open item for Jake: paid preparers need an IRS PTIN; Oscar Rodriguez (Smart
+    CFO) is NOT named publicly without his OK. A DJ's books go to an accountant only by that
+    DJ's opt-in (feature not built yet).
+  - **`/app/money`** (`lib/money.ts`): cash and card balances (Plaid's last report), owed to
+    you and past due (`openBookings`/`creditFor`, the matching math), money collected for
+    events still to come (with a "may have to go back on a cancellation" note; deliberately NO
+    "safe to spend"), next 30 days in (balances due) and out (expected repeat charges), and
+    repeat charges from `lib/books/recurring.ts` (evidence only: 3 charges, 2 for yearly,
+    steady cadence and amount, still active; 26 months of history so yearly bills are seen).
+    "Needs you": bank logins to repair, lines to sort, contractors needing a W-9, past due.
+  - **Vendors** (`vendors` table, `lib/vendors.ts`, pure rules `lib/books/vendor-logic.ts`,
+    `/app/vendors`): payments are FOUND on the bank feed by the vendor's match words, never
+    typed. 1099-NEC counts bank payments only (card payments go on a 1099-K); threshold by
+    payment year in `NEC_THRESHOLD_CENTS` ($600 to 2025, $2,000 for 2026, later years say
+    "not published yet" instead of guessing). Only a "W-9 on file" flag is stored, never a
+    tax id. Verify scripts: `verify-money.mjs` (18), `verify-vendors.mjs` (17).
+  - **Signup attribution**: `tenants.signup_src` takes the first-touch `?src=` tag
+    (`SourceCapture`, `cleanSrcTag`, never refused). `/admin/[key]` shows "Platform signups":
+    totals, trials, paying, by source, by business type, latest 15 (`lib/platform-stats.ts`,
+    counts only, no customer's bookings or money).
+  - **`docs/MARKETING_GRAPHICS_BRIEF.md`**: the brief Jake hands a design chat: true messages,
+    real features, exact palette from `app/globals.css`, first batch of graphics, in-person
+    pieces with their `?src=` tags, and the don'ts (no invented numbers, testimonials or
+    unsourced competitor claims; no em dashes).
+
+- **Compass Events by Crossroads, and officiating (2026-11-12, Jake and Terry).** Compass
+  Events is the event planning and officiating brand of Crossroads Wedding and Event Co.,
+  with Terry Winchester signing as its Chief Executive Officer (`COMPASS_SIGNER_TITLE`) the
+  way Jake signs for Crossroads. First service: officiating, $250 flat, $125 deposit on
+  accepting, $125 balance within 48 hours after the ceremony (Terry's texted terms; note
+  this differs from the DJ rule of 24 hours after start). The agreement is SEPARATE from a
+  couple's Crossroads agreement: its own link inside the same hub (`/hub/<token>/officiant`,
+  404 until set up), its own deposit, invoice (`CE-<date>-<id4>`) and signatures; nothing
+  touches `weddings.contract_*`. Words in `lib/compass.ts` (pure), rows in
+  `service_agreements` (one live per wedding and kind), server code in
+  `lib/service-agreements.ts`. The owner sets it up from the dashboard's "Officiant" button,
+  edits it only until the couple accepts, countersigns once, and marks each payment.
+  Clauses: what the flat fee covers (Zoom call, rehearsal, early arrival, ceremony,
+  license walkthrough, filing), couple responsible for a valid license (IC 31-11-4-10, 60
+  days), filing within 30 days (IC 31-11-4-16) with no liability for postal or clerk delays,
+  substitute officiant or full refund, Indiana law. The officiant's authorization prints
+  only when typed in; until then the owner page warns. Checks are made out to Crossroads,
+  because Compass Events is a brand name, not a separate company: file an Indiana assumed
+  business name for it before it appears on anything else. NOT lawyer-reviewed. First
+  client: Olivia "Liv" Ash. Officiant payments are not in the booking's total or the
+  payment matching yet.
+- **Officiant invoices take cards (2026-11-12, Jake: "I want Liv to be able to pay the $125
+  deposit to our stripe ASAP and test this out").** The couple's officiant page shows "Pay the
+  $125 deposit by card" once they have accepted, then the balance once the deposit is in, one
+  part at a time (`officiantPayablePart`). `POST /api/hub/[token]/officiant/pay` makes a
+  card-only Stripe Checkout session for exactly that part (idempotency key on agreement, part
+  and amount, so a second tap cannot charge twice) with metadata `kind: "officiant"`,
+  `serviceAgreementId`, `part`. The webhook handles `kind: "officiant"` BEFORE the DJ deposit
+  branch and fills only an empty paid-at (`markOfficiantPaidByCard`); a card payment on a part
+  already marked by hand is logged as a possible double payment. Own switch:
+  `COMPASS_CARD_PAYMENTS=1` plus `STRIPE_SECRET_KEY`; off, the invoice reads cash or check
+  with no control, exactly as before. The DJ deposit stays cash or check
+  (`STRIPE_DEPOSITS_ENABLED` unset). Liv's first deposit went out as a one-off Stripe payment
+  link ($125, one payment) the same night, before this shipped, so mark it received by hand
+  on the owner page if she paid that way. Verified by the Netlify preview build only (this
+  session had no package install); the first real payment is the end-to-end proof.
+  **Proven end to end the same night** with a dummy booking (Dummy & Officiant, $2 fee, $1
+  deposit, archived after): /book, owner set-up, hub accept, $1 deposit by card, webhook 200,
+  countersign, $1 balance by card, PAID stamp. The test showed the agreement's payment clause
+  still said "cash or check for now", so `buildOfficiantAgreement` takes `cardPayments` and
+  offers card when the switch is on (`OFFICIANT_AGREEMENT_VERSION` 2026-11-12b); agreements
+  accepted earlier keep their frozen wording.
+
+- **The officiant signs from his own link (2026-11-12, Jake: "a direct link to have Terry
+  sign ... and for Liv to get a ping").** Couples who book DJ and officiant have two
+  agreements, and the only sign box for the officiant one sat behind the whole dashboard key.
+  `/sign/officiant/<weddingId>.<hmac>` (`lib/officiant-sign.ts`) opens ONE wedding's officiant
+  agreement and one action, sign it; the token is an HMAC of the wedding id under
+  `ADMIN_DASH_KEY` (nothing stored, rotating the key retires every link, no key = 404). The
+  owner officiant page prints the link above the couple's. Both signing doors go through
+  `countersignAndNotify`, which emails the couple (contact email + hub invites, owner BCC) a
+  pointer to their signed copy, never the terms. Dashboard buttons now read "DJ agreement" and
+  "Officiant agreement". Verified on a local Postgres: forged token 404, three simultaneous
+  signs give one 200 and two 409, no sideways scroll at 390 and 1280.
+- **The company can always sign first (2026-11-12, Jake: "on all agreements, the company
+  should be able to sign first, always give us that option").** Both countersign paths drop
+  the "couple accepted" condition; the conditional UPDATE still allows one signature only.
+  Officiant agreement: once either side signs, the terms lock (`saveOfficiantAgreement` also
+  refuses after a countersign), so the couple accepts exactly what the officiant signed, and
+  the couple's email says "read and accept" instead of "both signatures". DJ agreement: the
+  terms come from the wedding row, which the couple and "Edit money" can still change, so
+  signing first does NOT freeze them; the couple's acceptance snapshot is still the record,
+  and the owner page says so. Verified on a local Postgres: officiant signs first (three
+  simultaneous: one 200, two 409), edit refused, couple accepts after, both signatures show;
+  DJ countersign with no acceptance returns 200.
+- **The couple's officiant page walks them through it (2026-11-12, Jake: Liv "didn't
+  understand the flow"; "blur out everything but the current step ... a handwritten note with
+  an arrow ... think clippy, old school").** Three step cards at the top (sign, deposit,
+  balance; done / do this now / later). `components/guide/StepGuide.tsx` is a reusable guide:
+  `StepGuide step=...` wraps a page, areas opt in with `data-zone`, and globals.css blurs the
+  zones that are not the current step (`[data-guide=...]`, screen only, never print). A
+  `GuideNote` is our own yellow sticky note (Caveat handwriting, a plain paperclip, a drawn
+  arrow; deliberately NOT Microsoft's Clippy character) placed right above the target, and a
+  corner note always says the next step. It is a guide, never a gate: "Show me everything"
+  turns it off, remembered per device (`cw-step-guide-off`). Card buttons are never hidden:
+  until unlocked they show greyed with the reason on hover and as text for phones ("Sign the
+  agreement above first", "Pay the deposit first"); accepting refreshes the page so the
+  deposit button goes live at once. Dashboard cards with an officiant agreement show four
+  pills: DJ deposit, officiant deposit, DJ agreement, officiant agreement (`officiant` on
+  `AdminWedding`). Verified on a local Postgres in headless Chromium at 390 and 1280.
+- **Platform billing live on Stripe (2026-11-12, Jake: "get billing live with whatever you
+  suggest. Can Found take payments?").** Found has no API and its own invoice card payments
+  run through Stripe, so the app uses Stripe directly and Stripe pays out to the Found
+  account (set in the Stripe dashboard). `/app/billing` (nav "Billing", customer accounts
+  only): one plan, `PLAN_PRICE_USD` a month, Stripe Checkout (`POST /api/app/billing/checkout`,
+  a 303) and the Stripe customer portal (`/api/app/billing/portal`) for card, invoices and
+  cancelling. Days left on the free trial carry over as the subscription's `trial_end`
+  (only when more than 49 hours remain, Stripe's floor). Price: `STRIPE_PRICE_ID` if set,
+  else inline price data. `lib/billing.ts`: the webhook (`/api/webhooks/stripe`, the one
+  endpoint, now also handling `customer.subscription.*` and subscription checkouts) mirrors
+  status onto `tenants` (`stripe_customer_id`, `stripe_subscription_id`, `billing_status`,
+  `billing_period_end`, `billing_event_at`); an event older than the last applied changes
+  nothing; trialing/active/past_due set `plan = 'standard'`, canceled/unpaid/expired set it
+  back to 'trial'; only `kind = 'customer'` rows, so the house account is never billed.
+  Nothing is locked when a trial ends yet: the page and home screen say so and offer the
+  plan. **Wedding card deposits stay off**: `/api/checkout` now also needs
+  `STRIPE_DEPOSITS_ENABLED=1`, so adding a Stripe key for billing cannot switch them on.
+  Platform scoreboard: "Paying" counts active and past_due. Verified locally with signed
+  test events (19 checks); the first real checkout against Stripe is the remaining proof.
+
+- **Back YOUR Blue tribute (2026-11-13, Jacob).** `/back-your-blue` is Jacob's tribute to his
+  father, Kevin Lee Kennedy (retired USAF, 21 years; turning 60 on November 16), and the first
+  look at a Heart of Columbus gratitude section, hosted here until heartofcolumbus.com is live.
+  Every fact is Jacob's own (see the page file's header); add nothing about rank, units or
+  dates of service. Its notes board is the moderated guestbook: rows tagged
+  `event_slug = 'back-your-blue'` (`TRIBUTE_SLUGS`), relations from `TRIBUTE_RELATIONS`,
+  approved from `/admin/[key]/reviews` like every note, shown on that page only and
+  excluded from `/reviews`. Share uses the Web Share API with a copy-link fallback.
+
+- **Owner dashboard becomes a command center (2026-11-13, Jake: "can we ramp this the hell
+  up?").** `/admin/[key]` now opens on what needs doing instead of a flat list. Four money
+  tiles (booked ahead, still to collect with collected so far, past due, pipeline), a ranked
+  "Do this next" list, a 12-month bar strip (booked solid, inquiries dashed) and the year's
+  pacing against `WEDDINGS_PER_YEAR_CAP` (24, `lib/site.ts`; corporate nights excluded, a
+  pace not a lock). A sticky jump bar (Today, Upcoming, Ready?, Calls, Sources, Past, unread
+  count) and a header row linking the ERP pages (Money, Books, Transactions, Vendors) and the
+  owner tools. Upcoming moved up to sit right under the command center. All logic is pure in
+  `lib/admin-insights.ts` and takes `today` (venue time zone): booked = deposit in or status
+  moved past inquiry; a balance is past due from the day after the event (the 24-hours-after
+  rule); cancelled rows count nowhere. Actions, in order: Now (unread messages, past-due
+  balances, agreements waiting on our signature, deposits within 60 days, unsigned agreement
+  within 30 days), Soon (missing email, far deposits and signatures), Heads up (booked events
+  within 14 days, intro calls today or tomorrow by local date). First 8 show, the rest fold.
+  Verify: `node --experimental-strip-types scripts/verify-admin-insights.mjs` (24 checks).
+  Measured on `/admin/preview` at 360/390/768/1280: no sideways scroll.
+
+- **Job costing, crew pay and materials, accrual basis (2026-11-13, Jake: "project costing
+  and planning for material and hour resources starting with labor for Nic, Terry, and
+  Jake"; "fully customizable"; "force accrual and US GAAP ... we are not a cash basis gl";
+  "we use the matching principle"; "match revenue to expenses by job costing"; "and
+  accruals").** STANDING DIRECTIVE: the books are accrual basis under US GAAP. The GL in
+  `lib/books/ledger.ts` is still cash basis (FINANCIALS_SPEC.md principle 1) and is next to
+  convert; nothing new may be built on the cash-basis assumption.
+  - **Compensation (owner, 2026-11-13):** Jake and Terry are full time and split what the
+    business leaves; Nic keeps his day job and takes small per-event shadowing payouts.
+    Everyone is a 1099 contractor paid through Found. The spec's 75% split and Nic's
+    $2,000/month draw (9.2a) are OUT OF DATE; never use them. No pay amount is seeded.
+  - **Tables** (`scripts/phase1-schema.sql`): `crew_members` (editable crew; pay_method
+    project / hour / percent / owner, cents and basis points, `share_bps` for owners,
+    `vendor_id` to the 1099 vendors row), `resource_items` (the owner's materials list),
+    `event_resources` (one job's labor and material lines; pay terms are COPIED onto the
+    line so editing a default never rewrites a planned job). Seeded once (`crew_members_v1`):
+    Jake and Terry as owners, Nic per project, no amounts.
+  - **Rules** (`lib/costing-logic.ts`, pure): an owner line is never a cost; owners split
+    what a job leaves (unset shares split evenly). A rate not set is reported as missing,
+    never guessed. "Paid" on a line is what went out and wins over the plan. Accrual per job:
+    revenue recognized on the event date (ASC 606, point in time); before it, collected cash
+    is deferred revenue and paid costs are prepaid job costs; on and after it, direct costs
+    are matched to the revenue as cost of revenue, unpaid costs are accrued job costs and
+    uncollected revenue is a receivable.
+  - **Pages:** `/admin/[key]/costing/<id>` (job plan editor with a live summary: left to
+    split, owners' split, per-person pay per hour), `/admin/[key]/crew` (crew and default
+    pay, materials list, planned hours by month, double-booked days, unstaffed events, 1099
+    paid this year per linked vendor), `/admin/[key]/jobs` (accrual balances, earned by event
+    month, backlog, every job). Dashboard: Costing button per card, Job costing and Crew links.
+  - Verify: `node --experimental-strip-types scripts/verify-costing.mjs` (37 checks).
+    Verified on a local Postgres: migration applies twice with one seed, crew/materials/plan
+    saves, bad body 400, wrong key 404, all pages 200, no sideways scroll at 390 and 1280.
+  - Found has no public API; Plaid is the aggregator that lists it, and the Plaid feed in
+    `/app/integrations` is how its transactions arrive (needs PLAID keys in production).
+
 ### 9.2a Strategy doc №2 (docs/MASTER_SPEC_AND_STRATEGY.md, 2026-08-26)
 A second brainstorm doc (Jacob & Jim), same standing: steering input, not gospel. New
 decisions absorbed from it:
@@ -986,7 +1237,7 @@ decisions absorbed from it:
 | --- | --- |
 | Neon Postgres | Wired 2026-08-26 after three rounds: the Vercel variable is named `Database_URL` (mixed case, resolver matches case-insensitively and sanitizes the value), and the first two pastes were not the connection string. The schema self-applies at build; the build log prints the host it dialed. Verify claims like this against build logs, not session lore |
 | Resend | **Live** (2026-08-26). `RESEND_API_KEY` in Vercel; sender is `jake@crossroadsweddingco.shop`, confirmed received by owner. Booking confirmations + notifications flow |
-| Stripe | Not yet created. Checkout + webhook routes fail closed (501) until `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` exist. Connect payouts need business verification |
+| Stripe | **Live** (2026-11-12). Account Crossroads Wedding and Event Co., activated; live restricted key and webhook secret in Netlify. Webhook destination `crossroads-billing` sends checkout.session.completed, checkout.session.async_payment_succeeded and customer.subscription.created/updated/deleted to `/api/webhooks/stripe`. Customer portal saved (cancel at period end). Payout bank (Found) could not be added until 2026-11-14 (Stripe's hold after new security settings); money waits in the Stripe balance until then. Switches: `COMPASS_CARD_PAYMENTS=1` on, `STRIPE_DEPOSITS_ENABLED` off. Connect payouts need business verification |
 | Spotify | **Keys live** (2026-08-28) but playlist reads need one more step: the Feb 2026 API migration (enforced 2026-03-09) moved playlist reads to /playlists/{id}/items and made that endpoint reject client-credentials tokens (401, observed in prod logs). Owner authorizes once at /api/spotify/connect?key=<ADMIN_DASH_KEY> (redirect URI https://crossroadsweddingco.shop/api/spotify/callback is registered on the app), pastes the shown refresh token into Vercel as SPOTIFY_REFRESH_TOKEN, redeploys. Client-credentials keys unlock playlist ingestion + track search (`lib/spotify.ts`, fails closed until then). The hub's playlist unfold + send-to-moment UI shipped 2026-08-28 (`/api/hub/[token]/playlist-tracks`, hub-token gated) and lights up the moment the keys land; note new Spotify dev apps can read user-created playlists but not Spotify-owned editorial ones (API change Nov 2024), which is fine since couples share their own |
 | Twilio | Booking texts wired 2026-08-27, fails closed until keys exist. On the docket once keys exist (Jacob 2026-08-27): milestone check-in texts on a daily cron, e.g. 90 days out "Hey, checking in. Getting close. Let us know if you need anything.", plus similar touches at 30 and 14 days; needs a Vercel cron route guarded by CRON_SECRET. Jacob needs: twilio.com account (paid, not trial), a toll-free number with toll-free verification (simplest US A2P path) or a local number with 10DLC brand+campaign registration, then `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_MESSAGING_SERVICE_SID` (or `TWILIO_FROM_NUMBER`) in Vercel. Optional `TWILIO_NOTIFY_TO` texts the owner on each booking. The dispatch cascade (Phase 3) reuses this |
 | WeddingPro (The Knot / WeddingWire vendor advertising) | Signing 2026-08-27 (quote Q-472003, rep Adam Muir, owner decision): $4,994.40/12 months non-cancellable, ~$416/mo, 4 items (Knot Spotlight Banner Musicians, Knot DJs Platinum, WW DJs regional, WW DJs Indianapolis city). BEFORE CONFIRMING Jacob is fixing: 3 items quoted for the "Indianapolis, Lafayette, Terre Haute Region", the wrong half of the state. The three push markets are Indianapolis, Bloomington, and Louisville (KY, a separate Knot market), per Jacob 2026-08-27. Also the account email is nic@nicotiamarket.com (wrong brand; leads will land there). AUTO-RENEWS annually at up to +50% price; cancel at least 10 days before renewal (calendar reminder late July 2027); bundle discounts are all-or-nothing. Arbitration opt-out available within 30 days of acceptance (by ~2026-09-26) via arbitrationtop@theknotww.com, keeps the contract intact. Once live: build the inbound lead bridge against the first real lead notification email (Jacob forwards it), auto-provisioning a wedding + hub + instant quote email per §6.1 |
@@ -1009,7 +1260,60 @@ decisions absorbed from it:
 - Layout QA for token-gated pages runs against `/hub/preview` and `/hub/preview/runsheet`:
   dev-only sample-data twins of the portal pages that 404 in production builds.
 
+### 9.5a Finance directives (owner, 2026-11-13; binding)
+- **Accrual basis under US GAAP, the matching principle, job costing, accruals.** The books are
+  NOT cash basis. Get the accounting logic right and tested before coding it. Spec:
+  `docs/FINANCIALS_SPEC.md` ("Accrual basis, live sync and the close").
+- **Nothing that carries money is ever deleted**: modify or void. Enforced by `forbid_delete`
+  triggers; never remove them.
+- **Live sync until a hard cutoff**: entries are derived from sources and follow them while the
+  month is open; the database refuses writes into a closed month; later changes post as dated
+  corrections. **Audit everything** (`lib/audit.ts`, append-only, hash-chained).
+- **Checks and balances**: Jake (CEO, accounting experience) triggers; Terry Winchester II (CBO,
+  acting CFO) approves or vetoes and is where the buck stops; Nic (COO) breaks ties and never
+  triggers cash. Whoever triggers never approves. Expense reports: only Jake approves the report;
+  Terry approves the payout, Nic approves Terry's own. Seats: `finance_roles`.
+- **Logins**: jake@, terry@ and nic@crossroadsweddingco.shop, all with full see/enter/edit access
+  (default `houseBooksEmails`).
+- **ETL first**: every feature has a way in and a way out; non-sync imports go through staging,
+  a cached preview, approval and audit. Mail and calendar: **Proton and Google, not Microsoft**.
+- **Compass Events** is a separate division to be owned solely by Terry Winchester II; book it
+  as its own division with an intercompany account (not built yet).
+- **Cash and check payments are always deposited and matched before a month can close.**
+- Handoff briefs: `docs/handoff/CLAUDE.md` (engineering tasks), `CHATGPT.md` (policies and
+  SOPs), `GEMINI.md` (integrations and formats).
+
 ### 9.6 Phase log
+- **Partner pages, deeper (2026-11-18, Jacob: "work way harder on the rabbits, balloons and
+  cookie paradise pages ... an MD for chat to research and make better").** Cookie Paradise
+  shows its live menu, read server-side from its public Shopify `/products.json`
+  (`lib/partner-menu.ts`, in-stock only, names and prices and links, no photos until they
+  give permission), with the page on a six-hour ISR revalidate; if their store does not
+  answer, the section does not render. Rabbit's Balloons gains how a project runs, her
+  stated low-waste practices and her own caveat, all from what Rachael Starr told Heart of
+  Columbus for her draft site; her "Why Rabbit?" story is NOT quoted until she says so.
+  Both pages get a "what to have ready" list (ours, not their policy) and cross-links.
+  `docs/handoff/PARTNERS_RESEARCH.md` is the ChatGPT brief: what is verified, what to
+  research, owner-outreach drafts, and a fixed return format with source and date per fact.
+- **Site menu, past events, partners (2026-11-18, Jacob: "a side menu bar and a top menu bar
+  on desktop, side menu bar for mobile"; "past events, partners"; a page each for Cookie
+  Paradise and Rabbit's Balloons).** One list, `lib/nav.ts`: `TOP_LINKS` in the header bar
+  from lg (1024px), with `wide` links only from xl (1280px) because at 1024 six links
+  truncated the brand name; `MENU_SECTIONS` in `components/SideMenu.tsx`, a right drawer on
+  every width (88vw on a phone, 360px max). Two traps, both measured: the header's
+  `backdrop-blur` makes it the containing block for `fixed` children, so the drawer is a
+  portal on `<body>` (inside the header it was 64px tall and the hero ate the clicks); and a
+  closed drawer parked off screen by a transform widened every page by 360px until a fixed
+  `overflow-hidden` layer clipped it (its shadow also showed as a strip at the right edge, so
+  the shadow is only on while open). `/past-events` reads `REVIEW_EVENTS` newest first;
+  `cover` picks the card photo where the first image names the couple (Forge's welcome
+  sign). `/partners` and `/partners/[slug]` read `lib/partners.ts`: only what each business
+  says about itself, with source and date (Cookie Paradise from cookieparadise.co, read
+  2026-11-13; Rabbit's Balloons from its owner, Rachael Starr, 2026-11-15, no public site,
+  phone or prices yet, so the way in is our inbox). The Rabbit's image is our inspiration art
+  from the Heart of Columbus draft site, captioned as not her work. Measured at
+  360/390/768/1024/1280/1440: no sideways scroll, drawer full height, Escape closes, focus
+  returns to the Menu button.
 - **Phase 3, sixth slice (2026-09-04): native intro-call booking with office hours.**
   Replaces the unset `NEXT_PUBLIC_BOOKING_URL` Calendly hole, and it is what the QR
   code on every printed business card resolves to: `/book?with=<slug>` for jake, nic,
@@ -1152,3 +1456,132 @@ decisions absorbed from it:
   tap must never be blocked, and the poll reconverges all devices. Still Phase 3 backlog:
   dispatch cascade (needs Twilio), blockout calendar, Music Stand/ChordPro, realtime push
   instead of polling.
+- **Expense capture: staff incidentals and reimbursements (2026-11-13, Jake: "a capture tool
+  like rocket money or expensify or such for staff incidentals and reimbursements").** Built
+  into the books, not beside them.
+  - **Capture link per crew member, no login:** `/expense/<crewId>.<hmac>`
+    (`lib/expense-token.ts`, the officiant-sign pattern: HMAC under `ADMIN_DASH_KEY`, nothing
+    stored, rotating the key retires every link, no key = 404). Phone first: the receipt input
+    opens the camera; amount, date (no future, within a year), where, what for, optional job
+    (house events 30 days back to 60 ahead) and expense category. 20 claims a day per person,
+    $5,000 cap per claim, receipts 4 MB, PNG/JPEG/WEBP/HEIC/PDF only. The page lists the
+    person's own claims and where each stands. Links are on `/admin/[key]/crew` (Expense links).
+  - **Two approvals (owner, 2026-11-13):** (1) the report: ONLY the preparer (Jake) approves
+    or rejects; the ledger recognizes the expense and the amount owed back here. (2) the
+    payout: the approver (Terry Winchester II, CBO acting CFO) approves or vetoes; on Terry's
+    own reports the tiebreaker (Nic, COO) decides. The preparer may escalate a veto to the
+    tiebreaker, whose decision is final, EXCEPT on the tiebreaker's own report, where the
+    approver's veto stands (nobody decides their own money). Nobody approves a payout to
+    themselves; the tiebreaker never initiates cash (no linking payouts, no escalating).
+    Cash is linked only once `payout_status = 'approved'`. Every rule is `decide()` in
+    `lib/expense-logic.ts`; the review page computes its buttons from the same function, so
+    it never offers what the server refuses. Roles come from `rolesFor()` in
+    `lib/finance-roles.ts` (the `finance_roles` table); a claimant's identity is
+    `crew_members.email`, now on the crew editor.
+  - **Review at `/app/books/expenses`** (books sign-in, nav "Expenses"): owed back per person,
+    then reports waiting, payouts waiting, approved to pay (tick the claims one bank payout
+    covered and pick the money-out line; a payout may cover more than the claims, never less),
+    paid back, and declined or voided. Decisions are conditional updates on the old states,
+    so two people acting at once cannot both win. A final payout veto tells the preparer to
+    void the report so it stops counting as owed.
+  - **Card receipts:** money-out lines on `/app/transactions` get "Add receipt"; it creates a
+    `card_receipt` claim (approved, posts nothing; one live per bank line, a second upload
+    replaces the receipt on the same record).
+  - **Tables:** `receipts` (bytes, like wedding documents) and `expense_claims` (status
+    submitted / approved / rejected / void; payout_status none / approved / vetoed /
+    escalated). Nothing is deleted: claims are voided. Receipt files are served with nosniff,
+    a sandbox CSP and no-store, to the tenant's books users or to the claimant's own link.
+  - Every submit, decision, link and receipt goes through `audit()` (`lib/audit.ts`), and
+    every change calls `postBankLedgerQuietly`. Ledger posting of claims is in
+    `lib/books/ledger.ts` (main session).
+  - Verify: `node --experimental-strip-types scripts/verify-expenses.mjs` (33 checks). Run
+    end to end on a local Postgres with three signed-in owners and a capture link (38
+    checks): only Jake approves reports; Terry approves payouts but not his own; Nic decides
+    Terry's; veto, escalate, final veto; Nic can't link cash; payout before approval refused;
+    money-in refused as a payout; wrong token 404; another person's receipt 404; SVG refused;
+    card receipt replace keeps one record. Capture page and review page measured at 390 and
+    1280: no sideways scroll.
+
+- **Accrual ledger, audit log, month-end close, expense reports (2026-11-13, Jake: "do it all
+  simultaneously and knock yourself out").** See 9.5a and `docs/FINANCIALS_SPEC.md`. The GL is
+  converted to accrual: `postLedger` (`lib/books/ledger.ts`) derives every entry from its source
+  (bank lines, job revenue, job cost, approved expense reports) through the pure rules in
+  `lib/books/accrual.ts` and `planPosting` (live while open, dated corrections after the close).
+  `postBankLedger`/`postBankLedgerQuietly` keep their names so every existing caller gets it.
+  New tables/columns: `journal_entries.source_ref`/`adjusts_period`, `weddings.cancelled_at`,
+  `crew_members.email`, `finance_roles` (seeded), `ledger_periods`, `audit_log` (append-only,
+  hash chain computed in the database), `event_resources.voided_at`, `receipts`,
+  `expense_claims`. Pages: `/app/books/close`, `/app/books/audit`, `/app/books/expenses`,
+  `/expense/<token>`. Verify: `verify-accrual.mjs` (53), `verify-expenses.mjs` (33),
+  `verify-costing.mjs` (37). Verified on a local Postgres 16: migration twice, accrual posting
+  (AR/revenue on the event date, cost matched to accrued), plan edit voids and reposts while open,
+  after closing October an edit leaves October untouched and posts a dated correction, closed-month
+  void refused, booking delete refused, audit update/delete/truncate refused, chain verifies.
+  NOT verified in a browser: the close page's buttons with real signed-in sessions (the rules
+  behind them are covered by the verify script). Open items are listed at the end of the spec and
+  in `docs/handoff/CLAUDE.md`.
+- **Plaid hardening and scheduled jobs on Netlify (2026-11-13).** The webhook now handles
+  `USER_PERMISSION_REVOKED` (item removed at Plaid, token forgotten, connection disconnected with
+  the reason; pulled lines and books stay), `USER_ACCOUNT_REVOKED` (log in again),
+  `NEW_ACCOUNTS_AVAILABLE` (`integration_connections.new_accounts_at`; the integrations page offers
+  "Choose accounts", which opens Plaid Link update mode with account selection) and records every
+  other `ITEM:ERROR` on the connection instead of dropping it; each status change is audited. The
+  rules are pure in `lib/integrations/plaid-webhook-logic.ts`. A daily backup sync
+  (`/api/cron/bank-sync`, stalest first, 20-second budget) covers webhooks that never arrive.
+  Netlify ignores `vercel.json`, so jobs now run as Netlify scheduled functions
+  (`netlify/functions/bank-sync-daily.mjs` at 11:17 UTC, `checkins-daily.mjs` at 15:00 UTC, the
+  check-in texts that never ran on Netlify; still silent until Twilio keys exist). They call the
+  routes with `CRON_SECRET` if set, else a per-job HMAC of `ADMIN_DASH_KEY` (`lib/cron-auth.ts`),
+  so no new secret is needed. `node --experimental-strip-types scripts/verify-plaid.mjs` (22 checks).
+  Still the owner's: Plaid production keys (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`) in
+  Netlify.
+- **True subledgers, the tie-out, and the jobs page on the ledger (2026-11-13, docs/handoff
+  tasks 2 and 3).** Every journal line on a control account names whose it is
+  (`journal_lines.sub_ref`: `job:<booking id>` on 1100/1300/2300/2400 and the job's 4500/5000,
+  `crew:<crew member id>` on 2500); netting, fingerprints and closed-month corrections work per
+  account and key. `/app/books/tie-out` ties each control account to its subledger and any
+  difference is a HARD close blocker (`tie_out` in `closeBlockers`, as of the month's end).
+  Drill-down: `/app/books` lines -> `/app/books/accounts/<id>` (register, running balance,
+  subledger, `?sub=`) -> `/app/books/entries/<id>` (lines, every version, source record, audit
+  history); trial balance at `/app/books/accounts`; vendor payments link to their entries; CSV
+  out at `/api/app/books/export` (trial balance, subledgers, audit log). `/admin/[key]/jobs` now
+  reads every balance from the ledger by key (archived and cancelled jobs with a balance are
+  listed so the totals ARE the GL) and says whether it ties. Pure rules in
+  `lib/books/subledger-logic.ts`; `node --experimental-strip-types scripts/verify-subledger.mjs`
+  (43 checks, including the handoff's "page totals equal the GL balances of 1100, 1300, 2300,
+  2400" and two sabotages). Existing books convert themselves: open-month job entries repost once
+  with keys, a closed month gets one dated reclassification, untagged bank entries keep their old
+  fingerprint (no churn). Fingerprints over 200 characters are now hashed, never cut off.
+  Migration verified twice on a local Postgres 16; this session had no package install, so the
+  Netlify deploy preview build is the type-check.
+- **Site email was down from the .com to .shop move until 2026-11-13.** Resend refused every
+  send ("The crossroadsweddingco.shop domain is not verified"), so sign-in links, booking
+  confirmations, hub links and message pointers all failed. Fixed: crossroadsweddingco.shop added
+  in Resend (account jacobkennedy.47201), and Netlify DNS gained `resend._domainkey` (TXT, DKIM)
+  plus `send` and `rsend` CNAMEs to `*.forge.rmta.net`. Proton's MX, SPF and DMARC are untouched.
+- **Bookings convert into the books correctly (2026-11-13, Jake: "make sure our bookings convert
+  over correctly").** The first production sync recognized every past booking, test bookings
+  included ($13,900 of receivables, mostly tests), and left out every deposit marked paid by hand
+  (no bank is connected). Now a hand-paid deposit or balance posts to 1050 Undeposited funds
+  against the job (rule 11 in FINANCIALS_SPEC), dated the day the box is ticked
+  (`deposit_paid_on`/`balance_paid_on`) or on a stated assumed date for older flags, and gives way
+  to the bank line once the deposit is matched. Test bookings are left out with "Not a real job?"
+  on `/admin/[key]/jobs` (reason, audit, put back any time; refused while real money is tied to
+  the booking). Excluded bookings also drop out of Money and the close blockers. The close page
+  now opens on the oldest open month. `verify-subledger.mjs` grew to 54 checks.
+- **Sales pipeline, CRM accounts and commissions (2026-11-13, Jake: "can the playbook play into
+  like sales orders and such and be a direct pipeline into invoicing and CRM"; "commissions per
+  playbook deal per event commission direct and account management commissions ongoing").**
+  Terms (asked and answered): $100 flat to the closer per event, 5% ongoing to the account manager
+  on every later event from an account, earned on the event day and paid once the client has paid
+  in full, nothing on a cancellation. **Jake, Terry and Nic all earn commissions; they are all
+  owners** ("we need paychecks for living, and it is good incentive"; this replaced a first answer
+  of "owners split profit only" the same morning). Steven is benched: not on the crew, so he can't
+  be a closer. `/admin/[key]/sales`: the order form (account or a new one, closer, deposit), the
+  pipeline with stage, invoice and job plan links, commissions per person (owed in the books,
+  ready to pay, still ahead) and accounts with their manager. `crm_accounts` (no delete), and
+  sales fields on `weddings` that COPY the terms at sale time. The playbook (site copy) offers
+  "Make a sales order" on every lead card and after logging a booked deal, opening the form
+  filled in. Posting: rule 12 in FINANCIALS_SPEC (Dr 5100 / Cr 2600 by person on the event day).
+  NOT YET: paying commissions out from the bank (needs cash payout requests, handoff task 9).
+  `node --experimental-strip-types scripts/verify-sales.mjs` (20 checks).

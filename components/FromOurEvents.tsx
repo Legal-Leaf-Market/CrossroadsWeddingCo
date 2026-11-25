@@ -26,7 +26,7 @@ export default function FromOurEvents() {
           ))}
         </div>
         <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
-          <a href="/reviews" className="text-terracotta underline decoration-terracotta/40 underline-offset-2 hover:text-terracotta-dark">
+          <a href={`/weddings/${event.slug}`} className="text-terracotta underline decoration-terracotta/40 underline-offset-2 hover:text-terracotta-dark">
             See the night and read the notes
           </a>
           <a href="/reviews#sign" className="text-ink/70 underline decoration-ink/30 underline-offset-2 hover:text-charcoal">
