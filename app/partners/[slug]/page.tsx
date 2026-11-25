@@ -10,8 +10,10 @@ import { getShopifyMenu, type MenuItem } from "@/lib/partner-menu";
 // changes unless that file does.
 export const dynamicParams = false;
 export const revalidate = 21600;
+// A partner with its own page file (Cookie Paradise) is served by that file,
+// never by this template.
 export function generateStaticParams() {
-  return PARTNERS.map((p) => ({ slug: p.slug }));
+  return PARTNERS.filter((p) => !p.customPage).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -36,7 +38,7 @@ function Dot() {
 
 export default async function PartnerPage({ params }: { params: Promise<{ slug: string }> }) {
   const p = findPartner((await params).slug);
-  if (!p) notFound();
+  if (!p || p.customPage) notFound();
   const external = (href: string) => /^https?:/.test(href);
   const menu: MenuItem[] = p.liveMenu ? await getShopifyMenu(p.liveMenu.origin) : [];
   const others = PARTNERS.filter((o) => o.slug !== p.slug);

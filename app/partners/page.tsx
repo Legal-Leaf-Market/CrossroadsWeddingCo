@@ -42,6 +42,11 @@ export default function PartnersPage() {
               >
                 <h2 className="text-2xl text-charcoal group-hover:text-terracotta">{p.name}</h2>
                 <p className="mt-1 text-sm font-semibold text-terracotta">{p.kind}</p>
+                {p.badge && (
+                  <p className="mt-3 inline-flex self-start rounded-full bg-gold/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-charcoal">
+                    {p.badge}
+                  </p>
+                )}
                 <p className="mt-4 flex-1 text-ink/80">{p.intro}</p>
                 <span className="mt-5 text-sm font-semibold text-terracotta underline decoration-terracotta/40 underline-offset-2">
                   See {p.name}
