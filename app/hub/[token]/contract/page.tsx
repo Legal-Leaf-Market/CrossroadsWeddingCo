@@ -4,6 +4,7 @@ import ContractView from "@/components/hub/ContractView";
 import PrintButton from "@/components/hub/PrintButton";
 import { contractSectionsForWedding, contractVersionForWedding } from "@/lib/contract";
 import { getWeddingByToken } from "@/lib/hub";
+import { isHouseTenant } from "@/lib/tenant-constants";
 import { formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME } from "@/lib/site";
 
@@ -21,7 +22,8 @@ export default async function ContractPage({
 }) {
   const { token } = await params;
   const wedding = await getWeddingByToken(token);
-  if (!wedding) notFound();
+  // Crossroads-only: its agreement and its team thread. See isHouseTenant.
+  if (!wedding || !isHouseTenant(wedding.tenantId)) notFound();
 
   const sections = contractSectionsForWedding(wedding);
 

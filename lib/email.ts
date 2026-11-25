@@ -225,6 +225,57 @@ export async function sendHubMessagePointer(input: {
   if (error) console.error("[email] hub pointer failed:", error);
 }
 
+/**
+ * The officiant signed the Compass Events agreement. A pointer, like every
+ * other couple email: who signed and a button to their copy in the hub, never
+ * the terms themselves.
+ */
+export async function sendOfficiantSignedEmail(input: {
+  to: string[];
+  coupleNames: string;
+  officiantName: string;
+  hubPath: string;
+  /** The couple already accepted, so the agreement is now fully signed. */
+  coupleAccepted: boolean;
+}): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  if (!input.to.length) {
+    console.warn("[email] officiant signed, but the booking has no couple email to tell");
+    return;
+  }
+  const resend = new Resend(key);
+  const url = `${SITE_URL}${input.hubPath}`;
+  const who = input.officiantName.trim() || "Your officiant";
+  const whoHtml = who.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: input.to,
+    bcc: NOTIFY_TO,
+    subject: `${who} signed your officiant agreement`,
+    text: [
+      `Good news: ${who} signed your officiant agreement with Compass Events.`,
+      ``,
+      input.coupleAccepted
+        ? `Both signatures are on it now. Your signed copy is in your planning hub: ${url}`
+        : `Your signature is the last one it needs. Read it and accept it in your planning hub: ${url}`,
+      ``,
+      `This is the officiant agreement only. Your DJ agreement with ${SITE_NAME} is separate and is not affected.`,
+      ``,
+      `Please don't reply to this email; message us in your hub.`,
+    ].join("\n"),
+    html:
+      `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
+      `Good news: <strong>${whoHtml}</strong> signed your officiant agreement with Compass Events.<br>` +
+      (input.coupleAccepted ? `Both signatures are on it now.` : `Your signature is the last one it needs.`) +
+      `<div style="margin: 16px 0;"><a href="${url}" style="display: inline-block; background: #c1633d; color: #faf5ec; font-weight: bold; padding: 12px 22px; border-radius: 999px; text-decoration: none;">${input.coupleAccepted ? "See your signed agreement" : "Read and accept it"}</a></div>` +
+      `This is the officiant agreement only. Your DJ agreement with ${SITE_NAME} is separate and is not affected.<br><br>` +
+      `Please don't reply to this email; message us in your hub.` +
+      `</div>`,
+  });
+  if (error) console.error("[email] officiant signed email failed:", error);
+}
+
 // --- Intro-call booking (2026-09-04) --------------------------------------
 // Two emails per booking: the visitor gets the confirmation they are waiting
 // on with the button still under their thumb, and the person being booked gets
@@ -321,5 +372,101 @@ export async function sendIntroCallEmails(input: {
   for (const r of results) {
     if (r.status === "rejected") console.error("[email] intro call failed:", r.reason);
     else if (r.value.error) console.error("[email] intro call failed:", r.value.error);
+  }
+}
+
+/**
+ * Sign-in link for a business account on the platform (multi-tenant signup).
+ * Returns false when email is not configured or the send failed, so the
+ * caller can say so instead of telling someone to check an inbox that will
+ * stay empty.
+ */
+export async function sendLoginLink(input: {
+  to: string;
+  fullName: string;
+  link: string;
+  isNewAccount: boolean;
+  platformName: string;
+}): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return false;
+  const first = input.fullName.trim().split(/\s+/)[0] || "there";
+  try {
+    const { error } = await new Resend(key).emails.send({
+      from: process.env.RESEND_PLATFORM_FROM ?? `${input.platformName} <${EMAIL_FROM_ADDRESS}>`,
+      to: input.to,
+      subject: input.isNewAccount
+        ? `Your ${input.platformName} account is ready`
+        : `Your ${input.platformName} sign-in link`,
+      text: [
+        `Hi ${first},`,
+        ``,
+        input.isNewAccount
+          ? `Your account is set up. Open this link to sign in for the first time:`
+          : `Here's your sign-in link:`,
+        ``,
+        input.link,
+        ``,
+        `The link works once and expires in 30 minutes. If you didn't ask for it, ignore this email and nothing happens.`,
+      ].join("\n"),
+    });
+    if (error) {
+      console.error("[email] login link failed:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[email] login link failed:", err);
+    return false;
+  }
+}
+
+// --- "Find my wedding" (2026-11-09) ---------------------------------------
+// A couple asks for their planning hub link from /my-wedding. It only ever goes
+// to an address already on their booking, and the link is the same private hub
+// link the booking email carried. No new credential, no password.
+export async function sendHubLinks(input: {
+  to: string;
+  weddings: { coupleNames: string; eventDate: string; hubPath: string }[];
+}): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !input.weddings.length) return false;
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const when = (iso: string) =>
+    new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const rows = input.weddings.map((w) => ({ ...w, url: `${SITE_URL}${w.hubPath}` }));
+  try {
+    const { error } = await new Resend(key).emails.send({
+      from: FROM,
+      to: input.to,
+      subject: rows.length === 1 ? `Your planning hub for ${rows[0].coupleNames}` : `Your planning hubs`,
+      text: [
+        `Here's the link you asked for. It's private to you, so keep it to yourselves.`,
+        ``,
+        ...rows.flatMap((w) => [`${w.coupleNames}, ${when(w.eventDate)}`, w.url, ``]),
+        `If you didn't ask for this, ignore it: the link only came to an address already on your booking.`,
+        `Please don't reply to this email; message us in your hub.`,
+      ].join("\n"),
+      html:
+        `<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; color: #2b2622;">` +
+        `Here's the link you asked for. It's private to you, so keep it to yourselves.` +
+        rows
+          .map(
+            (w) =>
+              `<div style="margin: 18px 0;"><strong>${esc(w.coupleNames)}</strong>, ${esc(when(w.eventDate))}<br>` +
+              `<a href="${esc(w.url)}" style="display: inline-block; margin-top: 8px; background: #c1633d; color: #faf5ec; font-weight: bold; padding: 12px 22px; border-radius: 999px; text-decoration: none;">Open your planning hub</a></div>`,
+          )
+          .join("") +
+        `<p style="color: #6b625a;">If you didn't ask for this, ignore it: the link only came to an address already on your booking. Please don't reply to this email; message us in your hub.</p>` +
+        `</div>`,
+    });
+    if (error) {
+      console.error("[email] hub links failed:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[email] hub links failed:", err);
+    return false;
   }
 }

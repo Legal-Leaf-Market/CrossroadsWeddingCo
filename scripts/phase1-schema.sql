@@ -469,3 +469,905 @@ CREATE TABLE IF NOT EXISTS guestbook_entries (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_guestbook_created ON guestbook_entries (created_at DESC);
+
+-- Custom edit flag per song (2026-11-05). A cue marked custom_edit is a cut,
+-- mashup or fade the DJ must have prepared; the run sheet warns until the day.
+ALTER TABLE music_cues ADD COLUMN IF NOT EXISTS custom_edit BOOLEAN NOT NULL DEFAULT false;
+
+-- Shared call log for the lead playbook served at /admin/[key]/playbook
+-- (2026-11-06, Jacob: "make this a static link that saves the changes we
+-- make"). One row per lead id (the card's id in the playbook), holding the
+-- same fields the claude.ai copy keeps: status, note, followUp, stars,
+-- starWhy, starBy, at, by. Bookings feed the weekly deposit goal.
+CREATE TABLE IF NOT EXISTS playbook_calls (
+    lead_id VARCHAR(100) PRIMARY KEY,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS playbook_bookings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Multi-tenant signup, first slice (2026-11-09, Jacob: "start on the
+-- multi-tenant signup"). The platform is being opened to other wedding and
+-- event businesses, so every row needs an owner account. Crossroads itself is
+-- the HOUSE tenant, with a fixed id so code can name it without a lookup.
+--
+-- How the existing app keeps working untouched: tenant_id gets a DEFAULT of
+-- the house id on every table the current code writes to, and NULLs are
+-- backfilled to it. Every insert path that exists today (bookings, calls,
+-- reviews, the playbook) therefore lands in the house account without a code
+-- change, and the /admin/[key] dashboard reads only house rows. A customer
+-- account's rows can never appear on the Crossroads dashboard.
+--
+-- New tenant_id columns use ON DELETE RESTRICT: deleting an account must never
+-- silently take its bookings with it. (weddings and leads keep the FKs they
+-- already had; there is no tenant delete anywhere in the app, on purpose.)
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS kind VARCHAR(20) NOT NULL DEFAULT 'customer';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS business_type VARCHAR(40);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS plan VARCHAR(20) NOT NULL DEFAULT 'trial';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
+
+INSERT INTO tenants (id, name, slug, domain, kind, plan)
+VALUES ('00000000-0000-4000-8000-000000000001', 'Crossroads Wedding and Event Co.',
+        'crossroads', 'crossroadsweddingco.shop', 'house', 'house')
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE weddings SET tenant_id = '00000000-0000-4000-8000-000000000001' WHERE tenant_id IS NULL;
+ALTER TABLE weddings ALTER COLUMN tenant_id SET DEFAULT '00000000-0000-4000-8000-000000000001';
+UPDATE leads SET tenant_id = '00000000-0000-4000-8000-000000000001' WHERE tenant_id IS NULL;
+ALTER TABLE leads ALTER COLUMN tenant_id SET DEFAULT '00000000-0000-4000-8000-000000000001';
+
+-- Guard for real client records (2026-11-09, Jacob: "these are real weddings and clients"). The
+-- app never wrote tenant_id before accounts existed, but a tenant row inserted by hand would have
+-- become kind 'customer' through the column default above and taken its weddings off the
+-- Crossroads dashboard. A real customer account always has its owner user, created in the same
+-- transaction as the tenant (lib/auth.ts createAccount), so a non-house tenant with NO users is
+-- one that predates accounts: its weddings and leads belong to the house. Idempotent, and a no-op
+-- when nothing matches, which is the expected case.
+UPDATE weddings SET tenant_id = '00000000-0000-4000-8000-000000000001'
+ WHERE tenant_id IN (SELECT t.id FROM tenants t
+                      WHERE t.id <> '00000000-0000-4000-8000-000000000001'
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE u.tenant_id = t.id));
+UPDATE leads SET tenant_id = '00000000-0000-4000-8000-000000000001'
+ WHERE tenant_id IN (SELECT t.id FROM tenants t
+                      WHERE t.id <> '00000000-0000-4000-8000-000000000001'
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE u.tenant_id = t.id));
+
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE office_hours ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+ALTER TABLE guestbook_entries ADD COLUMN IF NOT EXISTS tenant_id UUID
+    NOT NULL DEFAULT '00000000-0000-4000-8000-000000000001'
+    REFERENCES tenants(id) ON DELETE RESTRICT;
+
+-- Account owners sign in with an emailed link: no passwords. Both tables store
+-- only a SHA-256 of the token, so a database read never yields a working link
+-- or a working session. A login token is single use (used_at) and short lived;
+-- the link opens a page with a button that POSTs, because mail scanners
+-- prefetch GET links and would otherwise burn the token before the person
+-- ever clicks it.
+CREATE TABLE IF NOT EXISTS login_tokens (
+    token_hash CHAR(64) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_login_tokens_user ON login_tokens (user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    token_hash CHAR(64) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id);
+
+-- Integrations groundwork (2026-11-09, Jacob: "start laying the groundwork for
+-- integrating with Plaid and Found"). Bank and card feeds come in through an
+-- aggregator (Plaid first; Found has no public API, so a Found account is
+-- reached through an aggregator if at all). These tables are the raw feed the
+-- general ledger will later sit on: amounts are integer cents, every row
+-- belongs to an account (tenant), and a provider's own ids are kept with a
+-- unique constraint so a re-sync can never double-insert.
+--
+-- secret_ciphertext holds the provider's long-lived access token encrypted
+-- with AES-256-GCM under INTEGRATIONS_KEY (lib/secrets.ts). It is never stored
+-- or logged in plain text, and nothing in the app ever sends it to a browser.
+CREATE TABLE IF NOT EXISTS integration_connections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    provider VARCHAR(30) NOT NULL,              -- 'plaid'
+    external_id VARCHAR(200) NOT NULL,          -- Plaid item_id
+    institution_id VARCHAR(100),
+    institution_name VARCHAR(200),
+    status VARCHAR(30) NOT NULL DEFAULT 'active', -- active | needs_reauth | disconnected | error
+    secret_ciphertext TEXT,
+    sync_cursor TEXT,
+    last_synced_at TIMESTAMPTZ,
+    last_error TEXT,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_integration_external
+    ON integration_connections (provider, external_id);
+CREATE INDEX IF NOT EXISTS idx_integration_tenant ON integration_connections (tenant_id);
+
+CREATE TABLE IF NOT EXISTS bank_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    connection_id UUID NOT NULL REFERENCES integration_connections(id) ON DELETE RESTRICT,
+    external_id VARCHAR(200) NOT NULL,          -- Plaid account_id
+    name VARCHAR(200) NOT NULL,
+    official_name VARCHAR(200),
+    mask VARCHAR(10),
+    type VARCHAR(30),                           -- depository | credit | loan | investment
+    subtype VARCHAR(40),                        -- checking | savings | credit card ...
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    current_balance_cents BIGINT,
+    available_balance_cents BIGINT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_accounts_external ON bank_accounts (connection_id, external_id);
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_tenant ON bank_accounts (tenant_id);
+
+-- amount_cents: POSITIVE = money INTO the account, negative = money out.
+-- Plaid reports the opposite sign (positive = outflow); lib/integrations/plaid.ts
+-- flips it once on the way in so nothing downstream has to remember.
+CREATE TABLE IF NOT EXISTS bank_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    bank_account_id UUID NOT NULL REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+    external_id VARCHAR(200) NOT NULL,          -- Plaid transaction_id
+    posted_date DATE NOT NULL,
+    authorized_date DATE,
+    amount_cents BIGINT NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
+    merchant VARCHAR(255),
+    description TEXT NOT NULL DEFAULT '',
+    raw_category VARCHAR(120),
+    pending BOOLEAN NOT NULL DEFAULT false,
+    -- Review state for the coming categorization step. Nothing here posts to a
+    -- ledger yet; a bank line only becomes books when a person or a rule says so.
+    review_status VARCHAR(20) NOT NULL DEFAULT 'unreviewed', -- unreviewed | categorized | matched | excluded
+    removed_at TIMESTAMPTZ,                     -- the bank withdrew it (pending that never posted)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_tx_external ON bank_transactions (bank_account_id, external_id);
+CREATE INDEX IF NOT EXISTS idx_bank_tx_tenant_date ON bank_transactions (tenant_id, posted_date DESC);
+
+-- ── Bank transaction review: categories, rules, and who sorted what ──────────
+-- (2026-11-09) The review queue sits on bank_transactions. A category is the
+-- business's own word for a kind of money (Event income, Gear, Fuel); it is
+-- NOT a general-ledger account yet. gl_code is left for the ledger layer to
+-- fill in from the posting rules, so this table can be mapped, not rebuilt.
+CREATE TABLE IF NOT EXISTS ledger_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(80) NOT NULL,
+    kind VARCHAR(20) NOT NULL,                  -- income | expense | transfer | equity
+    tax_line VARCHAR(80),                       -- a Schedule C hint, never a promise
+    gl_code VARCHAR(20),                        -- filled in by the ledger layer
+    sort_order INT NOT NULL DEFAULT 100,
+    is_archived BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_categories_name ON ledger_categories (tenant_id, lower(name));
+
+-- A rule sorts NEW bank lines the way a person already sorted one. It never
+-- touches a row a person has reviewed or reopened (rules_paused).
+CREATE TABLE IF NOT EXISTS categorization_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    match_field VARCHAR(20) NOT NULL,           -- merchant | description
+    match_type VARCHAR(20) NOT NULL,            -- equals | contains
+    pattern VARCHAR(200) NOT NULL,
+    direction VARCHAR(10) NOT NULL DEFAULT 'any', -- any | in | out
+    action VARCHAR(20) NOT NULL,                -- categorize | exclude
+    category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT,
+    applied_count INT NOT NULL DEFAULT 0,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_categorization_rules_tenant ON categorization_rules (tenant_id);
+
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS rule_id UUID REFERENCES categorization_rules(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS rules_paused BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS pending_external_id VARCHAR(200);
+CREATE INDEX IF NOT EXISTS idx_bank_tx_review ON bank_transactions (tenant_id, review_status, posted_date DESC);
+
+-- ── The ledger (docs/FINANCIALS_SPEC.md, 2026-11-09) ─────────────────────────
+-- Double entry, cash basis, append-only. Entries are derived from sorted bank
+-- lines; a change voids the old entry and posts a new one, nothing is edited.
+CREATE TABLE IF NOT EXISTS ledger_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    code VARCHAR(10) NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    type VARCHAR(20) NOT NULL,                  -- asset | liability | equity | income | expense
+    system_key VARCHAR(40),                     -- transfers_clearing | opening_equity
+    is_archived BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_accounts_code ON ledger_accounts (tenant_id, code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_accounts_system ON ledger_accounts (tenant_id, system_key) WHERE system_key IS NOT NULL;
+
+ALTER TABLE ledger_categories ADD COLUMN IF NOT EXISTS ledger_account_id UUID REFERENCES ledger_accounts(id) ON DELETE RESTRICT;
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS ledger_account_id UUID REFERENCES ledger_accounts(id) ON DELETE RESTRICT;
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    entry_date DATE NOT NULL,
+    memo TEXT NOT NULL DEFAULT '',
+    source_type VARCHAR(30) NOT NULL,           -- bank_transaction | opening_balance
+    source_id UUID,                             -- bank_transactions.id or bank_accounts.id
+    status VARCHAR(10) NOT NULL DEFAULT 'posted', -- posted | void
+    voided_at TIMESTAMPTZ,
+    void_reason VARCHAR(200),
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- What the entry was posted from (date, accounts, amount). A source whose
+-- fingerprint no longer matches gets its entry voided and reposted.
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS fingerprint VARCHAR(200);
+-- One live entry per source: the guard against double posting under a race.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_live_source
+    ON journal_entries (tenant_id, source_type, source_id) WHERE status = 'posted';
+CREATE INDEX IF NOT EXISTS idx_journal_tenant_date ON journal_entries (tenant_id, entry_date);
+
+CREATE TABLE IF NOT EXISTS journal_lines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entry_id UUID NOT NULL REFERENCES journal_entries(id) ON DELETE RESTRICT,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    account_id UUID NOT NULL REFERENCES ledger_accounts(id) ON DELETE RESTRICT,
+    debit_cents BIGINT NOT NULL DEFAULT 0,
+    credit_cents BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT journal_line_one_side CHECK (
+        debit_cents >= 0 AND credit_cents >= 0 AND (debit_cents = 0) <> (credit_cents = 0)
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines (entry_id);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_account ON journal_lines (tenant_id, account_id);
+
+-- Checked at COMMIT: every entry touched balances, has at least two lines, and
+-- every line's account and tenant match the entry's tenant. The code checks this
+-- too; the database is the lock that holds when the code is wrong.
+CREATE OR REPLACE FUNCTION journal_entry_check() RETURNS trigger AS $$
+DECLARE
+    eid UUID := COALESCE(NEW.entry_id, OLD.entry_id);
+    d BIGINT; c BIGINT; n INT; bad INT; etenant UUID;
+BEGIN
+    SELECT tenant_id INTO etenant FROM journal_entries WHERE id = eid;
+    SELECT COALESCE(sum(debit_cents),0), COALESCE(sum(credit_cents),0), count(*)
+      INTO d, c, n FROM journal_lines WHERE entry_id = eid;
+    IF n < 2 OR d <> c THEN
+        RAISE EXCEPTION 'journal entry % does not balance (debits %, credits %, lines %)', eid, d, c, n;
+    END IF;
+    SELECT count(*) INTO bad FROM journal_lines l JOIN ledger_accounts a ON a.id = l.account_id
+     WHERE l.entry_id = eid AND (l.tenant_id <> etenant OR a.tenant_id <> etenant);
+    IF bad > 0 THEN
+        RAISE EXCEPTION 'journal entry % mixes tenants', eid;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS journal_lines_balance ON journal_lines;
+CREATE CONSTRAINT TRIGGER journal_lines_balance
+    AFTER INSERT OR UPDATE OR DELETE ON journal_lines
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW EXECUTE FUNCTION journal_entry_check();
+
+-- ── Matching deposits to bookings (2026-11-09) ──────────────────────────────
+-- A money-in bank line can be tied to one of the account's bookings. Matching
+-- is a link on the line, not a review status: a matched line is still a sorted
+-- (categorized) income line and posts to the ledger exactly as before.
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
+ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS payment_kind VARCHAR(20); -- deposit | balance
+CREATE INDEX IF NOT EXISTS idx_bank_tx_booking ON bank_transactions (tenant_id, booking_id) WHERE booking_id IS NOT NULL;
+
+-- Wedding website (2026-11-11, Jacob: "mock up a public site for Lauren and
+-- Clay"). A public page for guests at /w/<site_slug>, switched on by the couple
+-- from their hub and built from what they already entered there (names, date,
+-- venue, the guest schedule, dress code) plus the few things only a website
+-- needs: their story, links (registry, hotel block) and answers to guest
+-- questions. Off by default: nothing about a wedding is public until the
+-- couple turns it on. The slug carries a six-character random tail, so knowing
+-- a couple's names is not enough to find their page.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_enabled BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_slug VARCHAR(90);
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_story TEXT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_links JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS site_faq JSONB NOT NULL DEFAULT '[]'::jsonb;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_weddings_site_slug ON weddings (site_slug) WHERE site_slug IS NOT NULL;
+
+-- Notes tied to an event (2026-11-11, Jacob: "a page for Kat and Tanis ... and a
+-- place for the bride and groom to comment their experience"). A note signed on
+-- an event page carries that page's slug; a note the couple writes from inside
+-- their own planning hub carries their wedding, which is what proves it is
+-- them. Both still wait for approval like every other note.
+ALTER TABLE guestbook_entries ADD COLUMN IF NOT EXISTS event_slug VARCHAR(80);
+ALTER TABLE guestbook_entries ADD COLUMN IF NOT EXISTS wedding_id UUID REFERENCES weddings(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_guestbook_event ON guestbook_entries (event_slug);
+CREATE INDEX IF NOT EXISTS idx_guestbook_wedding ON guestbook_entries (wedding_id);
+
+-- Engagement photos for the wedding website (2026-11-11, Jacob: "add any
+-- engagement pictures"). Bytes in Postgres like wedding_documents, for the same
+-- reasons: no blob store, a handful per wedding, and a photo must never outlive
+-- its wedding. The hub resizes each photo in the browser before upload (long
+-- edge 2000px, re-encoded as JPEG), which also drops EXIF and GPS. Served
+-- publicly only while the couple's site is switched on.
+CREATE TABLE IF NOT EXISTS site_photos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wedding_id UUID NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
+    mime_type VARCHAR(40) NOT NULL,
+    byte_size INTEGER NOT NULL,
+    width INTEGER,
+    height INTEGER,
+    caption VARCHAR(200) NOT NULL DEFAULT '',
+    order_index INTEGER NOT NULL DEFAULT 0,
+    data BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_site_photos_wedding ON site_photos (wedding_id, order_index);
+
+-- Vendors (2026-11-11, Jacob: "Vendors", "think wedding ERP"). The people and
+-- companies an account pays: second DJs, techs, rentals, the music pool. A
+-- vendor's payments are FOUND, not typed: money-out bank lines whose merchant
+-- or description contains one of the vendor's match words. Contractors get a
+-- yearly total against the IRS 1099-NEC threshold. Only a "W-9 on file" flag
+-- is stored, never a taxpayer id: this table is not the place for one.
+CREATE TABLE IF NOT EXISTS vendors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(120) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'contractor', -- contractor | supplier | venue | subscription | other
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    match_text VARCHAR(400) NOT NULL DEFAULT '',     -- comma separated words found on bank lines
+    is_1099 BOOLEAN NOT NULL DEFAULT false,
+    w9_on_file BOOLEAN NOT NULL DEFAULT false,
+    notes TEXT NOT NULL DEFAULT '',
+    archived_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_vendors_tenant ON vendors (tenant_id);
+
+-- Where each business account came from (2026-11-11, Jacob: "aggressively
+-- guerilla market in person"). The first-touch ?src= tag the visitor arrived
+-- with (expo QR, DJ meetup card, an ad), so every channel is judged on
+-- signups, not hope. Same tag rules as weddings.lead_src_tag.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS signup_src VARCHAR(40);
+
+-- Separate service agreements inside a couple's hub (2026-11-12, Jake and
+-- Terry). First kind: officiating, sold as Compass Events by Crossroads
+-- Wedding and Event Co. and signed for Compass Events by Terry Winchester,
+-- its CEO. Own deposit, balance and signatures; the wedding's Crossroads
+-- agreement is untouched. One live agreement per wedding and kind.
+CREATE TABLE IF NOT EXISTS service_agreements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wedding_id UUID NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
+    kind VARCHAR(30) NOT NULL DEFAULT 'officiant',
+    brand VARCHAR(30) NOT NULL DEFAULT 'compass',
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    fee_usd NUMERIC(10, 2) NOT NULL,
+    deposit_usd NUMERIC(10, 2) NOT NULL,
+    balance_due_hours INTEGER NOT NULL DEFAULT 48,
+    accepted_at TIMESTAMPTZ,
+    accepted_name VARCHAR(255),
+    snapshot JSONB,
+    countersigned_at TIMESTAMPTZ,
+    countersigned_name VARCHAR(255),
+    countersigned_title VARCHAR(255),
+    deposit_paid_at TIMESTAMPTZ,
+    balance_paid_at TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_agreements_live
+    ON service_agreements (wedding_id, kind) WHERE cancelled_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_service_agreements_wedding ON service_agreements (wedding_id);
+
+-- Liv Ash's officiant agreement (2026-11-12, Jake: "get them live now ... on
+-- Liv's hub"). Creates the Compass Events agreement on her existing booking so
+-- her hub link works without a dashboard tap. Only when exactly ONE active
+-- house wedding names Ash, Olivia or Liv as a word; otherwise nothing, and the
+-- dashboard's Officiant button does it by hand. Never a second live agreement
+-- (partial unique index), and it records itself so it runs once.
+WITH match AS (
+    SELECT w.id FROM weddings w
+    WHERE w.tenant_id = '00000000-0000-4000-8000-000000000001'
+      AND w.archived_at IS NULL AND w.status <> 'cancelled'
+      AND (w.couple_names ~* '\mash\M' OR w.couple_names ~* '\molivia\M' OR w.couple_names ~* '\mliv\M')
+), ins AS (
+    INSERT INTO service_agreements (wedding_id, kind, brand, details, fee_usd, deposit_usd, balance_due_hours)
+    SELECT id, 'officiant', 'compass',
+           '{"officiantName":"Terry Winchester","credential":"","rehearsal":"","notes":""}'::jsonb,
+           250, 125, 48
+    FROM match
+    WHERE (SELECT count(*) FROM match) = 1
+      AND NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'officiant_liv_ash_v1')
+    ON CONFLICT DO NOTHING
+    RETURNING 1
+)
+INSERT INTO schema_seeds (name) SELECT 'officiant_liv_ash_v1' FROM ins ON CONFLICT (name) DO NOTHING;
+
+-- Platform billing, $50 a month through Stripe (2026-11-12, Jake: "get billing
+-- live with whatever you suggest"). Found has no API and routes its own card
+-- payments through Stripe anyway, so the app uses Stripe directly and Stripe
+-- pays out to the Found account. Stripe is the record; these mirror it.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_status VARCHAR(30);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_period_end TIMESTAMPTZ;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_event_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tenants_stripe_customer ON tenants (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+
+-- Project costing and resource planning (2026-11-13, Jake: "project costing and
+-- planning for material and hour resources starting with labor for Nic, Terry,
+-- and Jake"; "it should be fully customizable"; pay "is by project right now").
+-- Nothing about pay is assumed: the old 75% split and $2,000 draw in the spec
+-- are out of date (owner, same day), so every rate starts empty and costing
+-- says "rate not set" instead of guessing.
+--
+-- crew_members: the people who work events, edited from /admin/[key]/crew.
+-- pay_method is 'project' (flat per event), 'hour', 'percent' (of the event's
+-- total) or 'owner': an owner is not a cost, they split what is left after
+-- every cost (2026-11-13, Jake: "jake and terry are fulltime splitting
+-- cashflow with minor shadowing payouts to Nic right now"). share_bps is an
+-- owner's slice of that remainder; owners with no share set split evenly
+-- whatever the set shares leave. Amounts are integer cents, percents basis points.
+CREATE TABLE IF NOT EXISTS crew_members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(120) NOT NULL,
+    default_role VARCHAR(80) NOT NULL DEFAULT '',
+    pay_method VARCHAR(10) NOT NULL DEFAULT 'project',
+    rate_cents INTEGER,
+    percent_bps INTEGER,
+    share_bps INTEGER,
+    -- Everyone is a 1099 contractor paid through Found (owner, 2026-11-13), so
+    -- each person can point at their vendors row, whose bank-feed totals are
+    -- the 1099-NEC record. Planned pay lives here; paid money lives there.
+    vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL,
+    notes TEXT NOT NULL DEFAULT '',
+    sort INTEGER NOT NULL DEFAULT 0,
+    retired_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_crew_members_tenant ON crew_members (tenant_id);
+
+-- resource_items: the owner's own list of materials, rentals and consumables,
+-- each with a unit ("each", "bag", "case", "mile") and a default unit cost.
+CREATE TABLE IF NOT EXISTS resource_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(120) NOT NULL,
+    category VARCHAR(60) NOT NULL DEFAULT '',
+    unit VARCHAR(30) NOT NULL DEFAULT 'each',
+    unit_cost_cents INTEGER,
+    notes TEXT NOT NULL DEFAULT '',
+    sort INTEGER NOT NULL DEFAULT 0,
+    retired_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_resource_items_tenant ON resource_items (tenant_id);
+
+-- event_resources: one event's plan, labor and material lines. Pay terms and
+-- costs are COPIED onto the line when it is added, so changing someone's
+-- default later never rewrites an event already planned. Planned and actual
+-- sit side by side; actual_cost_cents, when set, is what was really paid and
+-- wins over any arithmetic.
+CREATE TABLE IF NOT EXISTS event_resources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    wedding_id UUID NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
+    kind VARCHAR(10) NOT NULL DEFAULT 'labor',
+    crew_member_id UUID REFERENCES crew_members(id) ON DELETE SET NULL,
+    resource_item_id UUID REFERENCES resource_items(id) ON DELETE SET NULL,
+    label VARCHAR(160) NOT NULL DEFAULT '',
+    role VARCHAR(80) NOT NULL DEFAULT '',
+    pay_method VARCHAR(10),
+    rate_cents INTEGER,
+    percent_bps INTEGER,
+    planned_minutes INTEGER,
+    actual_minutes INTEGER,
+    unit VARCHAR(30) NOT NULL DEFAULT '',
+    unit_cost_cents INTEGER,
+    planned_qty NUMERIC(10, 2),
+    actual_qty NUMERIC(10, 2),
+    actual_cost_cents INTEGER,
+    notes TEXT NOT NULL DEFAULT '',
+    sort INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_event_resources_wedding ON event_resources (wedding_id);
+CREATE INDEX IF NOT EXISTS idx_event_resources_crew ON event_resources (crew_member_id);
+
+-- Start the crew with the three partners as the owner described them: Jake
+-- and Terry are owners splitting what is left (no share set, so even), Nic is
+-- paid per project with NO amount set. Seeded once and recorded, so every
+-- later edit, rename or retirement sticks.
+WITH ins AS (
+    INSERT INTO crew_members (tenant_id, name, default_role, pay_method, notes, sort)
+    SELECT '00000000-0000-4000-8000-000000000001', v.name, v.role, v.method, v.notes, v.sort
+    FROM (VALUES
+        ('Jake', 'DJ / MC', 'owner', '', 1),
+        ('Terry', 'Stage manager', 'owner', '', 2),
+        ('Nic', 'Shadowing', 'project', 'Keeps his day job; small per-event shadowing payouts for now.', 3)
+    ) AS v(name, role, method, notes, sort)
+    WHERE NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'crew_members_v1')
+    RETURNING 1
+)
+INSERT INTO schema_seeds (name) SELECT 'crew_members_v1' FROM ins LIMIT 1 ON CONFLICT (name) DO NOTHING;
+
+-- Expense capture (2026-11-13, Jake: "a capture tool like rocket money or
+-- expensify or such for staff incidentals and reimbursements"). Staff send a
+-- receipt from a link on their phone; the report is approved, then its payout
+-- (see the two approvals below); an approved reimbursement is owed back until
+-- the bank payout that repays it is linked. Nothing is ever deleted: claims
+-- and receipts are voided. A card_receipt is a receipt for a charge already on
+-- the bank feed: it attaches proof and posts nothing by itself. The ledger reads this
+-- table (lib/books/ledger.ts); receipts are stored like wedding documents.
+ALTER TABLE crew_members ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+
+CREATE TABLE IF NOT EXISTS receipts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    file_name VARCHAR(255) NOT NULL DEFAULT '',
+    mime_type VARCHAR(100) NOT NULL,
+    byte_size INTEGER NOT NULL,
+    data BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_receipts_tenant ON receipts (tenant_id);
+
+CREATE TABLE IF NOT EXISTS expense_claims (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    crew_member_id UUID REFERENCES crew_members(id) ON DELETE SET NULL,
+    claimant_name VARCHAR(120) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'reimbursement',
+    bank_transaction_id UUID REFERENCES bank_transactions(id) ON DELETE SET NULL,
+    merchant VARCHAR(160) NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    spent_on DATE NOT NULL,
+    category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT,
+    wedding_id UUID REFERENCES weddings(id) ON DELETE SET NULL,
+    receipt_id UUID REFERENCES receipts(id) ON DELETE SET NULL,
+    status VARCHAR(12) NOT NULL DEFAULT 'submitted',
+    decided_by VARCHAR(255),
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT NOT NULL DEFAULT '',
+    reimbursed_bank_transaction_id UUID REFERENCES bank_transactions(id) ON DELETE SET NULL,
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- Two approvals (owner, 2026-11-13): the report, then the payout. Only the
+-- preparer (Jake) approves a report; the approver (Terry) approves its payout,
+-- except on Terry's own reports, where the tiebreaker (Nic) does. Terry may
+-- veto a payout; the preparer may escalate a veto to the tiebreaker, whose
+-- word is final. Cash moves (a payout is linked) only once payout_status is
+-- 'approved'. Roles come from finance_roles (lib/finance-roles.ts).
+ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS payout_status VARCHAR(12) NOT NULL DEFAULT 'none';
+ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS payout_decided_by VARCHAR(255);
+ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS payout_decided_at TIMESTAMPTZ;
+ALTER TABLE expense_claims ADD COLUMN IF NOT EXISTS payout_note TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_expense_claims_status ON expense_claims (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_expense_claims_wedding ON expense_claims (wedding_id);
+-- One receipt per bank line: a second upload replaces the claim's receipt instead.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_expense_claims_card_line
+    ON expense_claims (bank_transaction_id) WHERE kind = 'card_receipt' AND status <> 'void';
+
+-- ── Accrual basis, audit log, period close (2026-11-13) ─────────────────────
+-- Jake: "force accrual and US GAAP in the software ... we are not a cash basis
+-- gl"; "we use the matching principle"; live sync until "a hard cutoff"; "a
+-- damn good audit log before and after the cutoff, and damn good controls on
+-- that cutoff". Roles: Jake (CEO) prepares, Terry Winchester II (CBO, acting
+-- CFO) approves and is where the buck stops, Nic (COO) breaks ties.
+-- docs/FINANCIALS_SPEC.md is the spec; lib/books/accrual.ts the pure rules.
+
+-- Every journal entry names the thing it was derived from, so a source's
+-- effective posting is the sum of its live entries: the original plus any
+-- corrections posted after its period closed.
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS source_ref VARCHAR(80);
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS adjusts_period DATE;
+UPDATE journal_entries SET source_ref = source_type || ':' || coalesce(source_id::text, id::text) WHERE source_ref IS NULL;
+CREATE INDEX IF NOT EXISTS idx_journal_source_ref ON journal_entries (tenant_id, source_ref);
+
+-- When a booking was cancelled: a retained deposit is earned that day (ASC 606).
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
+
+-- Everyone in the finance chain is matched by email (they sign in to /app/books).
+ALTER TABLE crew_members ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+
+-- Who may do what in the close. One row per person and role.
+CREATE TABLE IF NOT EXISTS finance_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    email VARCHAR(255) NOT NULL,
+    name VARCHAR(120) NOT NULL DEFAULT '',
+    role VARCHAR(12) NOT NULL,              -- preparer | approver | tiebreaker
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_finance_roles ON finance_roles (tenant_id, lower(email), role) WHERE revoked_at IS NULL;
+
+-- The house finance chain as the owner set it (2026-11-13): "@crossroadsweddingco.shop
+-- emails should clearly be the logins for terry, jake, and nic". Jake (CEO, the
+-- accounting experience) prepares; Terry Winchester II (CBO, acting CFO) approves
+-- and is where the buck stops; Nic (COO) breaks ties. Seeded once and recorded,
+-- so a later change made in the app sticks.
+WITH ins AS (
+    INSERT INTO finance_roles (tenant_id, email, name, role)
+    SELECT '00000000-0000-4000-8000-000000000001', v.email, v.name, v.role
+    FROM (VALUES
+        ('jake@crossroadsweddingco.shop', 'Jake', 'preparer'),
+        ('terry@crossroadsweddingco.shop', 'Terry Winchester II', 'approver'),
+        ('nic@crossroadsweddingco.shop', 'Nic', 'tiebreaker')
+    ) AS v(email, name, role)
+    WHERE NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'finance_roles_v1')
+    ON CONFLICT DO NOTHING
+    RETURNING 1
+)
+INSERT INTO schema_seeds (name) SELECT 'finance_roles_v1' FROM ins LIMIT 1 ON CONFLICT (name) DO NOTHING;
+WITH upd AS (
+    UPDATE crew_members c SET email = lower(c.name) || '@crossroadsweddingco.shop'
+    WHERE c.tenant_id = '00000000-0000-4000-8000-000000000001' AND c.email IS NULL
+      AND c.name IN ('Jake', 'Terry', 'Nic')
+      AND NOT EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'crew_emails_v1')
+    RETURNING 1
+)
+INSERT INTO schema_seeds (name) SELECT 'crew_emails_v1' FROM upd LIMIT 1 ON CONFLICT (name) DO NOTHING;
+
+-- A removed job-plan line is voided, never deleted (owner, 2026-11-13: "no one
+-- can delete, only modify or void").
+ALTER TABLE event_resources ADD COLUMN IF NOT EXISTS voided_at TIMESTAMPTZ;
+
+-- The same rule, enforced by the database on every table that carries money or
+-- the record of it. Retire, archive or void instead.
+CREATE OR REPLACE FUNCTION forbid_delete() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION '% rows are never deleted: void, retire or archive instead', TG_TABLE_NAME;
+END;
+$$ LANGUAGE plpgsql;
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['weddings', 'event_resources', 'crew_members', 'resource_items', 'vendors',
+        'bank_transactions', 'bank_accounts', 'ledger_accounts', 'ledger_categories', 'ledger_periods',
+        'finance_roles', 'service_agreements', 'expense_claims', 'receipts']
+    LOOP
+        IF to_regclass(t) IS NOT NULL THEN
+            EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I', t || '_no_delete', t);
+            EXECUTE format('CREATE TRIGGER %I BEFORE DELETE ON %I FOR EACH ROW EXECUTE FUNCTION forbid_delete()', t || '_no_delete', t);
+        END IF;
+    END LOOP;
+END $$;
+
+-- One row per month that has been through the close workflow. No row = open.
+-- status: open | prepared | escalated | closed | reopen_requested.
+-- closed and reopen_requested are LOCKED: the triggers below refuse any
+-- journal write dated in them.
+CREATE TABLE IF NOT EXISTS ledger_periods (
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    period_start DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    prepared_by VARCHAR(255),
+    prepared_at TIMESTAMPTZ,
+    prepared_hash CHAR(64),
+    prepared_note TEXT NOT NULL DEFAULT '',
+    acknowledged JSONB NOT NULL DEFAULT '[]'::jsonb,
+    decided_by VARCHAR(255),
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT NOT NULL DEFAULT '',
+    closed_hash CHAR(64),
+    closed_snapshot JSONB,
+    closed_at TIMESTAMPTZ,
+    reopen_requested_by VARCHAR(255),
+    reopen_requested_at TIMESTAMPTZ,
+    reopen_reason TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, period_start)
+);
+
+CREATE OR REPLACE FUNCTION ledger_period_locked(t UUID, d DATE) RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM ledger_periods p
+        WHERE p.tenant_id = t
+          AND p.period_start = date_trunc('month', d)::date
+          AND p.status IN ('closed', 'reopen_requested')
+    );
+$$ LANGUAGE sql STABLE;
+
+-- The hard cutoff, enforced by the database rather than trusted to the app:
+-- nothing is posted into, voided in, or edited in a locked month, and the
+-- money fields of an entry never change after insert.
+CREATE OR REPLACE FUNCTION journal_entry_period_guard() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        IF ledger_period_locked(NEW.tenant_id, NEW.entry_date) THEN
+            RAISE EXCEPTION 'period % is closed: post a correction in an open month', to_char(NEW.entry_date, 'YYYY-MM');
+        END IF;
+        RETURN NEW;
+    END IF;
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'journal entries are never deleted';
+    END IF;
+    IF ledger_period_locked(OLD.tenant_id, OLD.entry_date) THEN
+        RAISE EXCEPTION 'period % is closed: its entries cannot change', to_char(OLD.entry_date, 'YYYY-MM');
+    END IF;
+    IF NEW.entry_date <> OLD.entry_date OR NEW.tenant_id <> OLD.tenant_id
+       OR NEW.source_type <> OLD.source_type OR NEW.source_id IS DISTINCT FROM OLD.source_id THEN
+        RAISE EXCEPTION 'a posted entry''s date, account and source never change: void it and post again';
+    END IF;
+    IF OLD.status = 'void' AND NEW.status <> 'void' THEN
+        RAISE EXCEPTION 'a voided entry stays void';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS journal_entries_period_guard ON journal_entries;
+CREATE TRIGGER journal_entries_period_guard
+    BEFORE INSERT OR UPDATE OR DELETE ON journal_entries
+    FOR EACH ROW EXECUTE FUNCTION journal_entry_period_guard();
+
+CREATE OR REPLACE FUNCTION journal_line_guard() RETURNS trigger AS $$
+DECLARE d DATE; t UUID;
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        RAISE EXCEPTION 'journal lines are append-only';
+    END IF;
+    SELECT entry_date, tenant_id INTO d, t FROM journal_entries WHERE id = NEW.entry_id;
+    IF ledger_period_locked(t, d) THEN
+        RAISE EXCEPTION 'period % is closed', to_char(d, 'YYYY-MM');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS journal_lines_guard ON journal_lines;
+CREATE TRIGGER journal_lines_guard
+    BEFORE INSERT OR UPDATE OR DELETE ON journal_lines
+    FOR EACH ROW EXECUTE FUNCTION journal_line_guard();
+
+-- The audit log: append-only and hash-chained per account. Each row's hash
+-- covers its own content and the previous row's hash, so changing or removing
+-- any row breaks every hash after it, and /app/books/audit shows where.
+CREATE TABLE IF NOT EXISTS audit_log (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    actor VARCHAR(255) NOT NULL,
+    action VARCHAR(60) NOT NULL,
+    entity_type VARCHAR(40) NOT NULL,
+    entity_id VARCHAR(80),
+    before JSONB,
+    after JSONB,
+    reason TEXT,
+    cause TEXT,
+    prev_hash CHAR(64),
+    hash CHAR(64) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_log (tenant_id, id);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log (tenant_id, entity_type, entity_id);
+
+CREATE OR REPLACE FUNCTION audit_digest(prev CHAR(64), r audit_log) RETURNS CHAR(64) AS $$
+    SELECT encode(sha256(convert_to(concat_ws('|',
+        coalesce(prev, ''), r.tenant_id::text, to_char(r.at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
+        r.actor, r.action, r.entity_type, coalesce(r.entity_id, ''),
+        coalesce(r.before::text, ''), coalesce(r.after::text, ''),
+        coalesce(r.reason, ''), coalesce(r.cause, '')), 'UTF8')), 'hex');
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION audit_log_chain() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        RAISE EXCEPTION 'the audit log is append-only';
+    END IF;
+    PERFORM pg_advisory_xact_lock(hashtextextended('audit:' || NEW.tenant_id::text, 0));
+    NEW.at := clock_timestamp();
+    SELECT hash INTO NEW.prev_hash FROM audit_log WHERE tenant_id = NEW.tenant_id ORDER BY id DESC LIMIT 1;
+    NEW.hash := audit_digest(NEW.prev_hash, NEW);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS audit_log_chain ON audit_log;
+CREATE TRIGGER audit_log_chain
+    BEFORE INSERT OR UPDATE OR DELETE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION audit_log_chain();
+CREATE OR REPLACE FUNCTION audit_log_no_truncate() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'the audit log is append-only';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS audit_log_no_truncate ON audit_log;
+CREATE TRIGGER audit_log_no_truncate BEFORE TRUNCATE ON audit_log
+    FOR EACH STATEMENT EXECUTE FUNCTION audit_log_no_truncate();
+
+-- ── Plaid: new accounts at the bank (2026-11-13) ────────────────────────────
+-- Set when Plaid sends NEW_ACCOUNTS_AVAILABLE, cleared once the person picks
+-- the accounts in Plaid Link (update mode with account selection).
+ALTER TABLE integration_connections ADD COLUMN IF NOT EXISTS new_accounts_at TIMESTAMPTZ;
+-- ── True subledgers and the tie-out (2026-11-13, docs/handoff task 3) ──────
+-- Every journal line on a control account names whose it is: job:<booking id>
+-- on 1100, 1300, 2300, 2400 (and the job's 4500 and 5000 lines),
+-- crew:<crew member id> on 2500. A control account's balance must equal the
+-- sum of its subledger; a line with no key is a tie-out difference and a hard
+-- close blocker (lib/books/subledger-logic.ts). Lines stay append-only: the
+-- live sync voids and reposts open-month entries with their keys, and a
+-- closed month gets a dated reclassification instead.
+ALTER TABLE journal_lines ADD COLUMN IF NOT EXISTS sub_ref VARCHAR(80);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_sub ON journal_lines (tenant_id, account_id, sub_ref);
+
+-- ── Bookings into the books, correctly (2026-11-13, Jake: "make sure our
+-- bookings convert over correctly") ────────────────────────────────────────
+-- A deposit or balance marked paid by hand is real money (cash and check for
+-- now): it posts to 1050 Undeposited funds against the job until the bank
+-- deposit is matched. These record the day each box was ticked; NULL for
+-- boxes ticked before today, which post on a stated assumed date.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS deposit_paid_on DATE;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS balance_paid_on DATE;
+-- A booking that was never a real job (a test) is left out of the books by
+-- the owner, with a reason, audited. Nothing is deleted; it can be put back.
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_at TIMESTAMPTZ;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_reason TEXT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS books_excluded_by VARCHAR(255);
+
+-- ── Sales pipeline, CRM and commissions (2026-11-13, Jake: "can the playbook
+-- play into like sales orders and such and be a direct pipeline into
+-- invoicing and CRM"; "commissions per playbook deal per event commission
+-- direct and account management commissions ongoing") ───────────────────────
+-- An account is who sends us work: a venue, planner, company, vendor or a
+-- family. A sales order is a booking (weddings row) tied to its account, who
+-- closed it and who manages the account, with the commission terms COPIED onto
+-- it at sale time (lib/sales-logic.ts), so changing a rate later never rewrites
+-- a deal. Commissions post on the event day (lib/books/accrual.ts).
+CREATE TABLE IF NOT EXISTS crm_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    name VARCHAR(160) NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'other',      -- venue | planner | company | vendor | couple | other
+    playbook_lead_id VARCHAR(100),                  -- the lead's id in the playbook, when it came from there
+    manager_crew_id UUID REFERENCES crew_members(id) ON DELETE RESTRICT,
+    contact_name VARCHAR(160) NOT NULL DEFAULT '',
+    contact_email VARCHAR(255) NOT NULL DEFAULT '',
+    contact_phone VARCHAR(50) NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    archived_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_crm_accounts_lead ON crm_accounts (tenant_id, playbook_lead_id) WHERE playbook_lead_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_crm_accounts_tenant ON crm_accounts (tenant_id, name);
+DROP TRIGGER IF EXISTS crm_accounts_no_delete ON crm_accounts;
+CREATE TRIGGER crm_accounts_no_delete BEFORE DELETE ON crm_accounts FOR EACH ROW EXECUTE FUNCTION forbid_delete();
+
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS crm_account_id UUID REFERENCES crm_accounts(id) ON DELETE RESTRICT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS closer_crew_id UUID REFERENCES crew_members(id) ON DELETE RESTRICT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS account_manager_crew_id UUID REFERENCES crew_members(id) ON DELETE RESTRICT;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS commission_direct_cents INTEGER;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS commission_mgmt_bps INTEGER;
+ALTER TABLE weddings ADD COLUMN IF NOT EXISTS playbook_lead_id VARCHAR(100);
+CREATE INDEX IF NOT EXISTS idx_weddings_crm_account ON weddings (crm_account_id) WHERE crm_account_id IS NOT NULL;

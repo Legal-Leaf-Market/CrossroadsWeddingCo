@@ -22,6 +22,7 @@ export default function GuestSchedule({
   art = null,
   dressCode = null,
   weddingSiteUrl = null,
+  brandName = SITE_NAME,
 }: {
   coupleNames: string;
   eventDate: string;
@@ -30,6 +31,8 @@ export default function GuestSchedule({
   art?: WeddingArt | null;
   dressCode?: string | null;
   weddingSiteUrl?: string | null;
+  /** Business that made the booking; Crossroads unless another account did. */
+  brandName?: string;
 }) {
   // Couples paste their site with or without a scheme; normalise so the link
   // never resolves relative to our own domain. Anything that is not http(s)
@@ -181,7 +184,7 @@ export default function GuestSchedule({
           </p>
         )}
         <p className="mt-10 text-center text-[0.65rem] uppercase tracking-[0.25em] text-white/30 print:text-black/40">
-          {SITE_NAME}
+          {brandName}
         </p>
       </div>
     </div>

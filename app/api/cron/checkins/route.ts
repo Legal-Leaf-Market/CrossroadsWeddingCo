@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { and, isNotNull, notInArray, sql } from "drizzle-orm";
+import { and, eq, isNotNull, notInArray, sql } from "drizzle-orm";
+import { cronAuthorized, cronConfigured } from "@/lib/cron-auth";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
 import { daysOut } from "@/lib/hub-constants";
 import { isSmsConfigured, sendSms, toE164US } from "@/lib/sms";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 
 // Daily milestone check-in texts (owner request 2026-08-27, CLAUDE.md §9.4):
 // 90, 30, and 14 days out the couple gets a short "checking in" text with
-// their hub link. Runs from vercel.json's cron at 15:00 UTC (10/11am at the
-// venue); Vercel authenticates cron requests with `Authorization: Bearer
+// their hub link. Runs at 15:00 UTC (10/11am at the venue) from the Netlify
+// scheduled function netlify/functions/checkins-daily.mjs (and vercel.json's
+// cron, for Vercel); Vercel authenticates cron requests with `Authorization: Bearer
 // $CRON_SECRET` automatically once that env var exists. Fails closed at
 // every layer: no secret, wrong secret, or no Twilio keys means no texts and
 // no errors for the cron to retry-loop on.
@@ -31,11 +34,11 @@ function messageFor(milestone: number, hubUrl: string): string {
 }
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
+  // CRON_SECRET (Vercel) or the job token the Netlify scheduled function sends (lib/cron-auth.ts).
+  if (!cronConfigured()) {
     return NextResponse.json({ skipped: "CRON_SECRET not configured" }, { status: 501 });
   }
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!cronAuthorized(request.headers.get("authorization"), "checkins")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   if (!isSmsConfigured()) {
@@ -59,6 +62,8 @@ export async function GET(request: Request) {
     .from(weddings)
     .where(
       and(
+        // Texts go out from Crossroads' number in Crossroads' voice: house bookings only.
+        eq(weddings.tenantId, HOUSE_TENANT_ID),
         isNotNull(weddings.contactPhone),
         notInArray(weddings.status, ["cancelled", "completed"]),
         sql`${weddings.eventDate} > current_date`,

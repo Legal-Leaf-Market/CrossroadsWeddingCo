@@ -105,8 +105,8 @@ export default function HubPreviewPage() {
           initialCuesRev={0}
           initialPlaylistsRev={0}
           initialCues={[
-            { cueType: "processional", label: "", trackTitle: "Can't Help Falling in Love", artist: "Kina Grannis", notes: "Start it when the doors open, not before.", spotifyUrl: "", isLivePerformance: true },
-            { cueType: "first_dance", label: "", trackTitle: "Lover", artist: "Taylor Swift", notes: "Fade it out around 3:10, we head straight into the father-daughter dance.", spotifyUrl: "https://open.spotify.com/track/1dGr1c8CrMLDpV6mPbImSI", isLivePerformance: false },
+            { cueType: "processional", label: "", trackTitle: "Can't Help Falling in Love", artist: "Kina Grannis", notes: "Start it when the doors open, not before.", spotifyUrl: "", isLivePerformance: true, customEdit: false },
+            { cueType: "first_dance", label: "", trackTitle: "Lover", artist: "Taylor Swift", notes: "Fade it out around 3:10, we head straight into the father-daughter dance.", spotifyUrl: "https://open.spotify.com/track/1dGr1c8CrMLDpV6mPbImSI", isLivePerformance: false, customEdit: true },
           ]}
           initialMustPlay={[
             { trackTitle: "September", artist: "Earth, Wind & Fire" },
@@ -146,7 +146,7 @@ export default function HubPreviewPage() {
           <a href="/hub/preview/messages" className="underline decoration-parchment underline-offset-2">
             message us
           </a>{" "}
-          and we both see it right away.
+          and the whole team sees it right away.
         </p>
       </main>
     </div>

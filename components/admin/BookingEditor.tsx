@@ -19,6 +19,7 @@ export default function BookingEditor({
 }) {
   const [open, setOpen] = useState(false);
   const [total, setTotal] = useState(wedding.totalAmount);
+  const [deposit, setDeposit] = useState(wedding.depositAmount);
   const [depositPaid, setDepositPaid] = useState(wedding.isDepositPaid);
   const [balancePaid, setBalancePaid] = useState(wedding.isBalancePaid);
   const [customTerms, setCustomTerms] = useState(wedding.customTerms ?? "");
@@ -46,6 +47,7 @@ export default function BookingEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           totalAmount: Number(total).toFixed(2),
+          depositAmount: Number(deposit).toFixed(2),
           isDepositPaid: depositPaid,
           isBalancePaid: balancePaid,
           customTerms,
@@ -103,6 +105,21 @@ export default function BookingEditor({
             inputMode="decimal"
             className="w-full rounded-lg border border-parchment bg-white px-3 py-2 text-charcoal focus:border-terracotta focus:outline-none"
           />
+        </label>
+        <label className="block text-sm">
+          <span className="mb-1 block font-semibold text-charcoal">Deposit ($)</span>
+          <input
+            value={deposit}
+            onChange={(e) => setDeposit(e.target.value)}
+            inputMode="decimal"
+            className="w-full rounded-lg border border-parchment bg-white px-3 py-2 text-charcoal focus:border-terracotta focus:outline-none"
+          />
+          {wedding.contractAcceptedAt && (
+            <span className="mt-1 block text-xs text-ink/60">
+              Their agreement is already accepted and frozen, so a new deposit shows on the
+              invoice but not in the signed agreement.
+            </span>
+          )}
         </label>
         <div className="flex items-end gap-4 text-sm">
           <label className="flex items-center gap-2">

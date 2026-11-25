@@ -3,14 +3,17 @@ import { notFound } from "next/navigation";
 import PrintButton from "@/components/hub/PrintButton";
 import { CUE_TYPES, getPortalData } from "@/lib/hub";
 import { formatEventDate } from "@/lib/hub-constants";
-import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
+import { countDocuments } from "@/lib/documents";
+import { preflight } from "@/lib/preflight";
+import PreflightPanel from "@/components/hub/PreflightPanel";
+import { brandForTenant, brandForToken, brandedMetadata } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Run sheet",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  return brandedMetadata(await brandForToken(token, "hub"), "Run sheet");
+}
 
 function time12(hhmm: string): string {
   const [h, m] = hhmm.split(":").map(Number);
@@ -19,11 +22,21 @@ function time12(hhmm: string): string {
   return `${hour}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-export default async function RunSheetPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function RunSheetPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ final?: string }>;
+}) {
   const { token } = await params;
+  // Proof is the default: a sheet printed before anyone has checked it says so
+  // on paper. ?final=1 is the deliberate act of calling it done.
+  const isFinal = (await searchParams).final === "1";
   const data = await getPortalData(token);
   if (!data) notFound();
   const { wedding, timeline, cues, vips, playlists } = data;
+  const brand = await brandForTenant(wedding.tenantId);
   // The hub stores partially filled rows so nothing a couple typed is lost;
   // the printed sheet only shows the ones with something to say.
   const hasTrack = (p: { trackTitle: string; artist: string }) =>
@@ -31,6 +44,23 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
   const doNotPlay = playlists.filter((p) => p.category === "do_not_play" && hasTrack(p));
   const mustPlay = playlists.filter((p) => p.category === "must_play" && hasTrack(p));
   const roster = vips.filter((v) => v.fullName.trim() !== "" || v.role.trim() !== "");
+  const checks = preflight({
+    timeline: timeline.map((t) => ({
+      title: t.title,
+      start: t.scheduledStartTime.slice(0, 5),
+      minutes: t.estimatedDurationMinutes,
+    })),
+    cues: cues.map((c) => ({
+      cueType: c.cueType,
+      label: c.label ?? "",
+      trackTitle: c.trackTitle,
+      artist: c.artist,
+      customEdit: c.customEdit ?? false,
+    })),
+    mustPlay,
+    doNotPlay: playlists.filter((p) => p.category === "do_not_play"),
+    documentCount: await countDocuments(wedding.id),
+  });
 
   return (
     <div className="min-h-screen bg-white p-8 text-charcoal print:p-0">
@@ -42,10 +72,12 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
           <PrintButton />
         </div>
 
+        <PreflightPanel checks={checks} isFinal={isFinal} base={`/hub/${token}/runsheet`} />
+
         <header className="mt-4 border-b-2 border-charcoal pb-3">
           <div className="flex items-baseline justify-between">
             <h1 className="text-2xl font-bold">{wedding.coupleNames}</h1>
-            <span className="text-sm font-semibold">{SITE_NAME}</span>
+            <span className="text-sm font-semibold">{brand.name}</span>
           </div>
           <p className="mt-1 text-sm">
             {formatEventDate(wedding.eventDate)}
@@ -115,6 +147,7 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
                     <li key={`${cue.cueType}-${i}`}>
                       <span className="font-semibold">{label}:</span> {track}
                       {cue.isLivePerformance ? " (live)" : ""}
+                      {cue.customEdit ? <strong> (custom edit)</strong> : null}
                       {cue.notes && (
                         <span className="block text-ink/60">{cue.notes}</span>
                       )}
@@ -177,7 +210,7 @@ export default async function RunSheetPage({ params }: { params: Promise<{ token
 
         <footer className="mt-6 border-t border-parchment pt-2 text-xs text-ink/50">
           {wedding.contactPhone ? `Day-of contact: ${wedding.contactPhone} · ` : ""}
-          {SITE_NAME} · {EMAIL_FROM_ADDRESS}
+          {brand.name}{brand.contactEmail ? ` · ${brand.contactEmail}` : ""}
         </footer>
       </div>
     </div>

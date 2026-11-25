@@ -15,7 +15,8 @@ export default function About() {
           />
         </div>
         <div className="order-1 md:order-2">
-          <h2 className="text-3xl text-charcoal">
+          <p className="text-xs font-semibold uppercase tracking-widest text-terracotta">Weddings</p>
+          <h2 className="mt-1 text-3xl text-charcoal">
             Why couples call us the coordinator
           </h2>
           <div className="mt-6 space-y-4 text-ink/80">

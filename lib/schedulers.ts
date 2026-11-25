@@ -73,7 +73,7 @@ export const SCHEDULERS: Scheduler[] = BOOKABLE.flatMap(({ slug, envVar }) => {
   return [{
     slug,
     name: member.name,
-    title: member.title,
+    title: member.executiveTitle,
     notifyEmail: notifyEmailFor(slug, envVar),
   }];
 });

@@ -3,14 +3,9 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
-import {
-  bartenderStaffFromAddons,
-  buildContract,
-  CONTRACT_VERSION,
-  servicesFromAddons,
-} from "@/lib/contract";
+import { buildContract, CONTRACT_VERSION, contractInputFromWedding, contractTerms } from "@/lib/contract";
 import { getWeddingByToken } from "@/lib/hub";
-import { formatEventDate } from "@/lib/hub-constants";
+import { isHouseTenant } from "@/lib/tenant-constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +21,7 @@ const schema = z.object({
 export async function POST(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const wedding = await getWeddingByToken(token);
-  if (!wedding) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!wedding || !isHouseTenant(wedding.tenantId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Accepting twice is a no-op, not an overwrite: the first acceptance is the
   // one that happened, and re-signing must never quietly restate the terms.
@@ -48,7 +43,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ token: str
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const services = servicesFromAddons(wedding.addons, wedding.packageType);
+  const input = contractInputFromWedding(wedding);
   const acceptedAt = new Date();
   // Freeze the terms as accepted. Later edits to the wedding row (a venue
   // change, a re-quote) can never rewrite what this couple agreed to.
@@ -60,20 +55,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ token: str
     eventDate: wedding.eventDate,
     venueName: wedding.venueName,
     venueAddress: wedding.venueAddress,
-    services,
-    totalUsd: Number(wedding.totalAmount),
-    depositUsd: Number(wedding.depositAmount),
-    sections: buildContract({
-      coupleNames: wedding.coupleNames,
-      eventDate: formatEventDate(wedding.eventDate),
-      venueName: wedding.venueName,
-      venueAddress: wedding.venueAddress,
-      services,
-      totalUsd: Number(wedding.totalAmount),
-      depositUsd: Number(wedding.depositAmount),
-      customTerms: wedding.customTerms,
-      bartenderStaff: bartenderStaffFromAddons(wedding.addons),
-    }),
+    services: input.services,
+    totalUsd: input.totalUsd,
+    depositUsd: input.depositUsd,
+    // The money terms as signed, so a later "Edit money" is detectable.
+    terms: contractTerms(input),
+    sections: buildContract(input),
   };
 
   await db

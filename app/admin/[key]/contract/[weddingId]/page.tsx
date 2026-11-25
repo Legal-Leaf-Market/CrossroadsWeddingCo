@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import ClearClientSignatureButton from "@/components/admin/ClearClientSignatureButton";
 import CountersignForm from "@/components/admin/CountersignForm";
+import ReissueContractButton from "@/components/admin/ReissueContractButton";
 import SignatureBlock from "@/components/contract/SignatureBlock";
 import PrintButton from "@/components/hub/PrintButton";
 import { adminKeyMatches, getAdminWeddingRow } from "@/lib/admin";
-import { contractSectionsForWedding, contractVersionForWedding } from "@/lib/contract";
+import { contractIsStale, contractSectionsForWedding, contractVersionForWedding } from "@/lib/contract";
 import { formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME } from "@/lib/site";
 
@@ -52,10 +54,14 @@ export default async function AdminContractPage({
           <PrintButton maskPath="/agreement" />
         </div>
 
+        {contractIsStale(wedding) && <ReissueContractButton adminKey={key} weddingId={wedding.id} />}
+
         {!client && (
           <p className="mt-4 rounded-xl bg-gold/15 px-4 py-3 text-sm text-ink print:hidden">
-            The couple hasn&apos;t accepted this agreement in their hub yet. You can print it for
-            pen signatures, or wait for them to accept and then sign here.
+            The couple hasn&apos;t accepted this agreement in their hub yet. You can sign for
+            Crossroads now (below) and they accept after, or print it for pen signatures. What they
+            accept is frozen at that moment, so if the money or services change before then, their
+            copy shows the new terms under your signature.
           </p>
         )}
 
@@ -90,7 +96,15 @@ export default async function AdminContractPage({
           version={contractVersionForWedding(wedding)}
         />
 
-        {client && !company && <CountersignForm adminKey={key} weddingId={wedding.id} />}
+        {!company && <CountersignForm adminKey={key} weddingId={wedding.id} />}
+
+        {client && (
+          <ClearClientSignatureButton
+            adminKey={key}
+            weddingId={wedding.id}
+            signedName={client.name}
+          />
+        )}
       </div>
     </div>
   );

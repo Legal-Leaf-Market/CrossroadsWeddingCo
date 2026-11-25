@@ -2,15 +2,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import GuestSchedule from "@/components/hub/GuestSchedule";
 import { getLiveBlocks, getWeddingByShareToken } from "@/lib/hub";
+import { brandForTenant, brandForToken, brandedMetadata } from "@/lib/brand";
 import { formatEventDate } from "@/lib/hub-constants";
 import { resolveWeddingArt } from "@/lib/wedding-art-server";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Order of events",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  return brandedMetadata(await brandForToken(token, "share"), "Order of events");
+}
 
 // Guest-facing order of events. Same zero-auth share token as the vendor live
 // view, but a different audience: times and titles only, never the MC notes,
@@ -25,6 +26,7 @@ export default async function GuestSchedulePage({
   const { token } = await params;
   const wedding = await getWeddingByShareToken(token);
   if (!wedding) notFound();
+  const brand = await brandForTenant(wedding.tenantId);
   const blocks = await getLiveBlocks(wedding.id);
   const items = blocks
     .filter((b) => b.title.trim() !== "")
@@ -39,6 +41,7 @@ export default async function GuestSchedulePage({
       art={resolveWeddingArt(wedding.artTheme, wedding.shareToken)}
       dressCode={wedding.dressCode}
       weddingSiteUrl={wedding.weddingSiteUrl}
+      brandName={brand.name}
     />
   );
 }

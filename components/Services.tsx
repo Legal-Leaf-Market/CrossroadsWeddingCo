@@ -50,10 +50,16 @@ export default function Services() {
   return (
     <section id="services" className="bg-parchment/40 py-20">
       <div className="mx-auto max-w-6xl px-6">
-        <h2 className="text-3xl text-charcoal">What we do</h2>
+        <p className="text-xs font-semibold uppercase tracking-widest text-terracotta">Weddings</p>
+        <h2 className="mt-1 text-3xl text-charcoal">What we do at a wedding</h2>
         <p className="mt-3 max-w-2xl text-ink/70">
           One crew, four things we're actually good at. Book one or stack all
-          four. Most backyard weddings end up wanting at least two.
+          four. Most backyard weddings end up wanting at least two. Planning a
+          company event or a party instead?{" "}
+          <a href="/events" className="font-semibold text-terracotta underline decoration-terracotta/40 underline-offset-2">Corporate events</a>
+          {" "}and{" "}
+          <a href="/parties" className="font-semibold text-terracotta underline decoration-terracotta/40 underline-offset-2">private parties</a>
+          {" "}have their own pages.
         </p>
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           {SERVICES.map((service) => (

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PrintButton from "@/components/hub/PrintButton";
+import PreflightPanel from "@/components/hub/PreflightPanel";
+import { preflight } from "@/lib/preflight";
 import { EMAIL_FROM_ADDRESS, SITE_NAME } from "@/lib/site";
 
 // Dev-only layout preview of the printable run sheet with sample data.
@@ -33,6 +35,21 @@ export default function RunSheetPreviewPage() {
           <span className="text-sm font-semibold text-terracotta">Back to your hub</span>
           <PrintButton />
         </div>
+
+        <PreflightPanel
+          isFinal={false}
+          base="/hub/preview/runsheet"
+          checks={preflight({
+            timeline: TIMELINE.map((t, i) => ({ title: t.title, start: ["16:00","16:30","16:35","17:00","18:00","18:10","19:00","19:20","19:25","21:55"][i], minutes: t.minutes })),
+            cues: [
+              { cueType: "processional", label: "", trackTitle: "Can't Help Falling in Love", artist: "Kina Grannis", customEdit: false },
+              { cueType: "first_dance", label: "", trackTitle: "Lover", artist: "Taylor Swift", customEdit: true },
+            ],
+            mustPlay: [{ trackTitle: "Mr. Brightside", artist: "The Killers" }],
+            doNotPlay: [{ trackTitle: "Mr Brightside", artist: "" }],
+            documentCount: 1,
+          })}
+        />
 
         <header className="mt-4 border-b-2 border-charcoal pb-3">
           <div className="flex items-baseline justify-between">

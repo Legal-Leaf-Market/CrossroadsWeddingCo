@@ -7,7 +7,7 @@
 // cards render brand-styled initials, which is why photoUrl is optional and why
 // a missing one costs nothing.
 //
-// TITLES ARE THE ONES ON THE PRINTED BUSINESS CARDS, and that is a deliberate
+// (HISTORY) TITLES WERE THE ONES ON THE PRINTED BUSINESS CARDS, and that is a deliberate
 // correction rather than a rewrite. The page had Jake and Nic as CEO and COO,
 // which are their titles at the holding company, not their jobs at a wedding;
 // it also gave Nic "Acoustic sets - Bar" with no DJ or MC on it, while the card
@@ -29,6 +29,9 @@ export type TeamMember = {
   /** Also the QR-code slug on this person's business card. See lib/schedulers.ts. */
   slug: string;
   name: string;
+  /** The officer title at the company (CEO, COO, CBO). Owner-stated 2026-11-08. */
+  executiveTitle: string;
+  /** What this person does at an event. Printed under the officer title. */
   title: string;
   roles: string;
   bio: string;
@@ -42,36 +45,43 @@ export type TeamMember = {
   showOnTeam?: boolean;
 };
 
+// THREE PARTNERS, TWO TITLES EACH (2026-11-08, Jacob: "it's now me, Nic and
+// Terry", and "put our white collar titles as well as the roles that we play").
+// executiveTitle is the officer title, which reads as a real company to the
+// corporate and events side; title and roles are what each person does on the
+// day, which is what a couple is actually booking. Both are shown, officer
+// title first. Terry's surname is Winchester; first names only on the site,
+// matching Jake and Nic. Terry's bio carries only what Jacob stated (event
+// promotion and execution experience, the go-to guy) and no number.
 export const TEAM: TeamMember[] = [
   {
     slug: "jake",
     name: "Jake",
-    title: "Co-founder & Event Producer",
+    executiveTitle: "Chief Executive Officer",
+    title: "Event Producer",
     roles: "DJ · MC · Acoustic",
-    bio: "The voice on the mic and the one watching the clock. Jake runs your sound from the processional to the last song, calls the cues so your wedding party is always where it needs to be, and keeps the whole day moving without anyone noticing he's doing it.",
+    bio: "Jake sets the direction for Crossroads and is the voice on the mic at your event. He runs your sound from the first song to the last, calls the cues so everyone is where they need to be, and keeps the whole day moving without anyone noticing he's doing it.",
     initials: "J",
   },
   {
     slug: "nic",
     name: "Nic",
-    title: "Co-founder & Event Manager",
+    executiveTitle: "Chief Operating Officer",
+    title: "Event Manager",
     roles: "DJ · MC · Acoustic · Bar",
-    bio: "The live music and the steady hand behind the bar. Nic plays the solo acoustic sets, singer-songwriter style, and brings about twenty years of serving and bartending, with a current Indiana ATC permit. When we say licensed bartenders, he's who we mean.",
+    bio: "Nic keeps the operation running, from the schedule to the gear to the crew, and he's the live music and the steady hand behind the bar. He plays the solo acoustic sets, singer-songwriter style, and brings about twenty years of serving and bartending, with a current Indiana ATC permit. When we say licensed bartenders, he's who we mean.",
     initials: "N",
   },
   {
-    // TERRY (2026-11-01, Jacob: "We are all partners and will all be reaching
-    // out in a sales capacity"). Bookable at /book?with=terry so calls from the
-    // venues he works land on his calendar. "Partner" is the only title anyone
-    // has stated, and roles and bio stay empty rather than invented, which is
-    // why he is off the public team section until Jacob writes them.
+    // TERRY (bookable since 2026-11-01; titles, roles and bio from Jacob
+    // 2026-11-08, so he is on the public team section now).
     slug: "terry",
     name: "Terry",
-    title: "Partner",
-    roles: "",
-    bio: "",
+    executiveTitle: "Chief Business Officer",
+    title: "Stage Manager",
+    roles: "DJ · Bar · Stage Management",
+    bio: "Terry brings tons of experience in event promotion and execution, and he's our go-to guy on just about everything. He DJs, works the bar, and runs the stage, so the room, the crew and the timing all come together the way they should.",
     initials: "T",
-    showOnTeam: false,
   },
 ];
 
