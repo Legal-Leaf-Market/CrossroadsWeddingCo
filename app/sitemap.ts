@@ -1,3 +1,4 @@
+import { PARTNERS } from "@/lib/partners";
 import { REVIEW_EVENTS } from "@/lib/review-constants";
 import type { MetadataRoute } from "next";
 import { CITIES, cityPath } from "@/lib/cities";
@@ -47,6 +48,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    {
+      url: `${SITE_URL}/past-events`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${SITE_URL}/partners`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    ...PARTNERS.map((p) => ({
+      url: `${SITE_URL}/partners/${p.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    })),
     {
       url: `${SITE_URL}/reviews`,
       lastModified: new Date(),

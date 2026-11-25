@@ -6,6 +6,7 @@ import VendorForm from "@/components/account/VendorForm";
 import { getBooksWorkspace } from "@/lib/auth";
 import { PLATFORM_NAME } from "@/lib/tenant-constants";
 import { getVendor } from "@/lib/vendors";
+import { liveEntriesFor } from "@/lib/books/subledger";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: `Vendor | ${PLATFORM_NAME}`, robots: { index: false, follow: false } };
@@ -18,6 +19,8 @@ export default async function VendorPage({ params }: { params: Promise<{ id: str
   const data = await getVendor(ws.tenant.id, (await params).id);
   if (!data) notFound();
   const { vendor: v, years, payments } = data;
+  // The vendor subledger's drill-down: each payment opens the journal entry it posted.
+  const entries = await liveEntriesFor(ws.tenant.id, payments.map((p) => `bank_transaction:${p.id}`));
 
   return (
     <AccountShell signedIn house={ws.tenant.kind === "house"}>
@@ -75,7 +78,15 @@ export default async function VendorPage({ params }: { params: Promise<{ id: str
             {payments.map((p) => (
               <li key={p.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2">
                 <span className="min-w-0 break-words text-charcoal">
-                  {p.merchant || p.description} <span className="text-ink/50">· {p.accountType === "credit" ? "card" : "bank"}</span>
+                  {entries.get(`bank_transaction:${p.id}`) ? (
+                    <Link href={`/app/books/entries/${entries.get(`bank_transaction:${p.id}`)}`} className="underline decoration-parchment underline-offset-2 hover:text-terracotta">
+                      {p.merchant || p.description}
+                    </Link>
+                  ) : (
+                    <>{p.merchant || p.description}</>
+                  )}{" "}
+                  <span className="text-ink/50">· {p.accountType === "credit" ? "card" : "bank"}</span>
+                  {!entries.get(`bank_transaction:${p.id}`) && <span className="text-ink/50"> · not in the books yet (sort it)</span>}
                 </span>
                 <span className="flex gap-3 text-ink/60">
                   <span>{p.postedDate}</span>

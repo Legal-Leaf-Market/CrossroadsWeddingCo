@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
 
-/** Body: { repair?: connectionId } to fix a bank login that expired. */
+/** Body: { repair?: connectionId } to fix a bank login that expired; add selectAccounts: true to pick new accounts. */
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: NO_STORE });
   const ws = await getBooksWorkspace();
@@ -16,9 +16,10 @@ export async function POST(req: NextRequest) {
   if (!plaidConfigured() || !secretsConfigured()) {
     return NextResponse.json({ error: "Bank connections aren't set up yet." }, { status: 501, headers: NO_STORE });
   }
-  const body = (await req.json().catch(() => ({}))) as { repair?: string };
+  const body = (await req.json().catch(() => ({}))) as { repair?: string; selectAccounts?: boolean };
   try {
-    const linkToken = await createLinkToken(ws.tenant.id, ws.user.id, typeof body.repair === "string" ? body.repair : undefined);
+    const repair = typeof body.repair === "string" ? body.repair : undefined;
+    const linkToken = await createLinkToken(ws.tenant.id, ws.user.id, repair, { selectAccounts: !!repair && body.selectAccounts === true });
     return NextResponse.json({ linkToken }, { headers: NO_STORE });
   } catch (err) {
     const status = err instanceof PlaidError && err.status === 404 ? 404 : 502;

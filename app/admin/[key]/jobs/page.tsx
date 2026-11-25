@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { adminKeyMatches } from "@/lib/admin";
-import { collectedOn } from "@/lib/admin-insights";
+import BooksExcludeButton from "@/components/admin/BooksExcludeButton";
 import { linesByWedding } from "@/lib/costing";
-import { centsLabel, jobLedger } from "@/lib/costing-logic";
+import { centsLabel, lineCost } from "@/lib/costing-logic";
 import { db } from "@/lib/db";
 import { weddings } from "@/lib/db/schema";
+import { postBankLedgerQuietly } from "@/lib/books/ledger";
+import { jobLedgerBalances } from "@/lib/books/subledger";
+import { jobsPage } from "@/lib/books/subledger-logic";
 import { formatEventDate } from "@/lib/hub-constants";
 import { SITE_NAME, VENUE_TIME_ZONE } from "@/lib/site";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 
 // Job costing on an accrual basis (2026-11-13, Jake: "force accrual and US
 // GAAP", "we use the matching principle", "match revenue to expenses by job
-// costing", "and accruals"). Every booking is a job; its revenue and its
-// direct costs land in the event's month, and what is earned-not-collected,
-// collected-not-earned, paid-early and owed-late shows as the four accrual
-// balances. The arithmetic is jobLedger in lib/costing-logic.ts.
+// costing", "and accruals"). Every booking is a job. Since the subledger
+// slice (docs/handoff task 2) every balance here is READ FROM THE LEDGER: the
+// journal lines keyed to each job on 1100, 1300, 2300, 2400, 4500 and 5000,
+// which postLedger derives from matched bank lines, approved receipts and the
+// cost plans. The page's totals are therefore the general ledger's balances,
+// and the page says so (or shows the difference) instead of computing its own
+// version from the cost lines' "Paid" box. Arithmetic: jobsPage in
+// lib/books/subledger-logic.ts, checked by scripts/verify-subledger.mjs.
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -35,39 +42,50 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
   if (!adminKeyMatches(key)) notFound();
   const today = new Date().toLocaleDateString("en-CA", { timeZone: VENUE_TIME_ZONE });
 
-  const rows = await db
-    .select()
-    .from(weddings)
-    .where(and(eq(weddings.tenantId, HOUSE_TENANT_ID), isNull(weddings.archivedAt)));
+  // Bring the books current first, so the page reads what the sources say now.
+  await postBankLedgerQuietly(HOUSE_TENANT_ID, { actor: "owner dashboard", cause: "job costing opened" });
+  const rows = await db.select().from(weddings).where(eq(weddings.tenantId, HOUSE_TENANT_ID));
   const lines = await linesByWedding(rows.map((r) => r.id));
-  const ledger = jobLedger(
-    rows.map((w) => ({
-      id: w.id,
-      name: w.coupleNames,
-      eventDate: w.eventDate,
-      cancelled: w.status === "cancelled",
-      revenueCents: Math.round(Number(w.totalAmount) * 100) || 0,
-      collectedCents: Math.round(
-        collectedOn({
-          totalAmount: w.totalAmount,
-          depositAmount: w.depositAmount,
-          isDepositPaid: w.isDepositPaid ?? false,
-          isBalancePaid: w.isBalancePaid ?? false,
-          status: w.status,
-        }) * 100,
-      ),
-      lines: lines.get(w.id) ?? [],
-    })),
+  const { balances, tie } = await jobLedgerBalances(HOUSE_TENANT_ID);
+  const excludedRows = rows.filter((w) => w.booksExcludedAt);
+  const page = jobsPage(
+    rows.filter((w) => !w.booksExcludedAt).map((w) => {
+      const contract = Math.round(Number(w.totalAmount) * 100) || 0;
+      const plan = lines.get(w.id) ?? [];
+      let planned = 0;
+      let missing = 0;
+      for (const l of plan) {
+        const c = lineCost(l, contract);
+        if (c.missing) missing++;
+        planned += l.actualCostCents ?? c.actual ?? c.planned ?? 0;
+      }
+      return {
+        id: w.id,
+        name: w.coupleNames,
+        eventDate: w.eventDate,
+        cancelled: w.status === "cancelled",
+        archived: !!w.archivedAt,
+        contractCents: contract,
+        plannedCostCents: planned,
+        missing,
+        hasPlan: plan.length > 0,
+      };
+    }),
+    balances,
+    tie,
     today,
   );
-  const b = ledger.balances;
+  const b = page.ledger;
+  const codeOf = (k: string, fallback: string) => tie.find((t) => t.systemKey === k)?.code ?? fallback;
   const tiles = [
-    { label: "Deferred revenue", value: b.deferredRevenue, note: "Collected for events not yet held (liability)" },
-    { label: "Accounts receivable", value: b.receivable, note: "Earned, not yet collected (asset)" },
-    { label: "Prepaid job costs", value: b.prepaidCost, note: "Paid out for events not yet held (asset)" },
-    { label: "Accrued job costs", value: b.accruedCost, note: "Owed for events already held (liability)" },
+    { label: "Undeposited funds", code: codeOf("undeposited_funds", "1050"), value: b.undeposited, shown: page.totals.undeposited, note: "Cash and checks marked paid, not yet matched to a bank deposit" },
+    { label: "Deferred revenue", code: codeOf("deferred_revenue", "2300"), value: b.deferredRevenue, shown: page.totals.deferredRevenue, note: "Collected for events not yet held (liability)" },
+    { label: "Accounts receivable", code: codeOf("accounts_receivable", "1100"), value: b.receivable, shown: page.totals.receivable, note: "Earned, not yet collected (asset)" },
+    { label: "Prepaid job costs", code: codeOf("prepaid_job_costs", "1300"), value: b.prepaidCost, shown: page.totals.prepaidCost, note: "Paid out for events not yet held (asset)" },
+    { label: "Accrued job costs", code: codeOf("accrued_job_costs", "2400"), value: b.accruedCost, shown: page.totals.accruedCost, note: "Owed for events already held (liability)" },
   ];
-  const unplanned = ledger.jobs.filter((j) => !j.hasPlan).length;
+  const unplanned = page.rows.filter((j) => !j.hasPlan && !j.cancelled && !j.archived).length;
+  const ledger = { jobs: page.rows, periods: page.periods, backlog: page.backlog };
 
   return (
     <div className="min-h-screen bg-cream">
@@ -86,23 +104,35 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
             <a href={`/admin/${key}/crew`} className="text-terracotta underline decoration-parchment underline-offset-2">
               Crew, pay and materials
             </a>
+            <a href={`/admin/${key}/sales`} className="text-terracotta underline decoration-parchment underline-offset-2">
+              Sales and commissions
+            </a>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
         <section>
-          <h2 className="mb-1 text-lg font-semibold text-charcoal">Accrual balances today</h2>
+          <h2 className="mb-1 text-lg font-semibold text-charcoal">Accrual balances today, from the general ledger</h2>
           <p className="mb-3 text-sm text-ink/60">
-            From the jobs below. Job costs count at plan until a paid amount is entered on the job.
+            Each balance is the ledger account itself; the jobs below are its subledger and add up to it. Payments count once
+            they are matched from the bank, and a held job&apos;s cost counts at plan until a paid amount is entered on it.
             {unplanned > 0 && ` ${unplanned} job${unplanned === 1 ? " has" : "s have"} no cost plan yet, so their costs are missing here.`}
           </p>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <p className={`mb-3 rounded-xl border bg-white p-3 text-sm ${page.ties ? "border-parchment text-sage-dark" : "border-terracotta text-terracotta-dark"}`}>
+            {page.ties
+              ? "Ties to the general ledger: the jobs below add up to 1050, 1100, 1300, 2300 and 2400 exactly."
+              : "Does not tie to the general ledger. Some money on these accounts isn't keyed to a job; the month can't close until it is. Open Books, then Tie-out, to see which lines."}
+          </p>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             {tiles.map((t) => (
               <div key={t.label} className="rounded-2xl border border-parchment bg-white p-4">
-                <p className="text-xs uppercase tracking-wider text-ink/55">{t.label}</p>
+                <p className="text-xs uppercase tracking-wider text-ink/55">
+                  {t.code} {t.label}
+                </p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums text-charcoal">{centsLabel(t.value)}</p>
                 <p className="mt-0.5 text-xs text-ink/55">{t.note}</p>
+                {t.shown !== t.value && <p className="mt-1 text-xs font-semibold text-terracotta-dark">Jobs add up to {centsLabel(t.shown)}</p>}
               </div>
             ))}
           </div>
@@ -157,10 +187,10 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
                   <th className="pb-2 text-right font-medium">Revenue</th>
                   <th className="pb-2 text-right font-medium">Direct cost</th>
                   <th className="pb-2 text-right font-medium">Gross profit</th>
-                  <th className="pb-2 text-right font-medium">Deferred</th>
-                  <th className="pb-2 text-right font-medium">Receivable</th>
-                  <th className="pb-2 text-right font-medium">Prepaid</th>
-                  <th className="pb-2 text-right font-medium">Accrued</th>
+                  <th className="pb-2 text-right font-medium">Deferred 2300</th>
+                  <th className="pb-2 text-right font-medium">Receivable 1100</th>
+                  <th className="pb-2 text-right font-medium">Prepaid 1300</th>
+                  <th className="pb-2 text-right font-medium">Accrued 2400</th>
                 </tr>
               </thead>
               <tbody>
@@ -171,10 +201,13 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
                         {j.name}
                       </a>
                       <span className="block text-xs text-ink/55">
-                        {formatEventDate(j.eventDate)} · {j.earned ? "earned" : "not yet earned"}
+                        {j.eventDate ? formatEventDate(j.eventDate) : "no date"} · {j.cancelled ? "cancelled" : j.earned ? "earned" : "not yet earned"}
+                        {j.archived && " · archived"}
                         {!j.hasPlan && " · no cost plan"}
                         {j.missing > 0 && ` · ${j.missing} cost${j.missing === 1 ? "" : "s"} not set`}
+                        {j.undeposited ? ` · ${centsLabel(j.undeposited)} paid by hand, not deposited yet` : ""}
                       </span>
+                      <BooksExcludeButton adminKey={key} weddingId={j.id} excluded={false} />
                     </td>
                     <td className="py-1.5 text-right">{centsLabel(j.revenue)}</td>
                     <td className="py-1.5 text-right">{centsLabel(j.cost)}</td>
@@ -189,9 +222,42 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-parchment font-semibold tabular-nums text-charcoal">
+                  <td className="py-2">Total (the general ledger)</td>
+                  <td />
+                  <td />
+                  <td />
+                  <td className="py-2 text-right">{centsLabel(page.totals.deferredRevenue)}</td>
+                  <td className="py-2 text-right">{centsLabel(page.totals.receivable)}</td>
+                  <td className="py-2 text-right">{centsLabel(page.totals.prepaidCost)}</td>
+                  <td className="py-2 text-right">{centsLabel(page.totals.accruedCost)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </section>
+
+        {excludedRows.length > 0 && (
+          <section>
+            <h2 className="mb-1 text-lg font-semibold text-charcoal">Left out of the books</h2>
+            <p className="mb-3 text-sm text-ink/60">Bookings marked as never a real job. Nothing was deleted; each change is in the audit log.</p>
+            <ul className="divide-y divide-parchment rounded-2xl border border-parchment bg-white px-4 text-sm">
+              {excludedRows.map((w) => (
+                <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span className="min-w-0 break-words">
+                    <span className="font-semibold text-charcoal">{w.coupleNames}</span>{" "}
+                    <span className="text-ink/55">
+                      {w.eventDate ? formatEventDate(w.eventDate) : ""}
+                      {w.booksExcludedReason ? ` · ${w.booksExcludedReason}` : ""}
+                    </span>
+                  </span>
+                  <BooksExcludeButton adminKey={key} weddingId={w.id} excluded />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </div>
   );

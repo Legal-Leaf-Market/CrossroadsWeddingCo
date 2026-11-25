@@ -22,7 +22,9 @@ import { formatEventDate } from "@/lib/hub-constants";
 // before it carries real weight. Bump CONTRACT_VERSION on any wording change
 // so accepted snapshots stay traceable to the text that was accepted.
 
-export const CONTRACT_VERSION = "2026-11-01";
+export const CONTRACT_VERSION = "2026-11-23";
+
+const BESPOKE_LEAD = "Your wedding is on an arrangement we agreed directly";
 
 export type ContractInput = {
   coupleNames: string;
@@ -36,6 +38,12 @@ export type ContractInput = {
   bartenderStaff?: number;
   /** Replaces the standard cost section verbatim when the deal is bespoke. */
   customTerms?: string | null;
+  /**
+   * Per-service prices as the booking stores them (an add-on's recorded fee),
+   * so the agreement names the same amounts the invoice bills. Omitted
+   * services fall back to the published rate.
+   */
+  fees?: { acoustic?: number | null; bartender?: number | null };
 };
 
 export type ContractSection = { heading: string; paragraphs: string[] };
@@ -77,6 +85,13 @@ export function buildContract(input: ContractInput): ContractSection[] {
   const barStaff = input.bartenderStaff === 2 ? 2 : 1;
   const barFee = bartenderFeeUsd(barStaff);
   const rate = (n: number) => (bespoke ? `normally ${money(n)}` : `${money(n)} flat`);
+  const acousticFee = input.fees?.acoustic ?? ACOUSTIC_ADDON_USD;
+  const barPrice = input.fees?.bartender ?? barFee;
+  // Same arithmetic as the invoice (lib/invoice.ts): the stored total is the
+  // truth, and any gap between it and the services is one named adjustment.
+  const serviceSum =
+    (hasDj ? DJ_DAY_RATE_USD : 0) + (hasAcoustic ? acousticFee : 0) + (hasBar ? barPrice : 0);
+  const adjustment = Math.round((input.totalUsd - serviceSum) * 100) / 100;
 
   const whatWeDo: string[] = [];
   if (hasDj) {
@@ -86,12 +101,12 @@ export function buildContract(input: ContractInput): ContractSection[] {
   }
   if (hasAcoustic) {
     whatWeDo.push(
-      `A live solo acoustic set, ${rate(ACOUSTIC_ADDON_USD)}. One performer, singer-songwriter style, for your ceremony or your cocktail hour. One hour is the sweet spot and two hours is the maximum. With enough notice, which means at least 30 days before the wedding, we will learn up to three songs of your choosing; everything else comes from our standing repertoire.`,
+      `A live solo acoustic set, ${rate(acousticFee)}. One performer, singer-songwriter style, for your ceremony or your cocktail hour. One hour is the sweet spot and two hours is the maximum. With enough notice, which means at least 30 days before the wedding, we will learn up to three songs of your choosing; everything else comes from our standing repertoire.`,
     );
   }
   if (hasBar) {
     whatWeDo.push(
-      `Bar service with ${barStaff === 1 ? "one bartender" : "two bartenders"}, ${rate(barFee)}. We provide licensed, experienced bartenders who set up, serve all night, and break down the bar. If your guest count changes enough to need a different crew, we tell you before the wedding and the price moves to our published rate for that size: ${money(bartenderFeeUsd(1))} for one, ${money(bartenderFeeUsd(2))} for two. It never goes anywhere else.`,
+      `Bar service with ${barStaff === 1 ? "one bartender" : "two bartenders"}, ${rate(barPrice)}. We provide licensed, experienced bartenders who set up, serve all night, and break down the bar. If your guest count changes enough to need a different crew, we tell you before the wedding and the price moves to our published rate for that size: ${money(bartenderFeeUsd(1))} for one, ${money(bartenderFeeUsd(2))} for two. It never goes anywhere else.`,
     );
   }
 
@@ -108,11 +123,13 @@ export function buildContract(input: ContractInput): ContractSection[] {
       heading: "What it costs, and when it is due",
       paragraphs: input.customTerms?.trim()
         ? [
-            `Your wedding is on an arrangement we agreed directly, not our standard pricing. The rates named above are what these services normally cost; what you owe is only what follows.`,
+            `${BESPOKE_LEAD}, not our standard pricing. The rates named above are what these services normally cost; what you owe is only what follows.`,
             ...input.customTerms.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean),
           ]
         : [
-        `Your total is ${money(input.totalUsd)}. Every service above is a published flat rate, so this is the whole number, not a starting point.`,
+        adjustment === 0
+          ? `Your total is ${money(input.totalUsd)}. Every service above is a published flat rate, so this is the whole number, not a starting point.`
+          : `Your total is ${money(input.totalUsd)}. That is the services above plus ${adjustment > 0 ? `${money(adjustment)} in agreed extras` : `a ${money(-adjustment)} agreed discount`}, and it is the whole number, not a starting point.`,
         `A deposit of ${money(input.depositUsd)} is due when you accept this agreement. It locks your date, comes off your total, and is non-refundable, because once we hold your date we stop offering it to anyone else.`,
         `The balance is due 24 hours after your wedding start time. A 3 PM wedding means the balance is due by 3 PM the next day. We ask for the balance after the wedding, not before, because you should not pay in full for something that has not happened yet.`,
         `That same 24 hours is your window to tell us anything you were unhappy about. If we fell short, say so in that window and we will adjust the invoice. We would rather fix a number than have you tell your friends we were not worth it.`,
@@ -196,15 +213,14 @@ export type ContractWedding = {
   contractSnapshot: unknown;
 };
 
-/**
- * The agreement text to show for a wedding. Once accepted it comes from the
- * frozen snapshot, never the live row: what they agreed to is what anyone
- * sees forever, the couple's copy and ours alike.
- */
-export function contractSectionsForWedding(w: ContractWedding): ContractSection[] {
-  const snapshot = w.contractSnapshot as { sections?: ContractSection[] } | null;
-  if (w.contractAcceptedAt && Array.isArray(snapshot?.sections)) return snapshot.sections;
-  return buildContract({
+/** The contract input a wedding row produces today: one place, so every caller agrees. */
+export function contractInputFromWedding(w: Omit<ContractWedding, "contractAcceptedAt" | "contractSnapshot">): ContractInput {
+  const rows = Array.isArray(w.addons) ? (w.addons as { type?: string; fee?: unknown }[]) : [];
+  const fee = (type: string) => {
+    const f = rows.find((r) => r.type === type)?.fee;
+    return typeof f === "number" ? f : null;
+  };
+  return {
     coupleNames: w.coupleNames,
     eventDate: formatEventDate(w.eventDate),
     venueName: w.venueName,
@@ -214,7 +230,64 @@ export function contractSectionsForWedding(w: ContractWedding): ContractSection[
     depositUsd: Number(w.depositAmount),
     customTerms: w.customTerms,
     bartenderStaff: bartenderStaffFromAddons(w.addons),
-  });
+    fees: { acoustic: fee("acoustic_set"), bartender: fee("bar_service") },
+  };
+}
+
+/** The terms a snapshot freezes and staleness is judged on. */
+export function contractTerms(input: ContractInput) {
+  return {
+    services: [...input.services].sort(),
+    totalUsd: input.totalUsd,
+    depositUsd: input.depositUsd,
+    customTerms: input.customTerms?.trim() || null,
+    fees: { acoustic: input.fees?.acoustic ?? null, bartender: input.fees?.bartender ?? null },
+    bartenderStaff: input.services.includes("bartender") ? (input.bartenderStaff === 2 ? 2 : 1) : null,
+  };
+}
+
+
+/**
+ * True when the couple accepted terms that no longer match the booking: the
+ * total, deposit, services, fees or custom arrangement changed after they
+ * signed (an "Edit money" after acceptance). Their frozen copy then disagrees
+ * with the invoice, and the agreement must be reissued for them to accept.
+ */
+export function contractIsStale(w: ContractWedding): boolean {
+  if (!w.contractAcceptedAt) return false;
+  const snap = w.contractSnapshot as {
+    totalUsd?: unknown;
+    depositUsd?: unknown;
+    services?: unknown;
+    terms?: ReturnType<typeof contractTerms>;
+    sections?: ContractSection[];
+  } | null;
+  if (!snap || !Array.isArray(snap.sections)) return false;
+  const now = contractTerms(contractInputFromWedding(w));
+  // Snapshots from 2026-11-23 on carry the full terms.
+  if (snap.terms) return JSON.stringify(snap.terms) !== JSON.stringify(now);
+  // Older snapshots: total, deposit and services were stored; a custom
+  // arrangement is recoverable verbatim from the cost section.
+  if (typeof snap.totalUsd === "number" && snap.totalUsd !== now.totalUsd) return true;
+  if (typeof snap.depositUsd === "number" && snap.depositUsd !== now.depositUsd) return true;
+  if (Array.isArray(snap.services) && [...snap.services].sort().join() !== now.services.join()) return true;
+  const cost = snap.sections.find((x) => x.heading === "What it costs, and when it is due")?.paragraphs ?? [];
+  const oldCustom = cost[0]?.startsWith(BESPOKE_LEAD) ? cost.slice(1).join("\n") : null;
+  const newCustom = now.customTerms
+    ? now.customTerms.split(/\n+/).map((l) => l.trim()).filter(Boolean).join("\n")
+    : null;
+  return oldCustom !== newCustom;
+}
+
+/**
+ * The agreement text to show for a wedding. Once accepted it comes from the
+ * frozen snapshot, never the live row: what they agreed to is what anyone
+ * sees forever, the couple's copy and ours alike.
+ */
+export function contractSectionsForWedding(w: ContractWedding): ContractSection[] {
+  const snapshot = w.contractSnapshot as { sections?: ContractSection[] } | null;
+  if (w.contractAcceptedAt && Array.isArray(snapshot?.sections)) return snapshot.sections;
+  return buildContract(contractInputFromWedding(w));
 }
 
 /** The version a wedding's agreement text carries: the accepted one, or the current. */
