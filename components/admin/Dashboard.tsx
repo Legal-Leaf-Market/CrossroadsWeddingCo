@@ -1,5 +1,6 @@
 import ArchiveButton from "@/components/admin/ArchiveButton";
 import BookingEditor from "@/components/admin/BookingEditor";
+import LeadSourceEditor from "@/components/admin/LeadSourceEditor";
 import type { AdminCall, AdminData, AdminWedding } from "@/lib/admin";
 import CommandCenter from "@/components/admin/CommandCenter";
 import CorporateBookingForm from "@/components/admin/CorporateBookingForm";
@@ -154,14 +155,12 @@ function WeddingCard({
         </p>
       )}
       {wedding.notes && <p className="mt-3 text-sm text-ink/60">{wedding.notes}</p>}
-      {(wedding.leadSource || wedding.leadSrcTag) && (
-        <p className="mt-2 text-xs text-ink/50">
-          Found us via:{" "}
-          {leadSourceLabel(wedding.leadSource) ?? "not answered"}
-          {wedding.leadSourceDetail && ` (${wedding.leadSourceDetail})`}
-          {wedding.leadSrcTag && ` \u00b7 link tag: ${wedding.leadSrcTag}`}
-        </p>
-      )}
+      <LeadSourceEditor
+        key={`${wedding.id}:${wedding.leadSource ?? ""}:${wedding.leadSourceDetail ?? ""}`}
+        wedding={wedding}
+        basePath={basePath}
+        demo={basePath === "/admin/preview"}
+      />
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <a

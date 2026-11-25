@@ -1297,6 +1297,18 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **"Found us via" is editable on the booking card (2026-11-25, Jacob: mark which WeddingPro side
+  each booking came from, "I don't have that marked on all of them").** Bookings made before the
+  "How did you find us?" question show "not answered", and most of them came through WeddingPro.
+  `components/admin/LeadSourceEditor.tsx` puts a "Change" link on the card's "Found us via" line
+  (now shown on every card): the same `LEAD_SOURCES` list, plus the detail box for friend, venue,
+  vendor and other. It PATCHes only `leadSource`/`leadSourceDetail` to
+  `/api/admin/[key]/wedding/[id]`, which saves them through `updateAdminLeadSource` (audited as
+  `booking.lead_source`) and returns before `updateAdminWedding`, so a source change never
+  reissues a signed agreement or reposts the books. Telling the WeddingPro side apart: a thread
+  address under `/inbox/tk/` is The Knot and `/inbox/gp/` is WeddingWire (matched every booking
+  that already had a source). This session had no package install, so the Netlify deploy preview
+  build is the type-check.
 - **Rabbit's Balloons gets its own page, Color Studio and a real inquiry (2026-11-25, Jacob:
   "now do that same for rabbit's balloons").** `/partners/rabbits-balloons` is its own page
   file (`customPage`), ported from the preview site Heart of Columbus built for Rachael Starr
