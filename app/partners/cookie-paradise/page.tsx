@@ -135,15 +135,15 @@ export default async function CookieParadisePage() {
               </div>
               <div className={s.quickLinks}>
                 <a href="#visit">
-                  <strong>Pick up on 25th Street <span aria-hidden="true">↗</span></strong>
+                  <strong>Pick up on 25th Street <span className={s.arrow} aria-hidden="true" /></strong>
                   <span>Holiday Center parking lot</span>
                 </a>
                 <a href="#fulfillment">
-                  <strong>Local delivery &amp; Indiana shipping <span aria-hidden="true">↗</span></strong>
+                  <strong>Local delivery &amp; Indiana shipping <span className={s.arrow} aria-hidden="true" /></strong>
                   <span>Choose at Cookie Paradise checkout</span>
                 </a>
                 <a href="#corporate">
-                  <strong>Gifts &amp; office catering <span aria-hidden="true">↗</span></strong>
+                  <strong>Gifts &amp; office catering <span className={s.arrow} aria-hidden="true" /></strong>
                   <span>Cookie boxes for teams and clients</span>
                 </a>
               </div>
@@ -159,7 +159,7 @@ export default async function CookieParadisePage() {
                   <p className={s.sub}>Add cookies or gift boxes here, then review and pay on the Cookie Paradise store.</p>
                 </div>
                 <div className={s.menuActions}>
-                  <a className={s.textLink} href={CP.links.shop}>Full shop <span aria-hidden="true">↗</span></a>
+                  <a className={s.textLink} href={CP.links.shop}>Full shop <span className={s.arrow} aria-hidden="true" /></a>
                   <OrderButton />
                 </div>
               </div>
@@ -180,7 +180,7 @@ export default async function CookieParadisePage() {
                     <div key={title}><dt>{title}</dt><dd>{text}</dd></div>
                   ))}
                 </dl>
-                <a className={s.btn} href={CP.links.weddings}>Request an event quote <span aria-hidden="true">↗</span></a>
+                <a className={s.btn} href={CP.links.weddings}>Request an event quote <span className={s.arrow} aria-hidden="true" /></a>
                 <p className={s.fine}>Share your date and guest count. Cookie Paradise will confirm flavors, pricing, and availability.</p>
               </div>
               <Planner quoteUrl={CP.links.weddings} />
@@ -195,7 +195,7 @@ export default async function CookieParadisePage() {
                   <h2 id="corporate-title">Make someone’s workday.</h2>
                   <p>Bring cookies to a team meeting, send a thank-you to a client, or put something sweet on the table at your holiday party.</p>
                   <div className={s.cta}>
-                    <a className={`${s.btn} ${s.honeyBtn}`} href={CP.links.corporate}>Ask about catering <span aria-hidden="true">↗</span></a>
+                    <a className={`${s.btn} ${s.honeyBtn}`} href={CP.links.corporate}>Ask about catering <span className={s.arrow} aria-hidden="true" /></a>
                     <a className={s.caterCall} href={`tel:${CP.tel}`}>Call {CP.phone}</a>
                   </div>
                 </div>
@@ -215,7 +215,7 @@ export default async function CookieParadisePage() {
                 <h2 id="story-title">The Lê family</h2>
                 <p className={s.sub}>The Lês moved from Vietnam to Columbus in November 2024. They named Cookie Paradise for their dream of making a home here and sharing a little of that joy in every cookie.</p>
                 <blockquote>“The name ‘Cookie Paradise’ is symbolic of our family’s dream.”</blockquote>
-                <a className={s.textLink} href={CP.links.about}>Read the family’s story <span aria-hidden="true">↗</span></a>
+                <a className={s.textLink} href={CP.links.about}>Read the family’s story <span className={s.arrow} aria-hidden="true" /></a>
               </div>
             </div>
           </section>
@@ -231,7 +231,7 @@ export default async function CookieParadisePage() {
                   <OpenStatus hours={CP.hours} fallback="Tuesday to Saturday, from 10 AM" />
                   <HoursTable hours={CP.hours} />
                   <div className={s.cta}>
-                    <a className={s.btn} href={CP.links.directions}>Get directions <span aria-hidden="true">↗</span></a>
+                    <a className={s.btn} href={CP.links.directions}>Get directions <span className={s.arrow} aria-hidden="true" /></a>
                     <a className={`${s.btn} ${s.ghost}`} href={`tel:${CP.tel}`}>Call {CP.phone}</a>
                   </div>
                   <ul className={s.socialLinks} aria-label="Contact and social links">

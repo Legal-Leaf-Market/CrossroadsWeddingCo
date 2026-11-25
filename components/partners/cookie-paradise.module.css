@@ -98,6 +98,33 @@
 .sm { min-height: 44px; padding: 8px 15px; font-size: 15px; }
 .added { background: var(--berry); border-color: var(--berry); }
 .textLink { font-weight: 700; }
+.arrow {
+  display: inline-block;
+  position: relative;
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  vertical-align: baseline;
+}
+.arrow::before, .arrow::after {
+  content: "";
+  position: absolute;
+}
+.arrow::before {
+  inset: 0 0 auto auto;
+  width: 6px;
+  height: 6px;
+  border-top: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+}
+.arrow::after {
+  top: 7px;
+  left: 1px;
+  width: 12px;
+  border-top: 1px solid currentColor;
+  transform: rotate(-45deg);
+  transform-origin: 3px 0;
+}
 
 .hero {
   background: radial-gradient(ellipse at 75% 42%, #f8deae, transparent 54%), #fbecda;
