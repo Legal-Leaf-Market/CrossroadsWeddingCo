@@ -12,8 +12,20 @@ import { BROCHURES, shareUrl } from "@/lib/brochures";
 // pages where a visitor is mid-task or the page is private: booking, the
 // planning hub, admin, live and guest views, and the brochure pages themselves.
 // /partners/cookie-paradise is a shopping cart (2026-11-25): its order button
-// owns the bottom right corner there.
-const HIDDEN_ON = ["/admin", "/hub", "/live", "/schedule", "/book", "/brochures", "/ig-studio", "/messaging", "/partners/cookie-paradise"];
+// owns the bottom right corner there. /partners/wild-bramble-catering is a
+// menu builder: on phones its "Review and send" bar owns the bottom edge.
+const HIDDEN_ON = [
+  "/admin",
+  "/hub",
+  "/live",
+  "/schedule",
+  "/book",
+  "/brochures",
+  "/ig-studio",
+  "/messaging",
+  "/partners/cookie-paradise",
+  "/partners/wild-bramble-catering",
+];
 
 const LINES = [
   "Share with your boss",

@@ -20,6 +20,11 @@
 // Since 2026-11-25 Rabbit's Balloons also has its own page file
 // (app/partners/rabbits-balloons): the Color Studio and a real inquiry form,
 // ported from the preview site Heart of Columbus built for Rachael.
+// Wild Bramble Catering (2026-11-25): its own website, read 2026-11-25, and
+// its Heart of Columbus listing; every fact and source is in
+// lib/wild-bramble.ts, and its page is its own file
+// (app/partners/wild-bramble-catering): a menu builder that sends straight
+// to their inbox. They have not reviewed the page.
 
 import { CONTACT_EMAIL } from "@/lib/site";
 
@@ -137,6 +142,27 @@ export const PARTNERS: Partner[] = [
     ],
     source: "Rachael Starr, owner",
     checked: "2026-11-15",
+  },
+  {
+    slug: "wild-bramble-catering",
+    name: "Wild Bramble Catering",
+    kind: "Seasonal, from-scratch catering in Columbus",
+    intro:
+      "A small Columbus catering studio, cooking since 2020 for weddings, corporate tables and private gatherings of 10 to 100 guests, with weekly family meal prep and meals you can send to someone who needs one.",
+    forEvents: [
+      "Weddings: multi-course dinners, family-style spreads and grazing tables.",
+      "Corporate: lunches, boardroom spreads and client gatherings.",
+      "Private events: intimate dinners, birthdays and showers, at home or at your venue.",
+      "Dietary needs: they cook around Alpha-Gal, gluten and FODMAP, and offer vegetarian and vegan dishes.",
+    ],
+    links: [
+      { label: "Request a quote", href: "https://www.wildbramblecatering.com/contact", primary: true },
+      { label: "Their website", href: "https://www.wildbramblecatering.com/" },
+    ],
+    customPage: true,
+    badge: "Build a menu and send it here",
+    source: "https://www.wildbramblecatering.com/",
+    checked: "2026-11-25",
   },
 ];
 

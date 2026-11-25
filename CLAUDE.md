@@ -1297,6 +1297,33 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Wild Bramble Catering gets its own page and a menu builder (2026-11-25, Jacob: "Make a page
+  for Wild Bramble now ... Catering in Columbus ... They are on HOC").**
+  `/partners/wild-bramble-catering` is its own page file (`customPage`) with its own scoped look
+  (`components/partners/wild-bramble.module.css`, Cormorant Garamond and DM Sans, blackberry and
+  sage). Facts are in `lib/wild-bramble.ts`, each from their own website read 2026-11-25 (home,
+  about, menu, meal prep, gift a meal, contact, availability) plus their Heart of Columbus
+  listing: est. 2020, 10 to 100 guests, weddings, corporate and private events, cooking around
+  Alpha-Gal, gluten and FODMAP, farms within a day's drive and their own 75 acres, the studio at
+  4389 North Long Rd, weekly meal prep (their own ~$580 and ~$290 a month estimates) and gift
+  meals. No owner is named (their site names none), no photos of theirs are used (the bramble is
+  our SVG), their words are paraphrased except one short quote, and dish names are theirs as
+  written. Their contact section also shows 812-374-6011; 463-202-6046 is shown because it is on
+  every other page and on Heart of Columbus. **They have no store, so the "order" is a menu**:
+  `BrambleMenu` lists 27 dishes from their published menu by their own course names; a visitor
+  taps dishes and fills in their quote form's own fields (event type, date, time, guests, place,
+  service style, budget, the six dietary badges, allergies, notes), then "Email this menu to
+  Wild Bramble" opens a mailto addressed to them, or "Copy it for their form". Nothing passes
+  through or is stored by Crossroads. A lead time note follows their stated windows (weddings 4–8
+  months, private dinners 2–4 weeks). On phones a "Review and send" bar follows the picks
+  (the share pop-up is hidden on this page for it); on desktop the panel is sticky and scrolls
+  inside itself. Added: where dinner lands on a Crossroads run sheet (labeled as our
+  suggestions) and neighbor cards for Cookie Paradise and Rabbit's Balloons. Listed in
+  `lib/partners.ts`, the side menu and the sitemap; the partners index copy now names catering.
+  They have NOT reviewed the page. `node --experimental-strip-types
+  scripts/verify-wild-bramble.mjs`. Checked in headless Chromium at 360/390/768/1024/1280 on a
+  local build (no sideways scroll, no console errors, pick and unpick, the exact mailto, copy,
+  the phone send bar, the sticky panel); the Netlify deploy preview is the build.
 - **"Found us via" is editable on the booking card (2026-11-25, Jacob: mark which WeddingPro side
   each booking came from, "I don't have that marked on all of them").** Bookings made before the
   "How did you find us?" question show "not answered", and most of them came through WeddingPro.
