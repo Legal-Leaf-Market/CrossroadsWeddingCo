@@ -55,6 +55,9 @@ export default async function BookingPage({ params }: { params: Promise<{ id: st
       <Link href="/app" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
         &larr; All bookings
       </Link>
+      <Link href={`/app/books/jobs/${b.id}`} className="ml-4 text-sm font-semibold text-terracotta-dark underline underline-offset-2">
+        Booking journal
+      </Link>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="break-words text-3xl text-charcoal">{b.coupleNames}</h1>

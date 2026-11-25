@@ -22,6 +22,7 @@ import {
 // Every query is scoped by the caller's tenant.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const JOB_SOURCES = ["job_revenue", "job_cost", "hand_deposit", "hand_balance", "commission_closer", "commission_mgmt"];
 type Row = Record<string, unknown>;
 const rows = async <T,>(q: ReturnType<typeof sql>) => (await db.execute(q)).rows as T[];
 
@@ -185,7 +186,7 @@ async function sourceRecord(tenantId: string, ref: string | null): Promise<Sourc
       where t.id = ${id}::uuid and t.tenant_id = ${tenantId}`);
     return { kind: "bank_transaction", id, row: row ?? null };
   }
-  if (["job_revenue", "job_cost", "hand_deposit", "hand_balance", "commission_closer", "commission_mgmt"].includes(type)) {
+  if (JOB_SOURCES.includes(type)) {
     const [row] = await rows<Row>(sql`
       select id::text, couple_names as names, event_date::text as "eventDate", total_amount::text as total, status,
              cancelled_at as "cancelledAt", archived_at as "archivedAt", package_type as "packageType",
@@ -216,7 +217,7 @@ function auditEntityFor(ref: string | null): { type: string; id: string }[] {
   const type = ref.slice(0, ref.indexOf(":"));
   const id = ref.slice(ref.indexOf(":") + 1);
   if (type === "bank_transaction") return [{ type: "bank_transaction", id }];
-  if (["job_revenue", "job_cost", "hand_deposit", "hand_balance", "commission_closer", "commission_mgmt"].includes(type)) return [{ type: "job", id }];
+  if (JOB_SOURCES.includes(type)) return [{ type: "job", id }];
   if (type === "expense_claim") return [{ type: "expense_claim", id }];
   return [];
 }
@@ -275,4 +276,36 @@ export async function liveEntriesFor(tenantId: string, refs: string[]): Promise<
       and source_ref in (${sql.join(clean.map((x) => sql`${x}`), sql`, `)})`);
   for (const x of r) out.set(x.ref, x.id);
   return out;
+}
+
+/** The posted, voided, and adjusting entries that can be traced to one booking. */
+export async function jobJournalTrail(tenantId: string, jobId: string) {
+  if (!UUID_RE.test(jobId)) return null;
+  const job = await sourceRecord(tenantId, `job_revenue:${jobId}`);
+  if (job.kind !== "job" || !job.row) return null;
+
+  const entries = await rows<{
+    id: string; date: string; memo: string; status: string; sourceType: string;
+    adjustsPeriod: string | null;
+  }>(sql`
+    with refs(ref) as (
+      values ${sql.join(JOB_SOURCES.map((type) => sql`(${`${type}:${jobId}`}::text)`), sql`, `)}
+      union
+      select 'bank_transaction:' || id::text
+      from bank_transactions where tenant_id = ${tenantId} and booking_id = ${jobId}::uuid
+      union
+      select 'expense_claim:' || id::text
+      from expense_claims where tenant_id = ${tenantId} and wedding_id = ${jobId}::uuid
+    )
+    select e.id::text, e.entry_date::text as date, e.memo, e.status,
+           e.source_type as "sourceType", e.adjusts_period::text as "adjustsPeriod"
+    from journal_entries e
+    where e.tenant_id = ${tenantId}
+      and (e.source_ref in (select ref from refs)
+        or exists (
+          select 1 from journal_lines l
+          where l.entry_id = e.id and l.tenant_id = e.tenant_id and l.sub_ref = ${`job:${jobId}`}
+        ))
+    order by e.entry_date desc, e.created_at desc, e.id desc`);
+  return { job: job.row, entries };
 }

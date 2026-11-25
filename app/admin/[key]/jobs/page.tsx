@@ -207,7 +207,12 @@ export default async function JobsPage({ params }: { params: Promise<{ key: stri
                         {j.missing > 0 && ` · ${j.missing} cost${j.missing === 1 ? "" : "s"} not set`}
                         {j.undeposited ? ` · ${centsLabel(j.undeposited)} paid by hand, not deposited yet` : ""}
                       </span>
-                      <BooksExcludeButton adminKey={key} weddingId={j.id} excluded={false} />
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <a href={`/app/books/jobs/${j.id}`} className="text-xs font-semibold text-terracotta-dark underline underline-offset-2">
+                          Booking journal
+                        </a>
+                        <BooksExcludeButton adminKey={key} weddingId={j.id} excluded={false} />
+                      </div>
                     </td>
                     <td className="py-1.5 text-right">{centsLabel(j.revenue)}</td>
                     <td className="py-1.5 text-right">{centsLabel(j.cost)}</td>

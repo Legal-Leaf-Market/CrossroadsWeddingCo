@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, desc, eq, type SQL } from "drizzle-orm";
+import { and, desc, eq, lt, type SQL } from "drizzle-orm";
 import AccountShell from "@/components/account/AccountShell";
 import { getBooksWorkspace } from "@/lib/auth";
 import { verifyAudit } from "@/lib/audit";
@@ -15,23 +15,48 @@ import { PLATFORM_NAME } from "@/lib/tenant-constants";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: `Audit log | ${PLATFORM_NAME}`, robots: { index: false, follow: false } };
 
-function short(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  const s = JSON.stringify(v);
-  return s.length > 400 ? `${s.slice(0, 400)}...` : s;
+const PAGE_SIZE = 100;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const linkClass = "text-terracotta-dark underline underline-offset-2";
+
+function auditHref(type?: string, id?: string, before?: number) {
+  const query = new URLSearchParams();
+  if (type) query.set("type", type);
+  if (id) query.set("id", id);
+  if (before) query.set("before", String(before));
+  const search = query.toString();
+  return search ? `/app/books/audit?${search}` : "/app/books/audit";
 }
 
-export default async function AuditPage({ searchParams }: { searchParams: Promise<{ type?: string; id?: string }> }) {
+function recordHref(type: string, id: string | null) {
+  if (!id || !UUID.test(id)) return null;
+  if (type === "job") return `/app/books/jobs/${id}`;
+  if (type === "journal_entry") return `/app/books/entries/${id}`;
+  return null;
+}
+
+export default async function AuditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string | string[]; id?: string | string[]; before?: string | string[] }>;
+}) {
   const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
-  const { type, id } = await searchParams;
+  const query = await searchParams;
+  const type = typeof query.type === "string" ? query.type.slice(0, 40) : undefined;
+  const id = typeof query.id === "string" ? query.id.slice(0, 80) : undefined;
+  const before = typeof query.before === "string" && /^[1-9][0-9]*$/.test(query.before) ? Number(query.before) : 0;
+  const cursor = Number.isSafeInteger(before) ? before : 0;
   const conds: SQL[] = [eq(auditLog.tenantId, ws.tenant.id)];
-  if (type) conds.push(eq(auditLog.entityType, type.slice(0, 40)));
-  if (id) conds.push(eq(auditLog.entityId, id.slice(0, 80)));
-  const [rows, chain] = await Promise.all([
-    db.select().from(auditLog).where(and(...conds)).orderBy(desc(auditLog.id)).limit(300),
+  if (type) conds.push(eq(auditLog.entityType, type));
+  if (id) conds.push(eq(auditLog.entityId, id));
+  if (cursor > 0) conds.push(lt(auditLog.id, cursor));
+  const [records, chain] = await Promise.all([
+    db.select().from(auditLog).where(and(...conds)).orderBy(desc(auditLog.id)).limit(PAGE_SIZE + 1),
     verifyAudit(ws.tenant.id),
   ]);
+  const rows = records.slice(0, PAGE_SIZE);
+  const next = records.length > PAGE_SIZE ? rows.at(-1)?.id : undefined;
 
   return (
     <AccountShell signedIn house={ws.tenant.kind === "house"}>
@@ -40,7 +65,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
       </Link>
       <h1 className="mt-2 text-2xl text-charcoal">Audit log</h1>
       <p className="mt-1 text-sm text-ink/60">
-        Who changed what, when, from what to what, and why. Nothing here can be edited or removed, by anyone, including the app.
+        See who made each recorded change, when it happened, and its before-and-after values. The application records changes in an append-only log.
       </p>
       <p className={`mt-3 rounded-xl border p-3 text-sm ${chain.brokenAt ? "border-terracotta bg-white text-terracotta-dark" : "border-parchment bg-white text-sage-dark"}`}>
         {chain.brokenAt ? `Chain broken at row ${chain.brokenAt}: ${chain.why}` : `Chain intact: all ${chain.rows.toLocaleString("en-US")} rows check out.`}
@@ -66,29 +91,44 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-parchment/60 align-top last:border-0">
-                <td className="px-3 py-2 tabular-nums text-ink/50">{r.id}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-ink/70">{r.at.toLocaleString("en-US", { timeZone: "America/Indiana/Indianapolis" })}</td>
-                <td className="px-3 py-2 text-charcoal">{r.actor}</td>
-                <td className="px-3 py-2 font-semibold text-charcoal">{r.action}</td>
-                <td className="px-3 py-2">
-                  <Link href={`/app/books/audit?type=${encodeURIComponent(r.entityType)}${r.entityId ? `&id=${encodeURIComponent(r.entityId)}` : ""}`} className="text-terracotta underline">
-                    {r.entityType}
-                    {r.entityId ? ` ${r.entityId.slice(0, 12)}` : ""}
-                  </Link>
-                </td>
-                <td className="max-w-[420px] break-words px-3 py-2 text-ink/70">
-                  {r.reason && <span className="block">Why: {r.reason}</span>}
-                  {r.cause && <span className="block">Cause: {r.cause}</span>}
-                  {r.before != null && <span className="block">Before: {short(r.before)}</span>}
-                  {r.after != null && <span className="block">After: {short(r.after)}</span>}
-                </td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const record = recordHref(r.entityType, r.entityId);
+              return (
+                <tr key={r.id} className="border-b border-parchment/60 align-top last:border-0">
+                  <td className="px-3 py-2 tabular-nums text-ink/50">{r.id}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-ink/70">{r.at.toLocaleString("en-US", { timeZone: "America/Indiana/Indianapolis" })}</td>
+                  <td className="px-3 py-2 text-charcoal">{r.actor}</td>
+                  <td className="px-3 py-2 font-semibold text-charcoal">{r.action}</td>
+                  <td className="px-3 py-2">
+                    <Link href={auditHref(r.entityType, r.entityId ?? undefined)} className={linkClass}>
+                      {r.entityType}
+                      {r.entityId ? ` ${r.entityId.slice(0, 12)}` : ""}
+                    </Link>
+                    {record && <Link href={record} className={`mt-1 block ${linkClass}`}>Open record</Link>}
+                  </td>
+                  <td className="max-w-[420px] break-words px-3 py-2 text-ink/70">
+                    {r.reason && <span className="block">Why: {r.reason}</span>}
+                    {r.cause && <span className="block">Cause: {r.cause}</span>}
+                    {(r.before != null || r.after != null) && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer font-semibold">Before and after</summary>
+                        <pre className="mt-1 whitespace-pre-wrap break-all rounded bg-cream p-2">{JSON.stringify({ before: r.before, after: r.after }, null, 2)}</pre>
+                      </details>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {rows.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-ink/70">No audit entries match this view.</td></tr>}
           </tbody>
         </table>
       </div>
+      {(next || cursor > 0) && (
+        <nav aria-label="Audit log pages" className="mt-3 flex gap-4 text-sm">
+          {cursor > 0 && <Link href={auditHref(type, id)} className={linkClass}>Newest entries</Link>}
+          {next && <Link href={auditHref(type, id, next)} className={linkClass}>Older entries</Link>}
+        </nav>
+      )}
     </AccountShell>
   );
 }
