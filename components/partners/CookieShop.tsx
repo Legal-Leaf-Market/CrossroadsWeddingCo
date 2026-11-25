@@ -153,9 +153,9 @@ export function CookieShop({
   return (
     <Ctx.Provider value={api}>
       {children}
-      {mounted && n > 0 && !open && (
-        <button type="button" className={`${s.btn} ${s.fab}`} onClick={() => setOpen(true)} aria-label={`Your order, ${n} items`}>
-          <span aria-hidden="true">🍪</span> Your order <b className={s.count}>{n}</b>
+      {mounted && n > 0 && (
+        <button type="button" className={`${s.btn} ${s.fab}`} onClick={() => setOpen(true)} aria-label={`Your order, ${n} ${n === 1 ? "item" : "items"}`}>
+          Your order <b className={s.count}>{n}</b>
         </button>
       )}
       <Drawer open={open} onClose={() => setOpen(false)} cart={cart} setCart={setCart} origin={origin} />
@@ -401,7 +401,7 @@ function AddButton({ item, variant, className, label = "Add to order" }: { item:
       type="button"
       className={`${className || `${s.btn} ${s.sm}`} ${n ? s.added : ""}`}
       onClick={() => add(item, variant)}
-      aria-label={n ? `${n} in your order. Add one more ${item.title}` : `${label}: ${item.title}`}
+      aria-label={n ? `Added ×${n}. Add one more ${item.title}` : `${label}: ${item.title}`}
     >
       {n ? `Added ×${n}` : label}
     </button>
@@ -446,15 +446,15 @@ function CookieCard({ item }: { item: ShopItem }) {
 
 export function MenuGrid({ shopUrl }: { shopUrl: string }) {
   const { items } = useShop();
-  const [tab, setTab] = useState<"all" | "cookies" | "boxes">("all");
   const boxes = items.filter(isBox);
   const singles = items.filter((i) => !isBox(i));
+  const [tab, setTab] = useState<"all" | "cookies" | "boxes">(singles.length ? "cookies" : "all");
   const shown = tab === "boxes" ? boxes : tab === "cookies" ? singles : [...singles, ...boxes];
   if (!items.length) {
     return (
       <div className={s.grid}>
         <p className={s.empty}>
-          The menu loads from the Cookie Paradise store, and it didn&rsquo;t answer just now.{" "}
+          The menu is temporarily unavailable here.{" "}
           <a href={shopUrl} target="_blank" rel="noopener">
             See today&rsquo;s cookies on cookieparadise.co
           </a>
@@ -470,7 +470,7 @@ export function MenuGrid({ shopUrl }: { shopUrl: string }) {
   ];
   return (
     <>
-      <div className={s.tabs} role="group" aria-label="Show">
+      <div className={s.tabs} role="group" aria-label="Filter the cookie menu">
         {tabs
           .filter((t) => t.n > 0)
           .map((t) => (
@@ -480,7 +480,7 @@ export function MenuGrid({ shopUrl }: { shopUrl: string }) {
             </button>
           ))}
       </div>
-      <div className={s.grid} aria-live="polite">
+      <div className={s.grid}>
         {shown.map((it) => (
           <CookieCard key={it.id} item={it} />
         ))}
@@ -505,7 +505,7 @@ function HolidayCard({ item }: { item: ShopItem }) {
         <b>{item.title}</b>
         <span className={s.holidayPrice}>{priceLabel(item)}</span>
         <VariantPick item={item} value={pick} onChange={setPick} light />
-        <div style={{ marginTop: 6 }}>
+        <div>
           <AddButton item={item} variant={v} className={`${s.btn} ${s.sm} ${s.honeyBtn}`} label="Add" />
         </div>
       </div>
@@ -517,7 +517,7 @@ function TdayAdd({ item }: { item: ShopItem }) {
   const [pick, setPick] = useState(0);
   const v = item.variants[pick] || item.variants[0];
   return (
-    <div style={{ display: "grid", gap: 8, minWidth: 190 }}>
+    <div className={s.tdayAction}>
       <VariantPick item={item} value={pick} onChange={setPick} light />
       <AddButton item={item} variant={v} className={`${s.btn} ${s.light}`} label="Add a box" />
     </div>
@@ -534,14 +534,9 @@ export function Seasonal({ thanksgiving }: { thanksgiving: { until: string; text
     <div className={s.season}>
       {showTday && (
         <div className={s.seasonBox}>
-          <div className={s.leaf} aria-hidden="true">
-            🍂
-          </div>
           <div>
             <h3>Thanksgiving cookie boxes</h3>
-            <p>
-              <span className={s.flav}>{thanksgiving.text}</span>
-            </p>
+            <p>{thanksgiving.text}</p>
           </div>
           {tday ? (
             <TdayAdd item={tday} />
@@ -554,11 +549,8 @@ export function Seasonal({ thanksgiving }: { thanksgiving: { until: string; text
       )}
       {holiday.length > 0 && (
         <div className={s.holiday}>
-          <p className={s.kicker} style={{ color: "#fcd34d", position: "relative" }}>
-            New on their menu
-          </p>
           <h3>Holiday cookie gift boxes</h3>
-          <p>For clients, neighbors, teachers and the office party. Add them right here and check out with Cookie Paradise.</p>
+          <p>A gift for the host, the neighbors, or everyone at the office.</p>
           <div className={s.holidayRow}>
             {holiday.map((it) => (
               <HolidayCard key={it.id} item={it} />
@@ -577,7 +569,7 @@ export function Seasonal({ thanksgiving }: { thanksgiving: { until: string; text
 export function GiftBoxes() {
   const { items } = useShop();
   const boxes = countedBoxes(items);
-  if (!boxes.length) return null;
+  if (!boxes.length) return <p>Ask Cookie Paradise which gift boxes are available.</p>;
   return (
     <div className={s.boxes}>
       {boxes.map(({ item }) => (
@@ -619,26 +611,26 @@ export function Planner({ quoteUrl }: { quoteUrl: string }) {
     <div className={s.planner}>
       <p className={s.kicker}>Dessert table planner</p>
       <h3>How many cookies for your crowd?</h3>
-      <label className={s.field}>
-        Guests
+      <div className={s.field}>
+        <label htmlFor="cp-guest-count">Guest count</label>
         <span className={s.guestRow}>
           <input
             type="number"
+            id="cp-guest-count"
             min={1}
             max={1000}
             value={guests}
             onChange={(e) => setGuests(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-            aria-label="Number of guests"
           />
           <input type="range" min={10} max={300} step={5} value={Math.min(300, Math.max(10, guests))} onChange={(e) => setGuests(Number(e.target.value))} aria-label="Guests slider" />
         </span>
-      </label>
+      </div>
       <div className={s.field}>
         Cookies per guest
         <div className={s.seg} role="group" aria-label="Cookies per guest">
           {[1, 2, 3].map((n) => (
             <button key={n} type="button" aria-pressed={each === n} onClick={() => setEach(n)}>
-              {n === 1 ? "1, with cake" : n === 2 ? "2, the table" : "3, cookie lovers"}
+              {n === 1 ? "1 · With cake" : n === 2 ? "2 · Dessert table" : "3 · Extra to share"}
             </button>
           ))}
         </div>
@@ -680,7 +672,7 @@ export function Planner({ quoteUrl }: { quoteUrl: string }) {
           </ul>
         ) : (
           <p className={s.fine} style={{ margin: 0 }}>
-            {boxes.length ? "Pick a guest count to see the boxes." : "Their gift boxes are not on the online menu right now, so ask them for a quote."}
+            {boxes.length ? "Pick a guest count to see the boxes." : "Ask Cookie Paradise about boxes for your guest count."}
           </p>
         )}
       </div>
@@ -699,16 +691,15 @@ export function Planner({ quoteUrl }: { quoteUrl: string }) {
               )
             }
           >
-            Add these boxes to my order
+            Add boxes to order
           </button>
         )}
         <a className={`${s.btn} ${s.ghost}`} href={quoteUrl} target="_blank" rel="noopener">
-          Request a wedding quote
+          Get an event quote
         </a>
       </div>
       <p className={s.fine} style={{ margin: "12px 0 0" }}>
-        Our math, at the gift box prices on their online store right now. For a wedding, send Cookie Paradise your date through
-        their quote form: they confirm flavors, pricing and availability, and favors and the trailer are quoted by them.
+        Estimates use current online gift box prices. Cookie Paradise quotes event orders, favors, and the trailer separately.
       </p>
     </div>
   );
