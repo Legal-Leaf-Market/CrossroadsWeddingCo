@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { appointments, leads, serviceAgreements, weddingMessages, weddings } from "@/lib/db/schema";
 import { nameSlug } from "@/lib/hub-constants";
 import { CORPORATE_PACKAGE } from "@/lib/invoice";
+import { contractIsStale } from "@/lib/contract";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 import { auditQuietly } from "@/lib/audit";
 import { ledgerToday, postBankLedgerQuietly } from "@/lib/books/ledger";
@@ -57,6 +58,8 @@ export type AdminWedding = {
   contractAcceptedAt: string | null;
   /** ISO timestamp we countersigned the agreement, null if not yet. */
   contractCountersignedAt: string | null;
+  /** The couple accepted money terms that have since changed (contractIsStale). */
+  contractStale: boolean;
   /** Bespoke arrangement that replaces the agreement's cost section. */
   customTerms: string | null;
   /** Folder slug under public/wedding-art/, or null for the plain look. */
@@ -148,6 +151,7 @@ function toAdminWedding(
     contractCountersignedAt: w.contractCountersignedAt
       ? w.contractCountersignedAt.toISOString()
       : null,
+    contractStale: contractIsStale(w),
     customTerms: w.customTerms,
     artTheme: w.artTheme,
     leadSource: w.leadSource,
@@ -205,6 +209,74 @@ export async function countersignContract(
   const w = await getAdminWeddingRow(weddingId);
   if (!w) return "not_found";
   return "already_signed";
+}
+
+/**
+ * Clear an accepted agreement whose terms no longer match the booking, so it
+ * regenerates from the current money and the couple accepts it again. Same
+ * clearing as clearClientSignature, logged as a reissue. Exported for the
+ * admin agreement page's "Reissue with current terms" button.
+ */
+export async function reissueContract(
+  weddingId: string,
+  reason = "Agreement reissued with current terms from the admin agreement page.",
+): Promise<"ok" | "not_signed" | "not_found"> {
+  return clearAcceptance(weddingId, "contract.reissued", reason);
+}
+
+/**
+ * Undo the couple's acceptance, for when it was typed by someone other than the
+ * couple (2026-11-23: signed by mistake from the admin side while viewing their
+ * hub). Clears only the couple's side so the accept box comes back in their hub;
+ * the company's signature stays, since signing first is allowed. The cleared
+ * name, time and frozen terms go into the audit log, so nothing is lost.
+ */
+export async function clearClientSignature(
+  weddingId: string,
+): Promise<"ok" | "not_signed" | "not_found"> {
+  return clearAcceptance(
+    weddingId,
+    "contract.client_signature_cleared",
+    "Client signature cleared from the admin agreement page so the couple can sign it themselves.",
+  );
+}
+
+async function clearAcceptance(
+  weddingId: string,
+  action: string,
+  reason: string,
+): Promise<"ok" | "not_signed" | "not_found"> {
+  const w = await getAdminWeddingRow(weddingId);
+  if (!w) return "not_found";
+  if (!w.contractAcceptedAt) return "not_signed";
+  const updated = await db
+    .update(weddings)
+    .set({
+      contractVersion: null,
+      contractAcceptedAt: null,
+      contractAcceptedName: null,
+      contractSnapshot: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(weddings.id, weddingId), isHouse, isNotNull(weddings.contractAcceptedAt)))
+    .returning({ id: weddings.id });
+  if (updated.length === 0) return "not_signed";
+  await auditQuietly({
+    tenantId: HOUSE_TENANT_ID,
+    actor: "owner dashboard",
+    action,
+    entityType: "job",
+    entityId: weddingId,
+    before: {
+      contractVersion: w.contractVersion,
+      contractAcceptedAt: w.contractAcceptedAt.toISOString(),
+      contractAcceptedName: w.contractAcceptedName,
+      contractSnapshot: w.contractSnapshot,
+    },
+    after: null,
+    reason,
+  });
+  return "ok";
 }
 
 export async function getAdminData(): Promise<AdminData> {
@@ -402,6 +474,10 @@ export async function updateAdminWedding(
   });
   const [after] = await db.select().from(weddings).where(and(eq(weddings.id, weddingId), isHouse)).limit(1);
   await auditQuietly({ tenantId: HOUSE_TENANT_ID, actor: "owner dashboard", action: "booking.money", entityType: "job", entityId: weddingId, before: pick(before), after: after ? pick(after) : null });
+  // New money on a signed agreement: the couple's frozen copy no longer
+  // matches the invoice. Reissue it so the hub shows the current terms and
+  // asks them to accept again; the old signature and terms go to the audit log.
+  if (after && contractIsStale(after)) await reissueContract(weddingId, "booking money edited after the couple accepted");
   await postBankLedgerQuietly(HOUSE_TENANT_ID, { actor: "owner dashboard", cause: "booking money or status edited" });
   return true;
 }

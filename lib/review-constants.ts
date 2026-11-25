@@ -63,6 +63,9 @@ export type ReviewEvent = {
   theme?: "goth";
   /** A line from the day itself (their own sign), never one we wrote for them. */
   tagline?: string;
+  /** The card photo on /past-events, by src. Absent: the first image. Chosen
+   *  by hand where the first image names the couple (Forge's welcome sign). */
+  cover?: string;
 };
 
 export const REVIEW_EVENTS: ReviewEvent[] = [
@@ -101,6 +104,7 @@ export const REVIEW_EVENTS: ReviewEvent[] = [
     // plus three that center on kids or young bridesmaids (add only if Kat OKs).
     theme: "goth",
     tagline: "'Til We Are Ghosts",
+    cover: `${FO}/vows.jpg`,
     media: [
       { src: `${FO}/welcome-sign.jpg`, kind: "image", numeral: "XVII", label: "The Star", alt: "The welcome sign: black with violet flowers and skeleton hands making a heart around 11.07.2026", width: 1200, height: 1600 },
       { src: `${FO}/getting-ready.jpg`, kind: "image", numeral: "I", label: "Ace of Cups", alt: "The bride getting ready, putting in an earring at the mirror in a white satin robe", width: 1200, height: 1600 },
