@@ -280,7 +280,7 @@ async function clearAcceptance(
 }
 
 export async function getAdminData(): Promise<AdminData> {
-  const [allWeddings, recentLeads, unreadRows, callRows] = await Promise.all([
+  const [allWeddings, recentLeads, unreadRows, callRows, officiantRows, todayRow] = await Promise.all([
     db.select().from(weddings).where(and(isHouse, isNull(weddings.archivedAt))).orderBy(weddings.eventDate),
     db.select().from(leads).where(eq(leads.tenantId, HOUSE_TENANT_ID)).orderBy(desc(leads.createdAt)).limit(10),
     db
@@ -289,7 +289,8 @@ export async function getAdminData(): Promise<AdminData> {
         count: sql<number>`count(*)::int`,
       })
       .from(weddingMessages)
-      .where(sql`${weddingMessages.sender} = 'couple' and ${weddingMessages.readByTeam} = false`)
+      .innerJoin(weddings, eq(weddingMessages.weddingId, weddings.id))
+      .where(and(isHouse, isNull(weddings.archivedAt), eq(weddingMessages.sender, "couple"), eq(weddingMessages.readByTeam, false)))
       .groupBy(weddingMessages.weddingId),
     db
       .select()
@@ -303,20 +304,20 @@ export async function getAdminData(): Promise<AdminData> {
       )
       .orderBy(appointments.startsAt)
       .limit(50),
+    db
+      .select({
+        weddingId: serviceAgreements.weddingId,
+        acceptedAt: serviceAgreements.acceptedAt,
+        countersignedAt: serviceAgreements.countersignedAt,
+        depositPaidAt: serviceAgreements.depositPaidAt,
+      })
+      .from(serviceAgreements)
+      .innerJoin(weddings, eq(serviceAgreements.weddingId, weddings.id))
+      .where(and(isHouse, isNull(weddings.archivedAt), eq(serviceAgreements.kind, "officiant"), isNull(serviceAgreements.cancelledAt))),
+    db.execute(sql`select current_date::text as today`),
   ]);
   const unreadByWedding = new Map(unreadRows.map((r) => [r.weddingId, r.count]));
-  const officiantRows = await db
-    .select({
-      weddingId: serviceAgreements.weddingId,
-      acceptedAt: serviceAgreements.acceptedAt,
-      countersignedAt: serviceAgreements.countersignedAt,
-      depositPaidAt: serviceAgreements.depositPaidAt,
-    })
-    .from(serviceAgreements)
-    .where(and(eq(serviceAgreements.kind, "officiant"), isNull(serviceAgreements.cancelledAt)));
   const officiantByWedding = new Map(officiantRows.map((r) => [r.weddingId, r]));
-
-  const todayRow = await db.execute(sql`select current_date::text as today`);
   const today = String(todayRow.rows[0]?.today ?? new Date().toISOString().slice(0, 10));
 
   const upcoming: AdminWedding[] = [];

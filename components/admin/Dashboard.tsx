@@ -3,6 +3,7 @@ import BookingEditor from "@/components/admin/BookingEditor";
 import LeadSourceEditor from "@/components/admin/LeadSourceEditor";
 import type { AdminCall, AdminData, AdminWedding } from "@/lib/admin";
 import CommandCenter from "@/components/admin/CommandCenter";
+import WeddingProBookings from "@/components/admin/WeddingProBookings";
 import CorporateBookingForm from "@/components/admin/CorporateBookingForm";
 import PlatformPanel from "@/components/admin/PlatformPanel";
 import type { PlatformStats } from "@/lib/platform-stats";
@@ -58,7 +59,7 @@ function WeddingCard({
   const adminKey = basePath.split("/").pop() ?? "";
   const d = daysOut(wedding.eventDate);
   return (
-    <div className="rounded-2xl border border-parchment bg-white p-5">
+    <div id={`booking-${wedding.id}`} className="scroll-mt-24 rounded-2xl border border-parchment bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-lg text-charcoal">{wedding.coupleNames}</h3>
@@ -399,8 +400,9 @@ const linkClass = "whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium 
 
 export default function Dashboard({ data, basePath, platform = null }: { data: AdminData; basePath: string; platform?: PlatformStats | null }) {
   const today = localDate(new Date());
+  const weddings = [...data.upcoming, ...data.past];
   const insights = buildInsights({
-    weddings: [...data.upcoming, ...data.past],
+    weddings,
     calls: data.calls,
     callDates: Object.fromEntries(data.calls.map((c) => [c.id, localDate(new Date(c.startsAt))])),
     today,
@@ -411,7 +413,8 @@ export default function Dashboard({ data, basePath, platform = null }: { data: A
     { href: "#upcoming", label: `Upcoming (${data.upcoming.length})` },
     ...(data.upcoming.some((w) => w.packageType !== "corporate" && w.status !== "cancelled") ? [{ href: "#ready", label: "Ready?" }] : []),
     { href: "#calls", label: `Calls (${data.calls.length})` },
-    ...(data.upcoming.length + data.past.length > 0 ? [{ href: "#sources", label: "Sources" }] : []),
+    ...(weddings.length > 0 ? [{ href: "#sources", label: "Sources" }] : []),
+    ...(basePath !== "/admin/preview" ? [{ href: "#weddingpro-bookings", label: "WeddingPro" }] : []),
     ...(data.past.length > 0 ? [{ href: "#past", label: "Past" }] : []),
   ];
   // The house books sign in by email (HOUSE_BOOKS_EMAILS), not by this key.
@@ -498,7 +501,8 @@ export default function Dashboard({ data, basePath, platform = null }: { data: A
         <Readiness weddings={data.upcoming} />
         <CallList calls={data.calls} />
         <CorporateBookingForm basePath={basePath} />
-        <SourceTally weddings={[...data.upcoming, ...data.past]} />
+        <SourceTally weddings={weddings} />
+        {basePath !== "/admin/preview" && <WeddingProBookings weddings={weddings} />}
         <PlatformPanel stats={platform} />
 
         {data.leads.length > 0 && (
