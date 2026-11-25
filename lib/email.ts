@@ -470,3 +470,45 @@ export async function sendHubLinks(input: {
     return false;
   }
 }
+
+/**
+ * A balloon (or other partner) inquiry from a partner page
+ * (/partners/rabbits-balloons, 2026-11-25). The partner has no public inbox
+ * yet, so it comes to the owner to pass on; reply-to is the person who asked,
+ * when they gave an email. True only when Resend accepted it.
+ */
+export async function sendPartnerInquiry(input: {
+  partnerName: string;
+  ownerName: string;
+  name: string;
+  contact: string;
+  replyTo?: string;
+  lines: [string, string][];
+  pageUrl: string;
+}): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return false;
+  try {
+    const { error } = await new Resend(key).emails.send({
+      from: FROM,
+      to: NOTIFY_TO,
+      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+      subject: `${input.partnerName} inquiry from ${input.name}`,
+      text: [
+        `${input.name} asked about ${input.partnerName} from ${input.pageUrl}.`,
+        `Pass it to ${input.ownerName}, or reply${input.replyTo ? " to this email" : ""} to connect them.`,
+        ``,
+        `Contact: ${input.contact}`,
+        ...input.lines.filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`),
+      ].join("\n"),
+    });
+    if (error) {
+      console.error("[email] partner inquiry failed:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[email] partner inquiry failed:", err);
+    return false;
+  }
+}
