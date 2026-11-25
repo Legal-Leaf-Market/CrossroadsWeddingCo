@@ -1498,6 +1498,12 @@ decisions absorbed from it:
   NOT verified in a browser: the close page's buttons with real signed-in sessions (the rules
   behind them are covered by the verify script). Open items are listed at the end of the spec and
   in `docs/handoff/CLAUDE.md`.
+- **Homepage shows Forge on 4th first (2026-11-13, Jacob: "put forge on fourth photos and videos
+  on the front page").** `FromOurEvents` lists every event with media, newest first: the latest
+  gets six tiles (2 columns on phones, 3 on desktop), earlier ones four (2 and 4), all 3:4 with
+  videos inline (poster, controls, `preload="none"`). What shows is the `home: true` flag on each
+  `REVIEW_EVENTS` item (no flags: the first few). Forge on 4th has no video in the repo yet; when
+  Jacob sends one, prepare it like the Valle Vista clip (H.264, poster) and flag it `home`.
 - **Plaid hardening and scheduled jobs on Netlify (2026-11-13).** The webhook now handles
   `USER_PERMISSION_REVOKED` (item removed at Plaid, token forgotten, connection disconnected with
   the reason; pulled lines and books stay), `USER_ACCOUNT_REVOKED` (log in again),
