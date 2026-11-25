@@ -54,7 +54,7 @@ export async function openBookings(tenantId: string): Promise<OpenBooking[]> {
       isBalancePaid: weddings.isBalancePaid,
     })
     .from(weddings)
-    .where(and(eq(weddings.tenantId, tenantId), isNull(weddings.archivedAt), ne(weddings.status, "cancelled")))
+    .where(and(eq(weddings.tenantId, tenantId), isNull(weddings.archivedAt), isNull(weddings.booksExcludedAt), ne(weddings.status, "cancelled")))
     .orderBy(asc(weddings.eventDate));
   const received = await receivedByBooking(tenantId);
   return rows.map((r) => {

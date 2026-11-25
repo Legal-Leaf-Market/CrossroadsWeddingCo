@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { adminKeyMatches, countersignContract } from "@/lib/admin";
+import { adminKeyMatches, clearClientSignature, countersignContract, reissueContract } from "@/lib/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +38,31 @@ export async function POST(
   if (result === "already_signed") {
     return NextResponse.json(
       { error: "This agreement is already signed for Crossroads. Refresh to see it." },
+      { status: 409, headers },
+    );
+  }
+  return NextResponse.json({ ok: true }, { headers });
+}
+
+// Clear the couple's acceptance (signed by mistake on their behalf) so they can
+// sign it themselves. Admin-key gated like the countersign above; the cleared
+// signature is kept in the audit log.
+// ?reissue=1: the accepted terms no longer match the booking's money, so the
+// agreement is regenerated from the current terms for the couple to accept.
+export async function DELETE(
+  req: NextRequest,
+  ctx: { params: Promise<{ key: string; weddingId: string }> },
+) {
+  const { key, weddingId } = await ctx.params;
+  if (!adminKeyMatches(key)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const reissue = req.nextUrl.searchParams.get("reissue") === "1";
+  const result = reissue ? await reissueContract(weddingId) : await clearClientSignature(weddingId);
+  const headers = { "Cache-Control": "no-store" };
+  if (result === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404, headers });
+  if (result === "not_signed") {
+    return NextResponse.json(
+      { error: "The couple's signature is already cleared. Refresh to see it." },
       { status: 409, headers },
     );
   }

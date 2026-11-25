@@ -45,11 +45,11 @@ Logins are their `@crossroadsweddingco.shop` addresses (default house books list
    open `/app/books` as jake@ and confirm the conversion posted (journal entries now carry
    `source_ref`; job revenue and cost entries exist for held jobs), and that `/app/books/audit`
    says the chain is intact.
-2. **Make `/admin/[key]/jobs` tie to the ledger.** It still computes prepaid and accrued from the
+2. **DONE 2026-11-13 (subledger slice).** **Make `/admin/[key]/jobs` tie to the ledger.** It still computes prepaid and accrued from the
    cost lines' "Paid" box. Read the same facts `postLedger` uses (matched bank lines and approved
    receipts), or better, read the posted journal by `source_ref`. Add a test that the page's
    totals equal the GL balances of 1100, 1300, 2300, 2400.
-3. **Drill-down to true subledgers.** Report line -> GL account register (running balance) ->
+3. **DONE 2026-11-13 (subledger slice; see FINANCIALS_SPEC "Subledgers and the tie-out").** **Drill-down to true subledgers.** Report line -> GL account register (running balance) ->
    subledger for control accounts (1100, 1300, 2300, 2400 by job; 2500 by person; vendors by
    1099 vendor) -> journal entry -> lines -> source record -> that source's audit history.
    Pages under `/app/books/accounts/<id>` and `/app/books/entries/<id>`. Add a tie-out report
@@ -73,7 +73,8 @@ Logins are their `@crossroadsweddingco.shop` addresses (default house books list
    Calendar. Exports: GL CSV exists; add trial balance, every subledger, the audit log, and a
    QuickBooks-importable journal.
 8. **Materiality threshold** setting for "correct in the current month" vs "reopen".
-9. **Cash payout requests** (any money out, not just reimbursements): Jake requests, Terry
+9. **Cash payout requests** (any money out, not just reimbursements; commissions in 2600 are now
+   waiting on this, see FINANCIALS_SPEC rule 13): Jake requests, Terry
    approves or vetoes, Nic breaks ties, before the bank line can be matched as that payout.
 
 ## How to verify locally
@@ -81,3 +82,9 @@ Postgres 16 is in the container: initdb a cluster owned by `postgres`, run
 `DATABASE_URL=... node scripts/migrate.mjs` twice (it must be idempotent), set `ADMIN_DASH_KEY`
 in `.env.local`, `pnpm dev`. Test the database guards with psql (deletes and closed-month writes
 must error). Every `scripts/verify-*.mjs` must pass.
+
+## Added 2026-11-13 (owner, live)
+- DONE: bookings convert correctly (hand-paid money to 1050, "Not a real job?" for test bookings).
+- DONE: sales pipeline and commissions (`/admin/[key]/sales`, playbook hand-off, rule 12).
+- Owner to do: mark the test bookings "Not a real job?" on `/admin/[key]/jobs` once #122 is
+  live; set Plaid production keys in Netlify; add Steven to the crew only when he's off the bench.

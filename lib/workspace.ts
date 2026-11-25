@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { weddings, type Wedding } from "@/lib/db/schema";
+import { ledgerToday } from "@/lib/books/ledger";
 import { nameSlug } from "@/lib/hub-constants";
 import type { BookingStatusKey } from "@/lib/tenant-constants";
 
@@ -127,6 +128,7 @@ export async function createBooking(tenantId: string, input: BookingInput): Prom
       totalAmount: total.toFixed(2),
       depositAmount: Math.min(Math.max(0, input.depositUsd), total).toFixed(2),
       isDepositPaid: input.depositReceived,
+      depositPaidOn: input.depositReceived ? ledgerToday() : null,
       status: input.depositReceived ? "deposit_paid" : "inquiry",
       notes: input.notes || null,
     })
@@ -164,7 +166,13 @@ export async function updateBooking(tenantId: string, id: string, patch: Booking
   if (patch.totalUsd !== undefined) set.totalAmount = Math.max(0, patch.totalUsd).toFixed(2);
   if (patch.depositUsd !== undefined) set.depositAmount = Math.max(0, patch.depositUsd).toFixed(2);
   if (patch.isDepositPaid !== undefined) set.isDepositPaid = patch.isDepositPaid;
+  // The day the box was ticked is the day the cash or check came in (the books post it then).
+  // Already ticked: keep the date it had; unticked: no date.
+  if (patch.isDepositPaid !== undefined)
+    set.depositPaidOn = patch.isDepositPaid ? sql`case when coalesce(${weddings.isDepositPaid}, false) then ${weddings.depositPaidOn} else ${ledgerToday()}::date end` : null;
   if (patch.isBalancePaid !== undefined) set.isBalancePaid = patch.isBalancePaid;
+  if (patch.isBalancePaid !== undefined)
+    set.balancePaidOn = patch.isBalancePaid ? sql`case when coalesce(${weddings.isBalancePaid}, false) then ${weddings.balancePaidOn} else ${ledgerToday()}::date end` : null;
   if (patch.status !== undefined) set.status = patch.status;
   if (patch.archived !== undefined) set.archivedAt = patch.archived ? new Date() : null;
   const done = await db

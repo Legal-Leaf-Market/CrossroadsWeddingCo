@@ -614,7 +614,23 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   reaches through `window.CR_PLAYBOOK_API` and polls every 15 seconds. It is separate from the
   claude.ai copy's log, which this repo cannot read. Notes saved on a device before it connected
   are uploaded once. The "New as of 11.6.26" list filter shows leads with `fresh:1`; `also`
-  puts a lead in a second section's filter. Steven is in the "Calling as" picker (2026-11-02), number (336) 684-8418 in `NUMS`. Every list puts dated leads first, most urgent on top (Jacob, 2026-11-02: "if there is ever a date associated, place this in the most urgent to least urgent order"): a lead's date is the earlier of its follow-up date (overdue follow-ups lead) and its upcoming `when` event date; undated leads follow by stars; past event dates sink to the bottom. Each dated card shows a chip (overdue/today in red, within a week in amber). "Best 10 for today" keeps its fixed call order. The "Nov to Dec events" section leaves out anything on Nov 6 or 7 because the Kat and Tanis wedding has the crew and gear that weekend (Jacob, 2026-11-02). Every lead carries a 1 to 5 star rating (Jacob, 2026-11-02, "that's totally a sales thing"): 5 = confirmed they need a DJ (they told us or posted it), 4 = warm or entertainment not set, 3 = their page shows a fit, 2 = real contact with no sign of need, 1 = long shot. Starting ratings live in `STARS` in the playbook and come only from what each listing says; a caller's rating and reason, saved in the log as `stars`/`starWhy`/`starBy`, replace them. Sections sort by stars (events stay in date order) and "Hottest first" lists everything by stars. Personal-connection leads (Jacob, 2026-11-02): Andrew Sutherland (Sutherland's Exteriors, LLC, confirmed on the NC registry) and Tim (Victory Roofing, unconfirmed, marked "Needs verification") sit in Partners; the Crump Theatre and the Tony Stewart Foundation (reported closing at the end of 2024, flagged) sit in Venues. Their cards carry business facts only: no personal phone numbers (Jake has them), nothing about anyone's private life, and the year and details of the Crump fundraiser stay out of public copy until Jacob confirms. Scripts say "Jake", never "Jake Kennedy", because the Calling-as picker swaps the first name. `docs/EVENT_LEAD_RESEARCH_BRIEF.md` is the Claude in Chrome research brief for the event leads; its results come back in a fixed block format meant to update `STARS` and each lead's `why`. **The call list IS in git, in a public repo, on purpose**
+  puts a lead in a second section's filter. The "New as of 11.23.26: Columbus" filter (2026-11-23, Jacob: "max
+  out Columbus") shows the 46 leads with `fresh23:1`, grouped by `grp` (dated, corp, venue, gala, youth, partner;
+  headings in `CBUS_GRPS`). They live in the "columbus" section; only the dated Nov to Dec ones also sit in
+  "Nov to Dec events". Picking one section in the List filter now renders only that section, so a lead with `also`
+  is never listed twice. **Sort, grid and slicing (2026-11-23, Jacob: "sort these by the stars and by status ... Airbnb style ...
+  you click on one thing and it drills down").** The Status menu became the Status facet; a Sort menu (stars either
+  way, status either way, last logged, name, town) renders one flat list with a subheading per star level, status or
+  town, while "Recommended" keeps the sections. The default view is a tile grid; a tile opens into the full card in
+  place (Close or Escape) and "Full cards" restores the old view. The slice panel holds six facets (stars, status,
+  when, kind of lead, town, how to reach them) as clickable bars, five quick pills, removable active pills and Clear
+  all. Values inside a facet are OR and facets are AND, and each bar's count applies every other filter, so the number
+  on a bar is what clicking it shows (checked for every bar). Stars, status pill, town and kind on a lead, and the
+  tally chips at the top, show "only this". Towns: parentheticals and "area" stripped, first of a "/" or "," pair, and
+  any town with fewer than 3 leads is "Elsewhere". List, sort, view and facets persist per device in `cr_filters`; an
+  old saved Status choice migrates into the facet. A redraw now waits only while someone is in a card's text box, date
+  or menu (not on buttons), open pitch prep stays open across redraws, and focus returns to the same control by
+  `data-key`. Steven is in the "Calling as" picker (2026-11-02), number (336) 684-8418 in `NUMS`. Every list puts dated leads first, most urgent on top (Jacob, 2026-11-02: "if there is ever a date associated, place this in the most urgent to least urgent order"): a lead's date is the earlier of its follow-up date (overdue follow-ups lead) and its upcoming `when` event date; undated leads follow by stars; past event dates sink to the bottom. Each dated card shows a chip (overdue/today in red, within a week in amber). "Best 10 for today" keeps its fixed call order. The "Nov to Dec events" section leaves out anything on Nov 6 or 7 because the Kat and Tanis wedding has the crew and gear that weekend (Jacob, 2026-11-02). Every lead carries a 1 to 5 star rating (Jacob, 2026-11-02, "that's totally a sales thing"): 5 = confirmed they need a DJ (they told us or posted it), 4 = warm or entertainment not set, 3 = their page shows a fit, 2 = real contact with no sign of need, 1 = long shot. Starting ratings live in `STARS` in the playbook and come only from what each listing says; a caller's rating and reason, saved in the log as `stars`/`starWhy`/`starBy`, replace them. Sections sort by stars (events stay in date order) and "Hottest first" lists everything by stars. Personal-connection leads (Jacob, 2026-11-02): Andrew Sutherland (Sutherland's Exteriors, LLC, confirmed on the NC registry) and Tim (Victory Roofing, unconfirmed, marked "Needs verification") sit in Partners; the Crump Theatre and the Tony Stewart Foundation (reported closing at the end of 2024, flagged) sit in Venues. Their cards carry business facts only: no personal phone numbers (Jake has them), nothing about anyone's private life, and the year and details of the Crump fundraiser stay out of public copy until Jacob confirms. Scripts say "Jake", never "Jake Kennedy", because the Calling-as picker swaps the first name. `docs/EVENT_LEAD_RESEARCH_BRIEF.md` is the Claude in Chrome research brief for the event leads; its results come back in a fixed block format meant to update `STARS` and each lead's `why`. **The call list IS in git, in a public repo, on purpose**
   (Jacob, 2026-11-01, asked and answered after being told it would be readable on
   GitHub): every entry came from a public listing. This supersedes the earlier rule that
   contact data stays out of git. Do not delete or scrub the file as a leak; editing a
@@ -1246,6 +1262,36 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Partner pages, deeper (2026-11-18, Jacob: "work way harder on the rabbits, balloons and
+  cookie paradise pages ... an MD for chat to research and make better").** Cookie Paradise
+  shows its live menu, read server-side from its public Shopify `/products.json`
+  (`lib/partner-menu.ts`, in-stock only, names and prices and links, no photos until they
+  give permission), with the page on a six-hour ISR revalidate; if their store does not
+  answer, the section does not render. Rabbit's Balloons gains how a project runs, her
+  stated low-waste practices and her own caveat, all from what Rachael Starr told Heart of
+  Columbus for her draft site; her "Why Rabbit?" story is NOT quoted until she says so.
+  Both pages get a "what to have ready" list (ours, not their policy) and cross-links.
+  `docs/handoff/PARTNERS_RESEARCH.md` is the ChatGPT brief: what is verified, what to
+  research, owner-outreach drafts, and a fixed return format with source and date per fact.
+- **Site menu, past events, partners (2026-11-18, Jacob: "a side menu bar and a top menu bar
+  on desktop, side menu bar for mobile"; "past events, partners"; a page each for Cookie
+  Paradise and Rabbit's Balloons).** One list, `lib/nav.ts`: `TOP_LINKS` in the header bar
+  from lg (1024px), with `wide` links only from xl (1280px) because at 1024 six links
+  truncated the brand name; `MENU_SECTIONS` in `components/SideMenu.tsx`, a right drawer on
+  every width (88vw on a phone, 360px max). Two traps, both measured: the header's
+  `backdrop-blur` makes it the containing block for `fixed` children, so the drawer is a
+  portal on `<body>` (inside the header it was 64px tall and the hero ate the clicks); and a
+  closed drawer parked off screen by a transform widened every page by 360px until a fixed
+  `overflow-hidden` layer clipped it (its shadow also showed as a strip at the right edge, so
+  the shadow is only on while open). `/past-events` reads `REVIEW_EVENTS` newest first;
+  `cover` picks the card photo where the first image names the couple (Forge's welcome
+  sign). `/partners` and `/partners/[slug]` read `lib/partners.ts`: only what each business
+  says about itself, with source and date (Cookie Paradise from cookieparadise.co, read
+  2026-11-13; Rabbit's Balloons from its owner, Rachael Starr, 2026-11-15, no public site,
+  phone or prices yet, so the way in is our inbox). The Rabbit's image is our inspiration art
+  from the Heart of Columbus draft site, captioned as not her work. Measured at
+  360/390/768/1024/1280/1440: no sideways scroll, drawer full height, Escape closes, focus
+  returns to the Menu button.
 - **Phase 3, sixth slice (2026-09-04): native intro-call booking with office hours.**
   Replaces the unset `NEXT_PUBLIC_BOOKING_URL` Calendly hole, and it is what the QR
   code on every printed business card resolves to: `/book?with=<slug>` for jake, nic,
@@ -1467,3 +1513,53 @@ decisions absorbed from it:
   so no new secret is needed. `node --experimental-strip-types scripts/verify-plaid.mjs` (22 checks).
   Still the owner's: Plaid production keys (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`) in
   Netlify.
+- **True subledgers, the tie-out, and the jobs page on the ledger (2026-11-13, docs/handoff
+  tasks 2 and 3).** Every journal line on a control account names whose it is
+  (`journal_lines.sub_ref`: `job:<booking id>` on 1100/1300/2300/2400 and the job's 4500/5000,
+  `crew:<crew member id>` on 2500); netting, fingerprints and closed-month corrections work per
+  account and key. `/app/books/tie-out` ties each control account to its subledger and any
+  difference is a HARD close blocker (`tie_out` in `closeBlockers`, as of the month's end).
+  Drill-down: `/app/books` lines -> `/app/books/accounts/<id>` (register, running balance,
+  subledger, `?sub=`) -> `/app/books/entries/<id>` (lines, every version, source record, audit
+  history); trial balance at `/app/books/accounts`; vendor payments link to their entries; CSV
+  out at `/api/app/books/export` (trial balance, subledgers, audit log). `/admin/[key]/jobs` now
+  reads every balance from the ledger by key (archived and cancelled jobs with a balance are
+  listed so the totals ARE the GL) and says whether it ties. Pure rules in
+  `lib/books/subledger-logic.ts`; `node --experimental-strip-types scripts/verify-subledger.mjs`
+  (43 checks, including the handoff's "page totals equal the GL balances of 1100, 1300, 2300,
+  2400" and two sabotages). Existing books convert themselves: open-month job entries repost once
+  with keys, a closed month gets one dated reclassification, untagged bank entries keep their old
+  fingerprint (no churn). Fingerprints over 200 characters are now hashed, never cut off.
+  Migration verified twice on a local Postgres 16; this session had no package install, so the
+  Netlify deploy preview build is the type-check.
+- **Site email was down from the .com to .shop move until 2026-11-13.** Resend refused every
+  send ("The crossroadsweddingco.shop domain is not verified"), so sign-in links, booking
+  confirmations, hub links and message pointers all failed. Fixed: crossroadsweddingco.shop added
+  in Resend (account jacobkennedy.47201), and Netlify DNS gained `resend._domainkey` (TXT, DKIM)
+  plus `send` and `rsend` CNAMEs to `*.forge.rmta.net`. Proton's MX, SPF and DMARC are untouched.
+- **Bookings convert into the books correctly (2026-11-13, Jake: "make sure our bookings convert
+  over correctly").** The first production sync recognized every past booking, test bookings
+  included ($13,900 of receivables, mostly tests), and left out every deposit marked paid by hand
+  (no bank is connected). Now a hand-paid deposit or balance posts to 1050 Undeposited funds
+  against the job (rule 11 in FINANCIALS_SPEC), dated the day the box is ticked
+  (`deposit_paid_on`/`balance_paid_on`) or on a stated assumed date for older flags, and gives way
+  to the bank line once the deposit is matched. Test bookings are left out with "Not a real job?"
+  on `/admin/[key]/jobs` (reason, audit, put back any time; refused while real money is tied to
+  the booking). Excluded bookings also drop out of Money and the close blockers. The close page
+  now opens on the oldest open month. `verify-subledger.mjs` grew to 54 checks.
+- **Sales pipeline, CRM accounts and commissions (2026-11-13, Jake: "can the playbook play into
+  like sales orders and such and be a direct pipeline into invoicing and CRM"; "commissions per
+  playbook deal per event commission direct and account management commissions ongoing").**
+  Terms (asked and answered): $100 flat to the closer per event, 5% ongoing to the account manager
+  on every later event from an account, earned on the event day and paid once the client has paid
+  in full, nothing on a cancellation. **Jake, Terry and Nic all earn commissions; they are all
+  owners** ("we need paychecks for living, and it is good incentive"; this replaced a first answer
+  of "owners split profit only" the same morning). Steven is benched: not on the crew, so he can't
+  be a closer. `/admin/[key]/sales`: the order form (account or a new one, closer, deposit), the
+  pipeline with stage, invoice and job plan links, commissions per person (owed in the books,
+  ready to pay, still ahead) and accounts with their manager. `crm_accounts` (no delete), and
+  sales fields on `weddings` that COPY the terms at sale time. The playbook (site copy) offers
+  "Make a sales order" on every lead card and after logging a booked deal, opening the form
+  filled in. Posting: rule 12 in FINANCIALS_SPEC (Dr 5100 / Cr 2600 by person on the event day).
+  NOT YET: paying commissions out from the bank (needs cash payout requests, handoff task 9).
+  `node --experimental-strip-types scripts/verify-sales.mjs` (20 checks).
