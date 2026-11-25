@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { adminKeyMatches, getAdminWedding, updateAdminWedding } from "@/lib/admin";
+import { adminKeyMatches, getAdminWedding, updateAdminLeadSource, updateAdminWedding } from "@/lib/admin";
+import { LEAD_SOURCE_VALUES } from "@/lib/lead-sources";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,15 @@ const schema = z.object({
       "cancelled",
     ])
     .optional(),
+  // Where the couple found us (lib/lead-sources.ts). Empty clears it back to
+  // "not answered". Saved on its own: attribution never touches the money,
+  // the agreement or the books.
+  leadSource: z
+    .string()
+    .max(40)
+    .refine((v) => v === "" || (LEAD_SOURCE_VALUES as readonly string[]).includes(v), "Pick a source from the list.")
+    .optional(),
+  leadSourceDetail: z.string().trim().max(200, "Keep it under 200 characters").optional(),
 });
 
 export async function PATCH(
@@ -67,7 +77,20 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  const d = parsed.data;
+  const { leadSource, leadSourceDetail, ...d } = parsed.data;
+
+  if (leadSource !== undefined || leadSourceDetail !== undefined) {
+    await updateAdminLeadSource(weddingId, {
+      ...(leadSource !== undefined ? { leadSource: leadSource || null } : {}),
+      ...(leadSourceDetail !== undefined ? { leadSourceDetail: leadSourceDetail || null } : {}),
+    });
+  }
+
+  // A source-only save stops here, so it can never reissue an agreement or
+  // repost the books.
+  if (Object.keys(d).length === 0) {
+    return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+  }
 
   await updateAdminWedding(weddingId, {
     ...d,

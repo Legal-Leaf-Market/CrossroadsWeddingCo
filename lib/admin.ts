@@ -483,6 +483,43 @@ export async function updateAdminWedding(
 }
 
 /**
+ * Where the couple found us, set by the owner after the fact (2026-11-25, Jacob:
+ * bookings made before the "How did you find us?" question, or never asked it,
+ * came in through WeddingPro and need The Knot or WeddingWire on them).
+ * Deliberately separate from updateAdminWedding: attribution is not money, so it
+ * must never reissue a signed agreement or repost the books. Audited.
+ */
+export async function updateAdminLeadSource(
+  weddingId: string,
+  patch: { leadSource?: string | null; leadSourceDetail?: string | null },
+): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/.test(weddingId)) return false;
+  const set: Record<string, unknown> = { updatedAt: new Date() };
+  if (patch.leadSource !== undefined) set.leadSource = patch.leadSource;
+  if (patch.leadSourceDetail !== undefined) set.leadSourceDetail = patch.leadSourceDetail;
+  const [before] = await db
+    .select({ leadSource: weddings.leadSource, leadSourceDetail: weddings.leadSourceDetail })
+    .from(weddings)
+    .where(and(eq(weddings.id, weddingId), isHouse))
+    .limit(1);
+  if (!before) return false;
+  await db.update(weddings).set(set).where(and(eq(weddings.id, weddingId), isHouse));
+  await auditQuietly({
+    tenantId: HOUSE_TENANT_ID,
+    actor: "owner dashboard",
+    action: "booking.lead_source",
+    entityType: "job",
+    entityId: weddingId,
+    before,
+    after: {
+      leadSource: patch.leadSource !== undefined ? patch.leadSource : before.leadSource,
+      leadSourceDetail: patch.leadSourceDetail !== undefined ? patch.leadSourceDetail : before.leadSourceDetail,
+    },
+  });
+  return true;
+}
+
+/**
  * A corporate event, entered from the dashboard. Corporate inquiries come in by
  * phone or as an intro call, never through the wedding booking form, so without
  * this they have no booking record and nothing to invoice. Stored in the same
