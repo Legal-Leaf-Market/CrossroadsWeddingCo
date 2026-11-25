@@ -41,6 +41,7 @@ export const MENU_SECTIONS: NavSection[] = [
       { href: "/partners", label: "All partners" },
       { href: "/partners/cookie-paradise", label: "Cookie Paradise" },
       { href: "/partners/rabbits-balloons", label: "Rabbit's Balloons" },
+      { href: "/partners/wild-bramble-catering", label: "Wild Bramble Catering" },
       { href: "/venues", label: "For venues" },
     ],
   },
