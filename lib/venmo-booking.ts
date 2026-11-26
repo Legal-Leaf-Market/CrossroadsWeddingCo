@@ -8,9 +8,9 @@ export async function venmoBookingPayment(booking: Parameters<typeof bookingPaym
   archivedAt: Date | null;
   booksExcludedAt: Date | null;
   customTerms: string | null;
-}) {
+}, options: { allowInquiry?: boolean } = {}) {
   if (booking.cancelledAt || booking.archivedAt || booking.booksExcludedAt ||
-      booking.status === "cancelled" || booking.status === "inquiry" ||
+      booking.status === "cancelled" || (booking.status === "inquiry" && !options.allowInquiry) ||
       booking.customTerms?.trim() || booking.isBalancePaid) return null;
 
   const credit = await bookingPaymentCredit(booking).catch((error: unknown) => {
