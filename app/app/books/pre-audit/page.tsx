@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, asc, eq, gte, lte } from "drizzle-orm";
 import AccountShell from "@/components/account/AccountShell";
 import { getBooksWorkspace } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { expenseClaims, receipts } from "@/lib/db/schema";
-import { ledgerToday } from "@/lib/books/ledger";
+import { externalEvidence, preAuditEvidence, preAuditRange, preAuditReports } from "@/lib/books/pre-audit";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Pre-audit packet", robots: { index: false, follow: false } };
@@ -18,31 +15,10 @@ export default async function PreAuditPage({ searchParams }: { searchParams: Pro
   const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
   const { year: raw } = await searchParams;
-  const today = ledgerToday();
-  const currentYear = Number(today.slice(0, 4));
-  const parsed = typeof raw === "string" && /^\d{4}$/.test(raw) ? Number(raw) : currentYear;
-  const year = parsed >= 1900 && parsed <= currentYear ? parsed : currentYear;
-  const from = `${year}-01-01`;
-  const through = year === currentYear ? today : `${year}-12-31`;
-  const tenantId = ws.tenant.id;
-  const evidence = await db.select({
-    id: expenseClaims.id, day: expenseClaims.spentOn, merchant: expenseClaims.merchant,
-    description: expenseClaims.description, status: expenseClaims.status, fileName: receipts.fileName,
-    receiptId: receipts.id, amountCents: expenseClaims.amountCents,
-  }).from(expenseClaims)
-    .leftJoin(receipts, and(eq(expenseClaims.receiptId, receipts.id), eq(receipts.tenantId, tenantId)))
-    .where(and(eq(expenseClaims.tenantId, tenantId), gte(expenseClaims.spentOn, from), lte(expenseClaims.spentOn, through)))
-    .orderBy(asc(expenseClaims.spentOn), asc(expenseClaims.id)).limit(501);
-  const reports = [
-    ["Trial balance CSV", `/api/app/books/export?report=trial-balance&asof=${through}`],
-    ["General ledger CSV", `/api/app/books/ledger?from=${from}&to=${through}`],
-    ["Subledger CSV", `/api/app/books/export?report=subledgers&asof=${through}`],
-    ["Control account tie-out", `/app/books/tie-out?asof=${through}`],
-    ["CPA comparison worksheet", `/api/app/books/export?report=cpa-tie-out&asof=${through}`],
-    ["Audit log CSV · full history", "/api/app/books/export?report=audit-log"],
-    ["Decisions flagged for tax review", "/app/books/audit?tax=flagged"],
-    ["Period close evidence", "/app/books/close"],
-  ] as const;
+  const range = preAuditRange(raw);
+  const { currentYear, year, from, through } = range;
+  const evidence = await preAuditEvidence(ws.tenant.id, range, 501);
+  const reports = preAuditReports(range);
 
   return (
     <AccountShell signedIn house={ws.tenant.kind === "house"}>
@@ -51,6 +27,7 @@ export default async function PreAuditPage({ searchParams }: { searchParams: Pro
       <p className="mt-1 text-sm text-ink/70">
         Live index for {from} through {through}. Links use Books access. Download the reports and evidence when you hand off a fixed review copy.
       </p>
+      <a href={`/api/app/books/pre-audit?year=${year}`} className={`mt-3 inline-block text-sm ${link}`}>Download evidence index CSV</a>
       <form action="/app/books/pre-audit" className="mt-3 flex flex-wrap items-end gap-2">
         <label className="grid gap-1 text-sm font-semibold">Review year
           <input name="year" type="number" min="1900" max={currentYear} defaultValue={year} required className="rounded-lg border border-parchment bg-white px-2 py-1" />
@@ -94,9 +71,7 @@ export default async function PreAuditPage({ searchParams }: { searchParams: Pro
       <section className="mt-6">
         <h2 className="text-lg font-semibold text-charcoal">Evidence to collect separately</h2>
         <ul className="mt-2 list-disc space-y-1 pl-6 text-sm text-ink/75">
-          <li>Bank and credit-card statements, processor settlement reports, and payroll registers.</li>
-          <li>Open invoices and vendor bills, service agreements, and deposit support.</li>
-          <li>Asset invoices and depreciation schedules, tax filings, and prior-year closing entries as applicable.</li>
+          {externalEvidence.map((item) => <li key={item}>{item}</li>)}
         </ul>
         <p className="mt-2 text-sm text-ink/70">Keep the CPA’s evidence references and proposed entries with the comparison. Review each proposed adjustment and obtain approval before it is posted.</p>
       </section>
