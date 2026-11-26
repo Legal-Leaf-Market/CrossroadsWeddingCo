@@ -4,6 +4,7 @@ import { bankAccounts, bankTransactions, ledgerCategories, weddings } from "@/li
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
 import { clearSplits } from "@/lib/books/splits";
 import { auditQuietly } from "@/lib/audit";
+import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 import { creditFor, type OpenBooking, type PaymentKind } from "@/lib/books/logic";
 export { PAYMENT_KINDS, suggestFor, creditFor, type OpenBooking, type PaymentKind, type Suggestion } from "@/lib/books/logic";
 
@@ -41,6 +42,27 @@ async function receivedByBooking(tenantId: string, ids?: string[]) {
   return new Map(rows.map((r) => [r.bookingId!, { cents: Number(r.cents), depositLines: r.depositLines }]));
 }
 
+
+/** Payment amounts for one booking, including bank payments already matched to it. */
+export async function bookingPaymentCredit(booking: {
+  id: string;
+  tenantId: string | null;
+  totalAmount: string;
+  depositAmount: string;
+  isDepositPaid: boolean | null;
+  isBalancePaid: boolean | null;
+}) {
+  const bank = (await receivedByBooking(booking.tenantId ?? HOUSE_TENANT_ID, [booking.id])).get(booking.id);
+  const totalCents = toCents(booking.totalAmount);
+  return creditFor({
+    totalCents,
+    depositCents: Math.min(totalCents, toCents(booking.depositAmount)),
+    isDepositPaid: !!booking.isDepositPaid,
+    isBalancePaid: !!booking.isBalancePaid,
+    bankCents: bank?.cents ?? 0,
+    bankDepositLines: bank?.depositLines ?? 0,
+  });
+}
 
 /** Bookings that can take a payment: not archived, not cancelled. Soonest event first. */
 export async function openBookings(tenantId: string): Promise<OpenBooking[]> {
