@@ -8,7 +8,7 @@ import { PARTNERS } from "@/lib/partners";
 // order is the order they joined.
 const TITLE = "Local partners for your wedding or event";
 const DESCRIPTION =
-  "Columbus, Indiana businesses we partner with for the parts of the day we don't do ourselves: catering, cookies, dessert tables, favors and balloon installs.";
+  "Columbus, Indiana businesses we partner with for the parts of the day we don't do ourselves: catering, cookies, dessert tables, favors, balloon installs and photography.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -27,7 +27,7 @@ export default function PartnersPage() {
             <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-gold">Partners</p>
             <h1 className="max-w-2xl text-4xl leading-tight sm:text-5xl">Local partners we trust with your day.</h1>
             <p className="mt-6 max-w-2xl text-lg text-cream/80">
-              We handle the music, the mic and the bar. For the food, the sweets and the balloons, these are the Columbus
+              We handle the music, the mic and the bar. For the food, the sweets, the balloons and the photos, these are the Columbus
               businesses we partner with. Book them directly, or tell us on your intro call and we&apos;ll connect you.
             </p>
           </div>

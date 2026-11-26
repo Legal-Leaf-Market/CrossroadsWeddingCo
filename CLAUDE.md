@@ -1297,6 +1297,19 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Love Me Wildly Photography is a partner (2026-11-26, Jacob: "Nick and I both know her personally
+  ... would 1000% recommend her ... a partner page").** `/partners/love-me-wildly` uses the shared
+  `[slug]` template (not a custom page): Deidra McKenzie's studio, facts from her own site and
+  Instagram read 2026-11-26 (packages by coverage hours, no prices, phone, email, hours), her way of
+  working as plain statements, and "Why we send couples to her" as our own recommendation (Jake and
+  Nic worked a wedding with her). No photos: her portfolio is her work and shows her couples, so it
+  stays on her site until she sends what she wants shown. `Partner.withUs` and `Partner.practicesTitle` let an entry replace the
+  template's closing timeline line and the practices heading (the defaults still name dessert tables
+  and low waste). Linked in
+  the side menu; the sitemap reads `PARTNERS`. Heart of Columbus built her a draft website and a
+  Founders Club invitation (its PR #192). She has NOT reviewed this page. This session had no package
+  install: the partners data type-checks on its own and every edited file parses; the Netlify deploy
+  preview is the build.
 - **Wild Bramble Catering gets its own page and a menu builder (2026-11-25, Jacob: "Make a page
   for Wild Bramble now ... Catering in Columbus ... They are on HOC").**
   `/partners/wild-bramble-catering` is its own page file (`customPage`) with its own scoped look
