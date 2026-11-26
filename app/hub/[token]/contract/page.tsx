@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import VenmoPayment from "@/components/hub/VenmoPayment";
+import { venmoBookingPayment } from "@/lib/venmo-booking";
 import ContractView from "@/components/hub/ContractView";
 import PrintButton from "@/components/hub/PrintButton";
 import { contractSectionsForWedding, contractVersionForWedding } from "@/lib/contract";
@@ -26,6 +28,11 @@ export default async function ContractPage({
   if (!wedding || !isHouseTenant(wedding.tenantId)) notFound();
 
   const sections = contractSectionsForWedding(wedding);
+  // Public inquiries receive a hub link before we confirm availability.
+  // Our signature opens the deposit option even before the couple signs.
+  const venmo = await venmoBookingPayment(wedding, {
+    allowInquiry: Boolean(wedding.contractCountersignedAt),
+  });
 
   return (
     <div className="min-h-screen bg-cream p-6 text-charcoal print:bg-white print:p-0">
@@ -48,6 +55,7 @@ export default async function ContractPage({
         </header>
         <div className="mt-6">
           <ContractView
+            paymentOption={venmo && <VenmoPayment {...venmo} />}
             sections={sections}
             endpoint={`/api/hub/${token}/contract`}
             acceptedAt={wedding.contractAcceptedAt ? wedding.contractAcceptedAt.toISOString() : null}

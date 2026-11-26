@@ -24,6 +24,7 @@ export default function ContractView({
   companyName,
   companyShort = "Crossroads",
   beforeAccept,
+  paymentOption,
 }: {
   sections: ContractSection[];
   endpoint: string;
@@ -41,6 +42,8 @@ export default function ContractView({
   companyShort?: string;
   /** Rendered just above the accept box (the step guide's note). */
   beforeAccept?: ReactNode;
+  /** Independent payment option, visible before and after acceptance. */
+  paymentOption?: ReactNode;
 }) {
   const [accepted, setAccepted] = useState<{ at: string; name: string } | null>(
     acceptedAt && acceptedName ? { at: acceptedAt, name: acceptedName } : null,
@@ -121,6 +124,8 @@ export default function ContractView({
           </section>
         ))}
       </article>
+
+      {paymentOption && <div className="mt-6 print:hidden">{paymentOption}</div>}
 
       <div data-zone="agreement">
       <SignatureBlock
