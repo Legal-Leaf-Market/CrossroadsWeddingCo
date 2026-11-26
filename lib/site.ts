@@ -20,6 +20,9 @@ export const SITE_DESCRIPTION =
 
 export const CONTACT_EMAIL = "hello@crossroadsweddingco.shop";
 
+// Public business contact number. Keep in sync with verified directory listings.
+export const CONTACT_PHONE = "+1-812-671-1780";
+
 // Transactional email identity (owner decision 2026-08-28): everything sends
 // as booking@, and the emails tell couples NOT to reply: the hub's Messages
 // thread is the conversation, email is only the door in. Jacob must keep
@@ -58,9 +61,8 @@ export const ACOUSTIC_ADDON_USD = 500;
 
 // Bar service is priced by how many bartenders the night needs, not as a floor
 // that climbs (owner directive 2026-10-03, replacing the $500 minimum set
-// 2026-08-27). Guest count decides the count; the number the couple is quoted
-// is the number they pay. Deliberately NOT a "minimum" any more: no copy,
-// quote, or structured data may reintroduce that framing.
+// 2026-08-27). Structured data must describe each fixed staffing price, never
+// frame either price as a minimum.
 export const BARTENDER_ONE_USD = 250;
 export const BARTENDER_TWO_USD = 400;
 
@@ -90,7 +92,7 @@ export const INTRO_CALL_LENGTH = "30-minute";
 // mailto link as the only ways in.
 export const BOOKING_URL = process.env.NEXT_PUBLIC_BOOKING_URL ?? "";
 
-// Mirrors the four cards in <Services />; used for schema.org makesOffer.
+// Mirrors the four cards in Services; used for schema.org makesOffer.
 export const SERVICE_OFFERS = [
   {
     name: "Wedding DJ",
@@ -107,9 +109,12 @@ export const SERVICE_OFFERS = [
   {
     name: "Bar Service",
     description:
-      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. $250 for one bartender, $400 for two. Your guest count tells us how many you need, and we settle that on your intro call.",
+      "Licensed, experienced bartenders for backyard and DIY-venue weddings without in-house bar staff. You provide the alcohol; we staff and run the bar. $250 for one bartender, $400 for two. Your guest count tells us how many you need, and we settle that on your intro call.",
     priceUsd: null,
-    minPriceUsd: BARTENDER_ONE_USD,
+    priceOptions: [
+      { name: "One bartender", priceUsd: BARTENDER_ONE_USD },
+      { name: "Two bartenders", priceUsd: BARTENDER_TWO_USD },
+    ],
   },
   {
     name: "Day-Of Coordination",
@@ -121,5 +126,5 @@ export const SERVICE_OFFERS = [
   name: string;
   description: string;
   priceUsd: number | null;
-  minPriceUsd?: number;
+  priceOptions?: readonly { name: string; priceUsd: number }[];
 }>;
