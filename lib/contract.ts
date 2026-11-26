@@ -15,14 +15,14 @@ import { formatEventDate } from "@/lib/hub-constants";
 // Owner policy decisions encoded here (CLAUDE.md §9.2): balance due 24 hours
 // after the start time with that window doubling as the couple's
 // comments-and-concerns period, serve-only bar (we never supply or sell
-// alcohol), cash/check deposits for now, acoustic set terms.
+// alcohol), cash, check and eligible Venmo payments, acoustic set terms.
 //
 // NOT legal advice: this is a plain-language agreement written from the
 // owners' stated policies and should be reviewed by an Indiana attorney
 // before it carries real weight. Bump CONTRACT_VERSION on any wording change
 // so accepted snapshots stay traceable to the text that was accepted.
 
-export const CONTRACT_VERSION = "2026-11-23";
+export const CONTRACT_VERSION = "2026-11-26";
 
 const BESPOKE_LEAD = "Your wedding is on an arrangement we agreed directly";
 
@@ -130,10 +130,10 @@ export function buildContract(input: ContractInput): ContractSection[] {
         adjustment === 0
           ? `Your total is ${money(input.totalUsd)}. Every service above is a published flat rate, so this is the whole number, not a starting point.`
           : `Your total is ${money(input.totalUsd)}. That is the services above plus ${adjustment > 0 ? `${money(adjustment)} in agreed extras` : `a ${money(-adjustment)} agreed discount`}, and it is the whole number, not a starting point.`,
-        `A deposit of ${money(input.depositUsd)} is due when you accept this agreement. It locks your date, comes off your total, and is non-refundable, because once we hold your date we stop offering it to anyone else.`,
+        `A deposit of ${money(input.depositUsd)} is due when you accept this agreement. If Crossroads has signed and a Venmo option is shown below, you may send the deposit before signing. Once we confirm receipt, the deposit locks your date, comes off your total, and is non-refundable because we stop offering your date to anyone else.`,
         `The balance is due 24 hours after your wedding start time. A 3 PM wedding means the balance is due by 3 PM the next day. We ask for the balance after the wedding, not before, because you should not pay in full for something that has not happened yet.`,
         `That same 24 hours is your window to tell us anything you were unhappy about. If we fell short, say so in that window and we will adjust the invoice. We would rather fix a number than have you tell your friends we were not worth it.`,
-        `Payments are by cash or check right now. We will send you the details with your confirmation.`,
+        `You can pay by cash or check using the details we send with your confirmation, or by Venmo when that payment option appears on this page.`,
       ],
     },
   ];

@@ -28,7 +28,11 @@ export default async function ContractPage({
   if (!wedding || !isHouseTenant(wedding.tenantId)) notFound();
 
   const sections = contractSectionsForWedding(wedding);
-  const venmo = await venmoBookingPayment(wedding, { allowInquiry: true });
+  // Public inquiries receive a hub link before we confirm availability.
+  // Our signature opens the deposit option even before the couple signs.
+  const venmo = await venmoBookingPayment(wedding, {
+    allowInquiry: Boolean(wedding.contractCountersignedAt),
+  });
 
   return (
     <div className="min-h-screen bg-cream p-6 text-charcoal print:bg-white print:p-0">
