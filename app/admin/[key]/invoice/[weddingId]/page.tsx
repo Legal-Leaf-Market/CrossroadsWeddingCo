@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import VenmoPayment from "@/components/hub/VenmoPayment";
 import PrintButton from "@/components/hub/PrintButton";
 import { adminKeyMatches, getAdminWeddingRow } from "@/lib/admin";
 import { formatEventDate } from "@/lib/hub-constants";
 import { buildInvoice, money } from "@/lib/invoice";
+import { venmoBookingPayment } from "@/lib/venmo-booking";
 import { VENUE_TIME_ZONE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,7 @@ export default async function AdminInvoicePage({
   if (!row) notFound();
 
   const inv = buildInvoice(row);
+  const venmo = await venmoBookingPayment(row);
   const issued = new Date().toLocaleDateString("en-US", {
     timeZone: VENUE_TIME_ZONE,
     month: "long",
@@ -148,6 +151,7 @@ export default async function AdminInvoicePage({
             <section className="mt-6 rounded-xl bg-cream px-4 py-3 text-sm text-ink/80 print:bg-transparent print:px-0">
               <p>{inv.balanceDueNote}</p>
               <p className="mt-1">{inv.paymentNote}</p>
+              {venmo && <VenmoPayment {...venmo} />}
             </section>
           )}
 

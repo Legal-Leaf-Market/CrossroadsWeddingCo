@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import VenmoPayment from "@/components/hub/VenmoPayment";
 import ContractView from "@/components/hub/ContractView";
 import PrintButton from "@/components/hub/PrintButton";
 import OfficiantInvoice from "@/components/compass/OfficiantInvoice";
 import OfficiantPayButton from "@/components/compass/OfficiantPayButton";
 import OfficiantSteps from "@/components/compass/OfficiantSteps";
 import { GuideNote, StepGuide } from "@/components/guide/StepGuide";
-import { COMPASS_FULL_NAME, COMPASS_NAME, officiantInvoiceParts } from "@/lib/compass";
+import { COMPASS_FULL_NAME, COMPASS_NAME, officiantInvoiceNumber, officiantInvoiceParts } from "@/lib/compass";
 import { getWeddingByToken } from "@/lib/hub";
 import { formatEventDate } from "@/lib/hub-constants";
 import {
@@ -232,6 +233,7 @@ export default async function OfficiantPage({
               : undefined
           }
         />
+        {!wedding.cancelledAt && !wedding.archivedAt && !wedding.booksExcludedAt && wedding.status !== "cancelled" && a.acceptedAt && !a.balancePaidAt && <VenmoPayment amount={inv.parts[a.depositPaidAt ? 1 : 0].amount} invoice={officiantInvoiceNumber({ id: a.id, eventDate: wedding.eventDate })} part={a.depositPaidAt ? "balance" : "deposit"} />}
         </div>
       </div>
     </div>
