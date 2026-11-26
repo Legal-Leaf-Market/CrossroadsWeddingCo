@@ -34,8 +34,9 @@ export async function preAuditEvidence(
   tenantId: string,
   { from, through }: ReturnType<typeof preAuditRange>,
   limit?: number,
+  ex: Pick<typeof db, "select"> = db,
 ) {
-  const query = db.select({
+  const query = ex.select({
     id: expenseClaims.id,
     day: expenseClaims.spentOn,
     merchant: expenseClaims.merchant,
@@ -43,6 +44,7 @@ export async function preAuditEvidence(
     status: expenseClaims.status,
     fileName: receipts.fileName,
     receiptId: receipts.id,
+    receiptBytes: receipts.byteSize,
     amountCents: expenseClaims.amountCents,
   }).from(expenseClaims)
     .leftJoin(receipts, and(eq(expenseClaims.receiptId, receipts.id), eq(receipts.tenantId, tenantId)))

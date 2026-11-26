@@ -111,6 +111,11 @@ export default async function AuditPage({
                       {r.entityId ? ` ${r.entityId.slice(0, 12)}` : ""}
                     </Link>
                     {record && <Link href={record} className={`mt-1 block ${linkClass}`}>Open record</Link>}
+                    {r.entityType === "pre_audit_packet" && r.entityId && UUID.test(r.entityId) && (
+                      <a href={`/api/app/books/pre-audit/packets/${r.entityId}`} className={`mt-1 block ${linkClass}`}>
+                        Download saved packet
+                      </a>
+                    )}
                   </td>
                   <td className="max-w-[420px] break-words px-3 py-2 text-ink/70">
                     {r.reason && <span className="block">Why: {r.reason}</span>}
