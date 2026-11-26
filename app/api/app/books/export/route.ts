@@ -13,7 +13,7 @@ import { csvOf, dollars } from "@/lib/books/subledger-logic";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const REPORTS = ["trial-balance", "subledgers", "audit-log"] as const;
+const REPORTS = ["trial-balance", "subledgers", "audit-log", "cpa-tie-out"] as const;
 type Report = (typeof REPORTS)[number];
 
 export async function GET(req: NextRequest) {
@@ -29,7 +29,13 @@ export async function GET(req: NextRequest) {
   if (report !== "audit-log") await postBankLedger(tenantId);
 
   let csv: string;
-  if (report === "trial-balance") {
+  if (report === "cpa-tie-out") {
+    const tb = await trialBalance(tenantId, asOf);
+    csv = csvOf(
+      ["As of", "Account code", "Account", "ERP debits", "ERP credits", "CPA debits", "CPA credits", "Unreconciled difference", "Proposed adjustment", "Evidence reference", "Reviewer note"],
+      tb.map((a) => [asOf, a.code, a.name, dollars(a.debit), dollars(a.credit), "", "", "", "", "", ""]),
+    );
+  } else if (report === "trial-balance") {
     const tb = await trialBalance(tenantId, asOf);
     csv = csvOf(
       ["As of", "Account code", "Account", "Type", "Debits", "Credits", "Balance"],

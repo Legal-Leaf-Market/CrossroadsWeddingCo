@@ -22,7 +22,14 @@ const rule = z
   .optional();
 
 const schema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("categorize"), ids, categoryId: z.string().max(40), note, rule }),
+  z.object({
+    action: z.literal("categorize"), ids, categoryId: z.string().max(40), note, rule,
+    preview: z.object({
+      amountCents: z.number().int().safe().refine((amount) => amount !== 0),
+      postedDate: z.iso.date(),
+      taxReviewRequested: z.boolean().optional(),
+    }).optional(),
+  }),
   z.object({ action: z.literal("exclude"), ids, note, rule }),
   z.object({ action: z.literal("reopen"), ids }),
   z.object({ action: z.literal("note"), ids, note: z.string().max(1000) }),
@@ -66,7 +73,7 @@ export async function POST(req: NextRequest) {
       if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status, headers: NO_STORE });
       return NextResponse.json({ ok: true, updated: 1 }, { headers: NO_STORE });
     }
-    const result = await applyReview(ws.tenant.id, ws.user.id, input);
+    const result = await applyReview(ws.tenant.id, ws.user.id, input, ws.user.email);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status, headers: NO_STORE });
     // "Always do this": the person's own decision is saved first, so a refused
     // rule never costs the sort they just made. The rule then sorts the rest.

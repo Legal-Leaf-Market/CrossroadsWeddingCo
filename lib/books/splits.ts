@@ -76,10 +76,12 @@ export async function applySplit(tenantId: string, userId: string, transactionId
 }
 
 /** Remove the parts of these lines (another decision replaced the split). */
-export async function clearSplits(tenantId: string, ids: string[]): Promise<void> {
+type SplitExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function clearSplits(tenantId: string, ids: string[], ex: SplitExecutor = db): Promise<void> {
   if (!ids.length) return;
-  await db.delete(bankTransactionSplits).where(and(eq(bankTransactionSplits.tenantId, tenantId), inArray(bankTransactionSplits.transactionId, ids)));
-  await db
+  await ex.delete(bankTransactionSplits).where(and(eq(bankTransactionSplits.tenantId, tenantId), inArray(bankTransactionSplits.transactionId, ids)));
+  await ex
     .update(bankTransactions)
     .set({ isSplit: false, updatedAt: new Date() })
     .where(and(eq(bankTransactions.tenantId, tenantId), inArray(bankTransactions.id, ids), eq(bankTransactions.isSplit, true)));
