@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KIND_LABEL, type CategoryKind } from "@/lib/books/categories";
+import { bankLinePosting } from "@/lib/books/logic";
 import ReceiptControl from "@/components/expenses/ReceiptControl";
 
 export type QueueCategory = { id: string; name: string; kind: CategoryKind };
@@ -71,6 +72,48 @@ function CategoryOptions({ categories, amountCents }: { categories: QueueCategor
         );
       })}
     </>
+  );
+}
+
+function TreatmentPreview({
+  item,
+  category,
+  busy,
+  onApprove,
+}: {
+  item: QueueItem;
+  category: QueueCategory;
+  busy: boolean;
+  onApprove: () => void;
+}) {
+  const lines = bankLinePosting(item.amountCents, "bank", "category");
+  const bank = item.mask ? `${item.accountName} ····${item.mask}` : item.accountName;
+  const counter = category.kind === "transfer" ? "Transfers in transit" : category.name;
+  return (
+    <div className="min-w-0 rounded-xl border border-parchment bg-white p-3">
+      <table className="w-full text-left text-sm">
+        <caption className="mb-2 text-left font-semibold text-charcoal">{category.name}</caption>
+        <thead>
+          <tr className="border-b border-parchment text-xs text-ink/70">
+            <th scope="col" className="pb-1">Account</th>
+            <th scope="col" className="pb-1 pl-2 text-right">Debit</th>
+            <th scope="col" className="pb-1 pl-2 text-right">Credit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => (
+            <tr key={line.accountId}>
+              <th scope="row" className="break-words py-1 font-normal">{line.accountId === "bank" ? bank : counter}</th>
+              <td className="whitespace-nowrap pl-2 text-right tabular-nums">{line.debitCents ? usd(line.debitCents) : "—"}</td>
+              <td className="whitespace-nowrap pl-2 text-right tabular-nums">{line.creditCents ? usd(line.creditCents) : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button type="button" className={`mt-2 ${primary}`} disabled={busy} onClick={onApprove}>
+        Approve {category.name}
+      </button>
+    </div>
   );
 }
 
@@ -257,6 +300,7 @@ export default function ReviewQueue({
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [always, setAlways] = useState<Record<string, boolean>>({});
   const [bulkCat, setBulkCat] = useState("");
+  const [comparing, setComparing] = useState<{ itemId: string; alternateId: string } | null>(null);
   const [busy, setBusy] = useState<string>("");
   const [msg, setMsg] = useState("");
 
@@ -288,12 +332,15 @@ export default function ReviewQueue({
     };
   }
 
-  async function sortOne(item: QueueItem) {
-    const categoryId = choice[item.id];
-    if (!categoryId) return;
+  async function sortOne(item: QueueItem, approvedCategory?: string) {
+    const categoryId = approvedCategory ?? choice[item.id];
+    if (!categoryId || busy) return;
     setBusy(item.id);
     setMsg("");
-    finish([item.id], await post({ action: "categorize", ids: [item.id], categoryId, note: notes[item.id], rule: ruleFor(item) }));
+    finish([item.id], await post({
+      action: "categorize", ids: [item.id], categoryId, note: notes[item.id], rule: ruleFor(item),
+      ...(approvedCategory ? { preview: { amountCents: item.amountCents, postedDate: item.postedDate } } : {}),
+    }));
   }
 
   async function excludeOne(item: QueueItem) {
@@ -383,6 +430,9 @@ export default function ReviewQueue({
         {visible.map((item) => {
           const hint = bankHint(item.rawCategory);
           const title = item.merchant || item.description || "Bank transaction";
+          const comparison = comparing?.itemId === item.id ? comparing : null;
+          const selectedCategory = categories.find((category) => category.id === choice[item.id]);
+          const alternate = comparison && categories.find((category) => category.id === comparison.alternateId && category.id !== selectedCategory?.id);
           return (
             <li key={item.id} className="grid gap-3 p-4">
               <div className="flex items-start gap-3">
@@ -462,9 +512,15 @@ export default function ReviewQueue({
                     onChange={(e) => setNotes((n) => ({ ...n, [item.id]: e.target.value }))}
                   />
                   <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" className={primary} disabled={!choice[item.id] || busy !== ""} onClick={() => sortOne(item)}>
-                      {busy === item.id ? "Saving..." : "Save"}
-                    </button>
+                    {item.pending || !item.amountCents ? (
+                      <button type="button" className={primary} disabled={!selectedCategory || busy !== ""} onClick={() => sortOne(item)}>
+                        {busy === item.id ? "Saving..." : "Save category"}
+                      </button>
+                    ) : (
+                      <button type="button" className={primary} aria-expanded={!!comparison} disabled={busy !== ""} onClick={() => setComparing(comparison ? null : { itemId: item.id, alternateId: "" })}>
+                        {comparison ? "Close comparison" : "Review T-accounts"}
+                      </button>
+                    )}
                     <button type="button" className={btn} disabled={busy !== ""} onClick={() => excludeOne(item)}>
                       Not business
                     </button>
@@ -481,6 +537,33 @@ export default function ReviewQueue({
                   )}
                 </div>
               ) : null}
+              {view === "unreviewed" && comparison && (
+                <section aria-label="Compare accounting treatments" className="grid gap-3 rounded-xl bg-cream/70 p-3 sm:ml-7">
+                  <p className="text-sm text-ink/70">
+                    Choose a category above and optionally compare an alternative. These previews show standard categorization.
+                    Linked reimbursements and period-close rules can affect the final posting.
+                  </p>
+                  <label className="grid gap-1 text-xs font-semibold text-ink/70">
+                    Alternate category
+                    <select
+                      className={select}
+                      value={alternate?.id ?? ""}
+                      disabled={busy !== ""}
+                      onChange={(e) => setComparing({ itemId: item.id, alternateId: e.target.value })}
+                    >
+                      <CategoryOptions categories={categories.filter((category) => category.id !== selectedCategory?.id)} amountCents={item.amountCents} />
+                    </select>
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[selectedCategory, alternate].filter((category): category is QueueCategory => Boolean(category)).map((category) => (
+                      <TreatmentPreview key={category.id} item={item} category={category} busy={busy !== ""} onApprove={() => void sortOne(item, category.id)} />
+                    ))}
+                  </div>
+                  <button type="button" className={`justify-self-start ${btn}`} disabled={busy !== ""} onClick={() => setComparing(null)}>
+                    Leave in review
+                  </button>
+                </section>
+              )}
               {view === "unreviewed" ? (
                 <SplitEditor item={item} categories={categories} busy={busy !== ""} onSave={(parts) => split(item, parts)} />
               ) : null}

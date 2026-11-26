@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { bankAccounts, bankTransactions, categorizationRules, ledgerCategories, weddings } from "@/lib/db/schema";
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
@@ -127,7 +128,7 @@ export async function queueCounts(tenantId: string): Promise<Record<ReviewStatus
 }
 
 export type ReviewAction =
-  | { action: "categorize"; ids: string[]; categoryId: string; note?: string }
+  | { action: "categorize"; ids: string[]; categoryId: string; note?: string; preview?: { amountCents: number; postedDate: string } }
   | { action: "exclude"; ids: string[]; note?: string }
   | { action: "reopen"; ids: string[] }
   | { action: "note"; ids: string[]; note: string };
@@ -139,10 +140,12 @@ export type ReviewResult = { ok: true; updated: number } | { ok: false; status: 
  * real) are simply not touched, and the count says how many were. A person's
  * decision always pauses rules on that row, so a later sync can never undo it.
  */
-export async function applyReview(tenantId: string, userId: string, input: ReviewAction): Promise<ReviewResult> {
+export async function applyReview(tenantId: string, userId: string, input: ReviewAction, actor = userId): Promise<ReviewResult> {
   const ids = [...new Set(input.ids.filter(isUuid))];
   if (!ids.length) return { ok: false, status: 400, error: "Pick at least one transaction." };
   const scope = and(eq(bankTransactions.tenantId, tenantId), inArray(bankTransactions.id, ids), isNull(bankTransactions.removedAt));
+  const preview = input.action === "categorize" ? input.preview : undefined;
+  if (preview && ids.length !== 1) return { ok: false, status: 400, error: "Approve one transaction at a time." };
   const now = new Date();
   const note = "note" in input && input.note !== undefined ? input.note.trim().slice(0, 1000) || null : undefined;
 
@@ -163,15 +166,40 @@ export async function applyReview(tenantId: string, userId: string, input: Revie
   else if (input.action === "categorize" || input.action === "exclude") set.note = noteWithoutBrokenSplit as unknown as string;
   if (!Object.keys(set).length) return { ok: true, updated: 0 };
 
-  const res = await db
-    .update(bankTransactions)
-    .set({ ...set, updatedAt: now })
-    .where(scope)
-    .returning({ id: bankTransactions.id });
-  if (res.length && input.action !== "note") {
-    await clearSplits(tenantId, res.map((r) => r.id)); // a new decision replaces any split
-    await postBankLedgerQuietly(tenantId);
+  const res = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(bankTransactions)
+      .set({ ...set, updatedAt: now })
+      .where(preview
+        ? and(scope,
+            eq(bankTransactions.reviewStatus, "unreviewed"),
+            eq(bankTransactions.pending, false),
+            eq(bankTransactions.amountCents, preview.amountCents),
+            eq(bankTransactions.postedDate, preview.postedDate))
+        : scope)
+      .returning({ id: bankTransactions.id });
+
+    if (rows.length && input.action !== "note") {
+      await clearSplits(tenantId, rows.map((row) => row.id), tx);
+    }
+    if (preview && input.action === "categorize" && rows.length) {
+      await audit(tx, {
+        tenantId,
+        actor,
+        action: "bank.treatment_approved",
+        entityType: "bank_transaction",
+        entityId: rows[0].id,
+        before: { reviewStatus: "unreviewed" },
+        after: { reviewStatus: "categorized", categoryId: input.categoryId, ...preview },
+        reason: note,
+      });
+    }
+    return rows;
+  });
+  if (preview && !res.length) {
+    return { ok: false, status: 409, error: "This transaction changed. Refresh and review its T-accounts again." };
   }
+  if (res.length && input.action !== "note") await postBankLedgerQuietly(tenantId, { actor });
   return { ok: true, updated: res.length };
 }
 
