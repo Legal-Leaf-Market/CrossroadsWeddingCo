@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import VenmoPayment from "@/components/hub/VenmoPayment";
 import PrintButton from "@/components/hub/PrintButton";
 import { adminKeyMatches, getAdminWeddingRow } from "@/lib/admin";
 import { formatEventDate } from "@/lib/hub-constants";
@@ -148,6 +149,7 @@ export default async function AdminInvoicePage({
             <section className="mt-6 rounded-xl bg-cream px-4 py-3 text-sm text-ink/80 print:bg-transparent print:px-0">
               <p>{inv.balanceDueNote}</p>
               <p className="mt-1">{inv.paymentNote}</p>
+              {!row.cancelledAt && !row.archivedAt && !row.booksExcludedAt && row.status !== "cancelled" && row.status !== "inquiry" && !row.customTerms && <VenmoPayment amount={inv.amountDue} invoice={inv.number} part={inv.depositPaid ? "balance" : "deposit"} />}
             </section>
           )}
 
