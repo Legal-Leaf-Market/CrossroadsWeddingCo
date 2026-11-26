@@ -22,6 +22,7 @@ const STRUCTURED_DATA = {
   url: SITE_URL,
   email: CONTACT_EMAIL,
   telephone: CONTACT_PHONE,
+  sameAs: ["https://www.theknot.com/marketplace/crossroads-wedding-co-columbus-in-2107955"],
   image: SITE_URL + "/opengraph-image",
   priceRange: "$$",
   address: {
@@ -72,7 +73,7 @@ const STRUCTURED_DATA = {
       }));
     }
 
-    return [{ "@type": "Offer", itemOffered }];
+    return [{ "@type": "Offer", itemOffered, price: undefined, priceCurrency: undefined }];
   }),
 };
 
