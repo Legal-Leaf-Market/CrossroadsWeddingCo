@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import s from "@/components/partners/wild-bramble.module.css";
@@ -16,8 +16,20 @@ import { DIETS, WILD_BRAMBLE as WB } from "@/lib/wild-bramble";
 // short quote. No photos: theirs are theirs, and the art here is ours.
 export const revalidate = 86400;
 
-const head = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600", "700"], style: ["normal", "italic"], variable: "--wb-head", display: "swap" });
-const body = DM_Sans({ subsets: ["latin"], variable: "--wb-body", display: "swap" });
+const head = localFont({
+  src: [
+    { path: "./fonts/cormorant-normal.woff2", weight: "500 700", style: "normal" },
+    { path: "./fonts/cormorant-italic.woff2", weight: "500 700", style: "italic" },
+  ],
+  variable: "--wb-head",
+  display: "swap",
+});
+const body = localFont({
+  src: "./fonts/dm-sans.woff2",
+  weight: "100 1000",
+  variable: "--wb-body",
+  display: "swap",
+});
 
 const TITLE = "Wild Bramble Catering: seasonal catering in Columbus, Indiana";
 const DESCRIPTION =
@@ -27,7 +39,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: `/partners/${WB.slug}` },
-  openGraph: { url: `/partners/${WB.slug}`, title: "Wild Bramble Catering: cooked like family, with what's in season", description: DESCRIPTION },
+  openGraph: { url: `/partners/${WB.slug}`, title: "Wild Bramble Catering: cooked for like family, with what's in season", description: DESCRIPTION },
 };
 
 function Bramble() {
@@ -145,7 +157,7 @@ export default function WildBramblePage() {
               </p>
               <p className={s.kicker}>Seasonal catering &middot; Columbus, Indiana &middot; Since {WB.since}</p>
               <h1>
-                Cooked like family,
+                Cooked for like family,
                 <em>with what&rsquo;s in season.</em>
               </h1>
               <p className={s.lede}>

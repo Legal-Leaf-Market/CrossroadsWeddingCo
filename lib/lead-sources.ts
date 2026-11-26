@@ -101,12 +101,15 @@ export function cleanSrcTag(raw: string | null | undefined): string | null {
   return /^[a-z0-9][a-z0-9_-]{0,39}$/.test(tag) ? tag : null;
 }
 
-/** The dropdown option a tag implies; tags like "roku-nov" match on the prefix. */
+/** Find the most specific known alias before any campaign suffix. */
 export function sourceForTag(tag: string | null): LeadSource | null {
-  if (!tag) return null;
-  if (Object.prototype.hasOwnProperty.call(SRC_TAGS, tag)) return SRC_TAGS[tag];
-  const prefix = tag.split(/[-_]/)[0];
-  return Object.prototype.hasOwnProperty.call(SRC_TAGS, prefix) ? SRC_TAGS[prefix] : null;
+  while (tag) {
+    if (Object.hasOwn(SRC_TAGS, tag)) return SRC_TAGS[tag];
+    const separator = Math.max(tag.lastIndexOf("-"), tag.lastIndexOf("_"));
+    if (separator < 0) break;
+    tag = tag.slice(0, separator);
+  }
+  return null;
 }
 
 // First-touch storage key. First touch, not last: the couple who saw the Hulu
