@@ -18,6 +18,7 @@ const HOME_DESCRIPTION = `DJ, sound and MC for corporate events, holiday parties
 export const metadata: Metadata = {
   title: { absolute: HOME_TITLE },
   description: HOME_DESCRIPTION,
+  alternates: { canonical: "/" },
   openGraph: { title: HOME_TITLE, description: HOME_DESCRIPTION },
 };
 

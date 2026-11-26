@@ -37,9 +37,6 @@ export const metadata: Metadata = {
     "wedding day-of coordinator",
     "affordable wedding DJ",
   ],
-  alternates: {
-    canonical: "/",
-  },
   openGraph: {
     type: "website",
     locale: "en_US",

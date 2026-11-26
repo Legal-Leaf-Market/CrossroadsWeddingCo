@@ -39,16 +39,10 @@ export default function BartendingPage() {
       name: SITE_NAME,
       url: SITE_URL,
     },
-    offers: {
-      "@type": "Offer",
-      priceSpecification: {
-        "@type": "PriceSpecification",
-        minPrice: String(BARTENDER_ONE_USD),
-        maxPrice: String(BARTENDER_TWO_USD),
-        priceCurrency: "USD",
-      },
-      description: "Serve-only wedding bartending: the host provides the alcohol, we staff and run the bar. $250 for one bartender, $400 for two, set by guest count.",
-    },
+    offers: [
+      { "@type": "Offer", name: "One bartender", price: String(BARTENDER_ONE_USD), priceCurrency: "USD" },
+      { "@type": "Offer", name: "Two bartenders", price: String(BARTENDER_TWO_USD), priceCurrency: "USD" },
+    ],
   };
 
   return (
