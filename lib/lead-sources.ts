@@ -20,6 +20,10 @@ export const LEAD_SOURCES = [
   { value: "gigsalad", label: "GigSalad" },
   { value: "the_bash", label: "The Bash" },
   { value: "google", label: "Google search" },
+  { value: "yelp", label: "Yelp" },
+  { value: "bing_places", label: "Bing Places" },
+  { value: "chatgpt", label: "ChatGPT" },
+  { value: "visit_columbus", label: "Visit Columbus" },
   { value: "instagram", label: "Instagram" },
   { value: "facebook", label: "Facebook" },
   { value: "tv", label: "Saw an ad on TV (Roku, Hulu)" },
@@ -61,6 +65,15 @@ export const SRC_TAGS: Record<string, LeadSource> = {
   thebash: "the_bash",
   google: "google",
   gbp: "google",
+  "google-business": "google",
+  "the-knot": "the_knot",
+  weddingwire: "weddingwire",
+  yelp: "yelp",
+  bing: "bing_places",
+  "bing-places": "bing_places",
+  chatgpt: "chatgpt",
+  "visit-columbus": "visit_columbus",
+  "venue-referral": "venue",
   ig: "instagram",
   fb: "facebook",
   tv: "tv",
@@ -91,9 +104,9 @@ export function cleanSrcTag(raw: string | null | undefined): string | null {
 /** The dropdown option a tag implies; tags like "roku-nov" match on the prefix. */
 export function sourceForTag(tag: string | null): LeadSource | null {
   if (!tag) return null;
-  if (SRC_TAGS[tag]) return SRC_TAGS[tag];
+  if (Object.prototype.hasOwnProperty.call(SRC_TAGS, tag)) return SRC_TAGS[tag];
   const prefix = tag.split(/[-_]/)[0];
-  return SRC_TAGS[prefix] ?? null;
+  return Object.prototype.hasOwnProperty.call(SRC_TAGS, prefix) ? SRC_TAGS[prefix] : null;
 }
 
 // First-touch storage key. First touch, not last: the couple who saw the Hulu
