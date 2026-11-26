@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: `/partners/${WB.slug}` },
-  openGraph: { url: `/partners/${WB.slug}`, title: "Wild Bramble Catering: cooked like family, with what's in season", description: DESCRIPTION },
+  openGraph: { url: `/partners/${WB.slug}`, title: "Wild Bramble Catering: cooked for like family, with what's in season", description: DESCRIPTION },
 };
 
 function Bramble() {
@@ -145,7 +145,7 @@ export default function WildBramblePage() {
               </p>
               <p className={s.kicker}>Seasonal catering &middot; Columbus, Indiana &middot; Since {WB.since}</p>
               <h1>
-                Cooked like family,
+                Cooked for like family,
                 <em>with what&rsquo;s in season.</em>
               </h1>
               <p className={s.lede}>
