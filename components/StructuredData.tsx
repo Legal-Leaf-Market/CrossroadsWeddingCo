@@ -1,10 +1,10 @@
 import { CITIES } from "@/lib/cities";
 import {
   CONTACT_EMAIL,
+  CONTACT_PHONE,
   SERVICE_OFFERS,
   SITE_DESCRIPTION,
   SITE_NAME,
-  EVENT_BRAND_NAME,
   SITE_URL,
 } from "@/lib/site";
 
@@ -15,13 +15,14 @@ import {
 const STRUCTURED_DATA = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  "@id": `${SITE_URL}/#business`,
+  "@id": SITE_URL + "/#business",
   name: SITE_NAME,
   alternateName: "Crossroads Wedding Co.",
   description: SITE_DESCRIPTION,
   url: SITE_URL,
   email: CONTACT_EMAIL,
-  image: `${SITE_URL}/opengraph-image`,
+  telephone: CONTACT_PHONE,
+  image: SITE_URL + "/opengraph-image",
   priceRange: "$$",
   address: {
     "@type": "PostalAddress",
@@ -42,25 +43,37 @@ const STRUCTURED_DATA = {
       geoRadius: "160000",
     },
   ],
-  makesOffer: SERVICE_OFFERS.map((offer) => ({
-    "@type": "Offer",
-    itemOffered: {
+  makesOffer: SERVICE_OFFERS.flatMap((offer) => {
+    const itemOffered = {
       "@type": "Service",
       name: offer.name,
       description: offer.description,
-    },
-    ...(offer.priceUsd !== null
-      ? { price: String(offer.priceUsd), priceCurrency: "USD" }
-      : "minPriceUsd" in offer && offer.minPriceUsd !== undefined
-        ? {
-            priceSpecification: {
-              "@type": "PriceSpecification",
-              minPrice: offer.minPriceUsd,
-              priceCurrency: "USD",
-            },
-          }
-        : {}),
-  })),
+    };
+
+    if (offer.priceUsd !== null) {
+      return [{
+        "@type": "Offer",
+        itemOffered,
+        price: String(offer.priceUsd),
+        priceCurrency: "USD",
+      }];
+    }
+
+    if ("priceOptions" in offer && offer.priceOptions) {
+      return offer.priceOptions.map((option) => ({
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name: offer.name + " — " + option.name,
+          description: offer.description,
+        },
+        price: String(option.priceUsd),
+        priceCurrency: "USD",
+      }));
+    }
+
+    return [{ "@type": "Offer", itemOffered }];
+  }),
 };
 
 export default function StructuredData() {
