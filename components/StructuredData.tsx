@@ -44,7 +44,7 @@ const STRUCTURED_DATA = {
       geoRadius: "160000",
     },
   ],
-  makesOffer: SERVICE_OFFERS.flatMap((offer) => {
+  makesOffer: SERVICE_OFFERS.flatMap<{ "@type": string; itemOffered: { "@type": string; name: string; description: string }; price?: string; priceCurrency?: string }>((offer) => {
     const itemOffered = {
       "@type": "Service",
       name: offer.name,
