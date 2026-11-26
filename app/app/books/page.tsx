@@ -104,6 +104,7 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
         <Link href="/app/books/accounts" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Trial balance</Link>
         <Link href="/app/books/tie-out" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Tie-out</Link>
         <Link href="/app/books/audit" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Audit log</Link>
+        <Link href="/app/books/import" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Import preflight</Link>
       </p>
       {ws.tenant.kind !== "house" && (
         <Link href="/app" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
