@@ -60,7 +60,11 @@ export default async function PreAuditPage({ searchParams }: { searchParams: Pro
       <section className="mt-6">
         <h2 className="text-lg font-semibold text-charcoal">Reports and reconciliation</h2>
         <ol className="mt-2 list-decimal space-y-1 pl-6 text-sm">
-          {reports.map(([name, href]) => <li key={name}><Link href={href} className={link}>{name}</Link></li>)}
+          {reports.map(([name, href]) => (
+            <li key={name}>
+              {href.startsWith("/api/") ? <a href={href} className={link}>{name}</a> : <Link href={href} className={link}>{name}</Link>}
+            </li>
+          ))}
         </ol>
         <p className="mt-2 text-sm text-ink/70">
           The comparison worksheet carries the ERP debit and credit totals by account, with blank columns for the CPA’s independent totals, differences, proposed adjustments and evidence references.
@@ -94,7 +98,7 @@ export default async function PreAuditPage({ searchParams }: { searchParams: Pro
           <li>Open invoices and vendor bills, service agreements, and deposit support.</li>
           <li>Asset invoices and depreciation schedules, tax filings, and prior-year closing entries as applicable.</li>
         </ul>
-        <p className="mt-2 text-sm text-ink/70">Keep the CPA’s evidence references and proposed entries with the comparison. Review each proposed adjustment before posting it through the close workflow.</p>
+        <p className="mt-2 text-sm text-ink/70">Keep the CPA’s evidence references and proposed entries with the comparison. Review each proposed adjustment and obtain approval before it is posted.</p>
       </section>
     </AccountShell>
   );
