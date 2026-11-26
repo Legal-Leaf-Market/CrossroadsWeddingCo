@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { auditLog } from "@/lib/db/schema";
 import {
   CONTROL_ACCOUNTS,
   isControlKey,
@@ -278,16 +279,9 @@ export async function liveEntriesFor(tenantId: string, refs: string[]): Promise<
   return out;
 }
 
-/** The posted, voided, and adjusting entries that can be traced to one booking. */
-export async function jobJournalTrail(tenantId: string, jobId: string) {
-  if (!UUID_RE.test(jobId)) return null;
-  const job = await sourceRecord(tenantId, `job_revenue:${jobId}`);
-  if (job.kind !== "job" || !job.row) return null;
-
-  const entries = await rows<{
-    id: string; date: string; memo: string; status: string; sourceType: string;
-    adjustsPeriod: string | null;
-  }>(sql`
+/** Journal entries linked by a source record or a booking subledger line. */
+function jobJournalEntriesQuery(tenantId: string, jobId: string) {
+  return sql`
     with refs(ref) as (
       values ${sql.join(JOB_SOURCES.map((type) => sql`(${`${type}:${jobId}`}::text)`), sql`, `)}
       union
@@ -298,14 +292,38 @@ export async function jobJournalTrail(tenantId: string, jobId: string) {
       from expense_claims where tenant_id = ${tenantId} and wedding_id = ${jobId}::uuid
     )
     select e.id::text, e.entry_date::text as date, e.memo, e.status,
-           e.source_type as "sourceType", e.adjusts_period::text as "adjustsPeriod"
+           e.source_type as "sourceType", e.adjusts_period::text as "adjustsPeriod", e.created_at
     from journal_entries e
     where e.tenant_id = ${tenantId}
       and (e.source_ref in (select ref from refs)
         or exists (
           select 1 from journal_lines l
           where l.entry_id = e.id and l.tenant_id = e.tenant_id and l.sub_ref = ${`job:${jobId}`}
-        ))
-    order by e.entry_date desc, e.created_at desc, e.id desc`);
+        ))`;
+}
+
+/** Match both the booking's own changes and events for entries in its journal. */
+export function bookingAuditCondition(tenantId: string, jobId: string) {
+  return sql`(
+    (${auditLog.entityType} = 'job' and ${auditLog.entityId} = ${jobId})
+    or (${auditLog.entityType} = 'journal_entry' and ${auditLog.entityId} in (
+      select id from (${jobJournalEntriesQuery(tenantId, jobId)}) as entries
+    ))
+  )`;
+}
+
+/** The posted, voided, and adjusting entries that can be traced to one booking. */
+export async function jobJournalTrail(tenantId: string, jobId: string) {
+  if (!UUID_RE.test(jobId)) return null;
+  const job = await sourceRecord(tenantId, `job_revenue:${jobId}`);
+  if (job.kind !== "job" || !job.row) return null;
+
+  const entries = await rows<{
+    id: string; date: string; memo: string; status: string; sourceType: string;
+    adjustsPeriod: string | null;
+  }>(sql`
+    select id, date, memo, status, "sourceType", "adjustsPeriod"
+    from (${jobJournalEntriesQuery(tenantId, jobId)}) as entries
+    order by date desc, created_at desc, id desc`);
   return { job: job.row, entries };
 }

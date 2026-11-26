@@ -26,7 +26,7 @@ export default async function BookingJournalPage({ params }: { params: Promise<{
       <nav aria-label="Booking journal links" className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
         <Link href="/app/books" className={linkClass}>Books</Link>
         {!house && <Link href={`/app/bookings/${id}`} className={linkClass}>Booking record</Link>}
-        <Link href={`/app/books/audit?type=job&id=${id}`} className={linkClass}>Booking audit history</Link>
+        <Link href={`/app/books/audit?booking=${id}`} className={linkClass}>Booking audit history</Link>
       </nav>
       <h1 className="mt-3 break-words text-2xl text-charcoal">{String(job.names)}</h1>
       <p className="mt-1 text-sm text-ink/70">{formatEventDate(String(job.eventDate))}</p>

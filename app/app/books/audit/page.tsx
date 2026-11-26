@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { and, desc, eq, lt, sql, type SQL } from "drizzle-orm";
 import AccountShell from "@/components/account/AccountShell";
 import { getBooksWorkspace } from "@/lib/auth";
 import { verifyAudit } from "@/lib/audit";
+import { bookingAuditCondition } from "@/lib/books/subledger";
 import { db } from "@/lib/db";
 import { auditLog } from "@/lib/db/schema";
 import { PLATFORM_NAME } from "@/lib/tenant-constants";
@@ -19,12 +20,13 @@ const PAGE_SIZE = 100;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const linkClass = "text-terracotta-dark underline underline-offset-2";
 
-function auditHref(type?: string, id?: string, before?: number, tax = false) {
+function auditHref(type?: string, id?: string, before?: number, tax = false, booking?: string) {
   const query = new URLSearchParams();
   if (type) query.set("type", type);
   if (id) query.set("id", id);
   if (before) query.set("before", String(before));
   if (tax) query.set("tax", "flagged");
+  if (booking) query.set("booking", booking);
   const search = query.toString();
   return search ? `/app/books/audit?${search}` : "/app/books/audit";
 }
@@ -39,7 +41,7 @@ function recordHref(type: string, id: string | null) {
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string | string[]; id?: string | string[]; before?: string | string[]; tax?: string | string[] }>;
+  searchParams: Promise<{ type?: string | string[]; id?: string | string[]; before?: string | string[]; tax?: string | string[]; booking?: string | string[] }>;
 }) {
   const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
@@ -49,9 +51,12 @@ export default async function AuditPage({
   const before = typeof query.before === "string" && /^[1-9][0-9]*$/.test(query.before) ? Number(query.before) : 0;
   const cursor = Number.isSafeInteger(before) ? before : 0;
   const tax = query.tax === "flagged";
+  const booking = query.booking;
+  if (booking !== undefined && (typeof booking !== "string" || !UUID.test(booking))) notFound();
   const conds: SQL[] = [eq(auditLog.tenantId, ws.tenant.id)];
   if (type) conds.push(eq(auditLog.entityType, type));
   if (id) conds.push(eq(auditLog.entityId, id));
+  if (booking) conds.push(bookingAuditCondition(ws.tenant.id, booking));
   if (tax) conds.push(eq(auditLog.action, "bank.treatment_approved"), sql`${auditLog.after}->>'taxReviewRequested' = 'true'`);
   if (cursor > 0) conds.push(lt(auditLog.id, cursor));
   const [records, chain] = await Promise.all([
@@ -73,12 +78,14 @@ export default async function AuditPage({
       <p className={`mt-3 rounded-xl border p-3 text-sm ${chain.brokenAt ? "border-terracotta bg-white text-terracotta-dark" : "border-parchment bg-white text-sage-dark"}`}>
         {chain.brokenAt ? `Chain broken at row ${chain.brokenAt}: ${chain.why}` : `Chain intact: all ${chain.rows.toLocaleString("en-US")} rows check out.`}
       </p>
-      <Link href={auditHref(type, id, undefined, !tax)} className={`mt-3 inline-block text-sm ${linkClass}`}>
+      <Link href={auditHref(type, id, undefined, !tax, booking)} className={`mt-3 inline-block text-sm ${linkClass}`}>
         {tax ? "Include all audit decisions" : "Show decisions flagged for tax review"}
       </Link>
-      {(type || id) && (
+      {(booking || type || id) && (
         <p className="mt-2 text-sm">
-          Showing {type} {id}.{" "}
+          {booking ? (
+            <>Showing changes to <Link href={`/app/books/jobs/${booking}`} className={linkClass}>this booking</Link> and its journal entries.</>
+          ) : <>Showing {type} {id}.</>}{" "}
           <Link href="/app/books/audit" className="text-terracotta underline">
             Show everything
           </Link>
@@ -131,8 +138,8 @@ export default async function AuditPage({
       </div>
       {(next || cursor > 0) && (
         <nav aria-label="Audit log pages" className="mt-3 flex gap-4 text-sm">
-          {cursor > 0 && <Link href={auditHref(type, id, undefined, tax)} className={linkClass}>Newest entries</Link>}
-          {next && <Link href={auditHref(type, id, next, tax)} className={linkClass}>Older entries</Link>}
+          {cursor > 0 && <Link href={auditHref(type, id, undefined, tax, booking)} className={linkClass}>Newest entries</Link>}
+          {next && <Link href={auditHref(type, id, next, tax, booking)} className={linkClass}>Older entries</Link>}
         </nav>
       )}
     </AccountShell>
