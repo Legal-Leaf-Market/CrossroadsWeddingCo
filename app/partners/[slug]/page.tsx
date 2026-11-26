@@ -211,8 +211,8 @@ export default async function PartnerPage({ params }: { params: Promise<{ slug: 
           <div className="mx-auto max-w-5xl px-6">
             <h2 className="text-2xl text-charcoal">Planning with Crossroads?</h2>
             <p className="mt-3 max-w-2xl text-ink/80">
-              Mention {p.name} on your intro call and we&apos;ll put the timeline together around them, so the dessert table,
-              the backdrop and the big moments land where they should.
+              Mention {p.name} on your intro call and{" "}
+              {p.withUs ?? "we'll put the timeline together around them, so the dessert table, the backdrop and the big moments land where they should."}
             </p>
             <a href="/book" className="mt-5 inline-block rounded-full bg-terracotta px-6 py-3 text-sm font-semibold text-cream hover:bg-terracotta-dark">
               Check your date

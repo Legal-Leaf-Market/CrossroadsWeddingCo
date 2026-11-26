@@ -25,6 +25,16 @@
 // lib/wild-bramble.ts, and its page is its own file
 // (app/partners/wild-bramble-catering): a menu builder that sends straight
 // to their inbox. They have not reviewed the page.
+// Love Me Wildly Photography (2026-11-26, Jacob: "Nick and I both know her
+// personally ... would 1000% recommend her ... a partner page"): Deidra
+// McKenzie's studio. Facts from her own pages, read 2026-11-26:
+// lovemewildly.com (home, about, packages, portfolio, contact) and
+// instagram.com/love.me.wildly. Her site publishes no prices. The surname is
+// from Jacob; her site signs "Deidra". "Why we send couples to her" is our
+// own recommendation, Jake and Nic having worked a wedding with her, not a
+// review of hers. NO PHOTOS: her portfolio is her work and shows her couples,
+// so it stays on her site until she sends what she wants shown here. Heart of
+// Columbus built her a draft website (its sites/love-me-wildly/).
 
 import { CONTACT_EMAIL } from "@/lib/site";
 
@@ -59,6 +69,8 @@ export type Partner = {
   customPage?: boolean;
   /** One short line on the partner list card, e.g. that you can order here. */
   badge?: string;
+  /** How their part fits a Crossroads timeline, for the shared template's closing section. */
+  withUs?: string;
   source: string;
   checked: string;
 };
@@ -163,6 +175,49 @@ export const PARTNERS: Partner[] = [
     badge: "Build a menu and send it here",
     source: "https://www.wildbramblecatering.com/",
     checked: "2026-11-25",
+  },
+  {
+    slug: "love-me-wildly",
+    name: "Love Me Wildly Photography",
+    kind: "Wedding, elopement and family photography, based in Columbus",
+    intro:
+      "Deidra McKenzie's photography studio in Columbus, Indiana: weddings, elopements, portraits and newborn lifestyle sessions. She has been behind the camera since 2010, her packages are built around each couple, and she travels for elopements.",
+    forEvents: [
+      "The Golden Hour package: 5 hours of coverage.",
+      "The Timeless package: 8 hours of coverage.",
+      "The Wildly In Love package: elopement weddings, wherever you are going. One couple's elopement took her to Tennessee.",
+      "Engagement, family and portrait sessions, plus newborn lifestyle photos for after the wedding.",
+      "Every package is a starting point she customizes to you. Prices come from her, so ask with your date.",
+    ],
+    details: [
+      { label: "Why we send couples to her", value: "Jake and Nic have worked a wedding with Deidra, and we recommend her 1000%." },
+      { label: "Based in", value: "Columbus, Indiana, and she travels" },
+      { label: "Call or text", value: "(812) 593-5541, Monday to Friday, 9 AM to 5 PM" },
+      { label: "Email", value: "Lovemewildlyphotography@gmail.com" },
+      { label: "Her work", value: "Her portfolio lives on her website and Instagram. We'll show it here once she sends the photos she wants shared." },
+    ],
+    links: [
+      { label: "See her work", href: "https://www.lovemewildly.com/", primary: true },
+      { label: "Packages", href: "https://www.lovemewildly.com/packages" },
+      { label: "Contact her", href: "https://www.lovemewildly.com/contact" },
+      { label: "Instagram", href: "https://www.instagram.com/love.me.wildly/" },
+    ],
+    practices: [
+      { title: "Real moments first", body: "The in-between moments, the fun interactions and the real emotion, not stiff, overly posed photos." },
+      { title: "Direction when you want it", body: "In her words: yes, she'll tell you what to do with your hands." },
+      { title: "A collaboration", body: "She sees your photos as art you make together, not a service handed over." },
+      { title: "Made to fit", body: "Her packages are loose frameworks, customized to each couple." },
+    ],
+    ask: [
+      "Your date, venue and the hours you want covered, from getting ready to the send off.",
+      "When the sun sets on your date, so there is time for golden hour portraits.",
+      "The family groupings you want, written down, so the formal photos go fast.",
+      "Whether you want an engagement session first.",
+    ],
+    withUs:
+      "we'll build the timeline with her, so the first look, the family photos and the golden hour portraits land where they should and the dance floor waits for her shots of the big moments.",
+    source: "https://www.lovemewildly.com/",
+    checked: "2026-11-26",
   },
 ];
 
