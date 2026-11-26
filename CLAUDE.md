@@ -552,6 +552,16 @@ PHASE 4: Multi-Tenant Franchise Rollout (Weeks 7–8)
   and `next.config.mjs` `rewrites()` does the same on any other host. Do not add a route,
   middleware or Permissions-Policy header that covers /messaging: the tool needs the camera
   and microphone on this origin. Change the tool in its own repo, not here.
+- **Publishing in batches (2026-11-26, after the team ran out of Netlify credits).** Every
+  production deploy costs 15 credits; Deploy Previews and branch deploys cost nothing.
+  `.github/workflows/publish.yml` (copied from Heart of Columbus) fast-forwards a `live` branch
+  to `main` once 5 site changes are waiting or the oldest has waited 4 hours, at once for a pull
+  request with `[publish]` in its title, or on Actions > Publish to the live site > Run workflow.
+  Merges touching only `.github/`, `docs/`, root `.md` files or `vercel.json` never publish on
+  their own. **It saves nothing until Netlify project comforting-kataifi-0c8252 builds
+  production from `live`** (production branch `live`, branch deploys include `main`), and it does
+  nothing until a `live` branch exists. Once switched, a merged pull request is not live until the
+  next publish; say so when reporting one as done. Never commit on `live` or push to it by hand.
 - **The live site is on Netlify, not Vercel (owner-confirmed 2026-10-13).**
   crossroadsweddingco.shop answers with `server: Netlify`; Netlify project
   comforting-kataifi-0c8252 builds from `main`. References to Vercel elsewhere in this file
