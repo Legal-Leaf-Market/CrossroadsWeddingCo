@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import VenmoPayment from "@/components/hub/VenmoPayment";
+import { buildInvoice } from "@/lib/invoice";
 import AccessSection from "@/components/hub/AccessSection";
 import CallSection from "@/components/hub/CallSection";
 import CountdownHero from "@/components/hub/CountdownHero";
@@ -54,6 +56,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
   // message thread and video calls reach the Crossroads team. A business on
   // the platform gets none of them until each is rebuilt per account.
   const house = brand.isHouse;
+  const venmoInvoice = house && !wedding.cancelledAt && !wedding.archivedAt && !wedding.booksExcludedAt && wedding.status !== "cancelled" && wedding.status !== "inquiry" && !wedding.customTerms ? buildInvoice(wedding) : null;
   // A separate agreement (officiating by Compass Events), shown only when the owner set one up.
   const officiant = house ? await getOfficiantAgreement(wedding.id) : null;
   const todayInIndiana = new Date().toLocaleDateString("en-CA", { timeZone: "America/Indiana/Indianapolis" });
@@ -161,6 +164,7 @@ export default async function HubPage({ params }: { params: Promise<{ token: str
             lives here any time you want it.
           </a>
         )}
+        {venmoInvoice && !venmoInvoice.balancePaid && <VenmoPayment amount={venmoInvoice.amountDue} invoice={venmoInvoice.number} part={venmoInvoice.depositPaid ? "balance" : "deposit"} />}
         {officiant && (
           <a
             href={`/hub/${token}/officiant`}
