@@ -175,7 +175,7 @@ export default async function PartnerPage({ params }: { params: Promise<{ slug: 
         {p.practices && (
           <section className="bg-cream py-14">
             <div className="mx-auto max-w-5xl px-6">
-              <h2 className="text-3xl text-charcoal">Lower waste, stated plainly</h2>
+              <h2 className="text-3xl text-charcoal">{p.practicesTitle ?? "Lower waste, stated plainly"}</h2>
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
                 {p.practices.map((x) => (
                   <div key={x.title} className="flex gap-3">

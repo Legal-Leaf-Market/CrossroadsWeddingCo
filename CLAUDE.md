@@ -1303,8 +1303,9 @@ decisions absorbed from it:
   Instagram read 2026-11-26 (packages by coverage hours, no prices, phone, email, hours), her way of
   working as plain statements, and "Why we send couples to her" as our own recommendation (Jake and
   Nic worked a wedding with her). No photos: her portfolio is her work and shows her couples, so it
-  stays on her site until she sends what she wants shown. `Partner.withUs` lets an entry replace the
-  template's closing timeline line (the default still names dessert tables and backdrops). Linked in
+  stays on her site until she sends what she wants shown. `Partner.withUs` and `Partner.practicesTitle` let an entry replace the
+  template's closing timeline line and the practices heading (the defaults still name dessert tables
+  and low waste). Linked in
   the side menu; the sitemap reads `PARTNERS`. Heart of Columbus built her a draft website and a
   Founders Club invitation (its PR #192). She has NOT reviewed this page. This session had no package
   install: the partners data type-checks on its own and every edited file parses; the Netlify deploy

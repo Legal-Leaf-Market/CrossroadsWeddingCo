@@ -56,6 +56,8 @@ export type Partner = {
   steps?: { title: string; body: string }[];
   /** Practices they describe, each a plain statement. */
   practices?: { title: string; body: string }[];
+  /** Heading over `practices` (the template's default is about low waste). */
+  practicesTitle?: string;
   /** A limit they state themselves, shown as written. */
   caveat?: string;
   /** Read their public Shopify catalog for a live "on the menu now" list. */
@@ -202,6 +204,7 @@ export const PARTNERS: Partner[] = [
       { label: "Contact her", href: "https://www.lovemewildly.com/contact" },
       { label: "Instagram", href: "https://www.instagram.com/love.me.wildly/" },
     ],
+    practicesTitle: "How she works",
     practices: [
       { title: "Real moments first", body: "The in-between moments, the fun interactions and the real emotion, not stiff, overly posed photos." },
       { title: "Direction when you want it", body: "In her words: yes, she'll tell you what to do with your hands." },
