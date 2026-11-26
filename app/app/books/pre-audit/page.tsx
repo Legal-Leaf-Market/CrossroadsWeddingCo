@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { listPreAuditPackets } from "@/lib/books/pre-audit-packets";
 import AccountShell from "@/components/account/AccountShell";
 import { getBooksWorkspace } from "@/lib/auth";
 import { externalEvidence, preAuditEvidence, preAuditRange, preAuditReports } from "@/lib/books/pre-audit";
@@ -11,13 +12,17 @@ export const metadata: Metadata = { title: "Pre-audit packet", robots: { index: 
 const link = "font-semibold text-terracotta-dark underline underline-offset-2";
 const usd = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-export default async function PreAuditPage({ searchParams }: { searchParams: Promise<{ year?: string | string[] }> }) {
+export default async function PreAuditPage({ searchParams }: { searchParams: Promise<{ year?: string | string[]; saved?: string; packet?: string; before?: string }> }) {
   const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
-  const { year: raw } = await searchParams;
+  const { year: raw, saved, packet, before } = await searchParams;
   const range = preAuditRange(raw);
   const { currentYear, year, from, through } = range;
-  const evidence = await preAuditEvidence(ws.tenant.id, range, 501);
+  const cursor = typeof before === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(before) ? before : undefined;
+  const [evidence, archives] = await Promise.all([
+    preAuditEvidence(ws.tenant.id, range, 501),
+    listPreAuditPackets(ws.tenant.id, year, cursor),
+  ]);
   const reports = preAuditReports(range);
 
   return (
@@ -25,7 +30,7 @@ export default async function PreAuditPage({ searchParams }: { searchParams: Pro
       <Link href="/app/books" className={link}>Books</Link>
       <h1 className="mt-2 text-2xl text-charcoal">Pre-audit packet</h1>
       <p className="mt-1 text-sm text-ink/70">
-        Live index for {from} through {through}. Links use Books access. Download the reports and evidence when you hand off a fixed review copy.
+        Live index for {from} through {through}. Links use Books access. Use a saved packet when the reviewer needs a fixed copy.
       </p>
       <a href={`/api/app/books/pre-audit?year=${year}`} className={`mt-3 inline-block text-sm ${link}`}>Download evidence index CSV</a>
       <form action="/app/books/pre-audit" className="mt-3 flex flex-wrap items-end gap-2">
@@ -34,6 +39,39 @@ export default async function PreAuditPage({ searchParams }: { searchParams: Pro
         </label>
         <button className="rounded-full border border-parchment bg-white px-3 py-1.5 text-sm font-semibold">Show year</button>
       </form>
+      <section id="saved-packets" className="mt-6 scroll-mt-20">
+        <h2 className="text-lg font-semibold text-charcoal">Saved review packets</h2>
+        <p className="mt-1 text-sm text-ink/70">
+          Save the posted ledger, trial balance, comparison worksheet and evidence index as a fixed ZIP. Each packet has its own ID and checksum.
+        </p>
+        <form action="/api/app/books/pre-audit/packets" method="post" className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <input type="hidden" name="year" value={year} />
+          <label className="flex items-center gap-2"><input type="checkbox" name="includeReceipts" defaultChecked /> Include attached receipts</label>
+          <button className="rounded-full bg-terracotta px-4 py-2 font-semibold text-white">Save new packet</button>
+        </form>
+        {packet === "too-large" && <p role="alert" className="mt-2 text-sm font-medium text-terracotta-dark">The packet exceeded the size limit. Try without receipts or use the individual report and index downloads.</p>}
+        {archives.some((item) => item.id === saved) && <p role="status" className="mt-2 text-sm font-semibold">Packet saved. Download it below.</p>}
+        {archives.length === 0 ? <p className="mt-3 text-sm text-ink/70">No saved packets on this page.</p> : (
+          <ol className="mt-3 divide-y divide-parchment rounded-2xl border border-parchment bg-white px-4">
+            {archives.slice(0, 25).map((item) => (
+              <li key={item.id} className="py-3 text-sm">
+                <p className="font-semibold text-charcoal">
+                  {new Date(item.createdAt).toLocaleString("en-US", { timeZone: "America/Indiana/Indianapolis", dateStyle: "medium", timeStyle: "short" })} · through {item.through}
+                </p>
+                <p className="mt-1 break-all text-xs text-ink/70">ID {item.id} · SHA-256 {item.sha256}</p>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                  <a className={link} href={`/api/app/books/pre-audit/packets/${item.id}`}>Download ZIP</a>
+                  <Link className={link} href={`/app/books/audit?type=pre_audit_packet&id=${item.id}`}>Creation record</Link>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+        <nav aria-label="Saved packet pages" className="mt-2 flex gap-4 text-sm">
+          {cursor && <Link className={link} href={`/app/books/pre-audit?year=${year}#saved-packets`}>Newest packets</Link>}
+          {archives.length > 25 && <Link className={link} href={`/app/books/pre-audit?year=${year}&before=${archives[24].id}#saved-packets`}>Older packets</Link>}
+        </nav>
+      </section>
       <section className="mt-6">
         <h2 className="text-lg font-semibold text-charcoal">Reports and reconciliation</h2>
         <ol className="mt-2 list-decimal space-y-1 pl-6 text-sm">

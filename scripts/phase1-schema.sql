@@ -1389,3 +1389,26 @@ ALTER TABLE weddings ADD COLUMN IF NOT EXISTS commission_direct_cents INTEGER;
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS commission_mgmt_bps INTEGER;
 ALTER TABLE weddings ADD COLUMN IF NOT EXISTS playbook_lead_id VARCHAR(100);
 CREATE INDEX IF NOT EXISTS idx_weddings_crm_account ON weddings (crm_account_id) WHERE crm_account_id IS NOT NULL;
+
+-- Fixed pre-audit exports. Reviewers can refer to one stable ID and checksum.
+CREATE TABLE IF NOT EXISTS pre_audit_packets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    review_year INTEGER NOT NULL CHECK (review_year BETWEEN 1900 AND 9999),
+    through_date DATE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by UUID REFERENCES users(id) ON DELETE RESTRICT,
+    sha256 VARCHAR(64) NOT NULL,
+    size_bytes INTEGER NOT NULL CHECK (size_bytes BETWEEN 1 AND 3800000),
+    archive BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pre_audit_packets_tenant_year
+    ON pre_audit_packets (tenant_id, review_year, created_at DESC, id DESC);
+CREATE OR REPLACE FUNCTION forbid_pre_audit_packet_change() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'Saved pre-audit packets cannot be changed or deleted';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS pre_audit_packets_immutable ON pre_audit_packets;
+CREATE TRIGGER pre_audit_packets_immutable BEFORE UPDATE OR DELETE ON pre_audit_packets
+    FOR EACH ROW EXECUTE FUNCTION forbid_pre_audit_packet_change();

@@ -608,11 +608,11 @@ export async function setOpeningBalance(
 export type AccountTotal = { id: string; code: string; name: string; type: AccountType; systemKey: string | null; debit: number; credit: number };
 
 /** Debit and credit totals per account over posted entries, optionally within dates. */
-export async function accountTotals(tenantId: string, opts: { from?: string; to?: string } = {}): Promise<AccountTotal[]> {
+export async function accountTotals(tenantId: string, opts: { from?: string; to?: string } = {}, ex: Exec = db): Promise<AccountTotal[]> {
   const conds = [eq(journalEntries.tenantId, tenantId), eq(journalEntries.status, "posted")];
   if (opts.from) conds.push(gte(journalEntries.entryDate, opts.from));
   if (opts.to) conds.push(lte(journalEntries.entryDate, opts.to));
-  const sums = await db
+  const sums = await ex
     .select({
       accountId: journalLines.accountId,
       debit: sql<string>`coalesce(sum(${journalLines.debitCents}),0)`,
@@ -719,8 +719,8 @@ export async function reconciliation(tenantId: string) {
 }
 
 /** Every posted journal line, oldest first, as CSV. */
-export async function generalLedgerCsv(tenantId: string, range?: { from: string; to: string }): Promise<string> {
-  const rows = await db
+export async function generalLedgerCsv(tenantId: string, range?: { from: string; to: string }, ex: Exec = db, fullIds = false): Promise<string> {
+  const rows = await ex
     .select({
       date: journalEntries.entryDate,
       entryId: journalEntries.id,
@@ -748,7 +748,7 @@ export async function generalLedgerCsv(tenantId: string, range?: { from: string;
   };
   const head = ["Date", "Entry", "Memo", "Source", "Account code", "Account", "Type", "Debit", "Credit"];
   const lines = rows.map((r) =>
-    [r.date, r.entryId.slice(0, 8), r.memo, r.source, r.code, r.account, r.type, r.debit ? (r.debit / 100).toFixed(2) : "", r.credit ? (r.credit / 100).toFixed(2) : ""]
+    [r.date, fullIds ? r.entryId : r.entryId.slice(0, 8), r.memo, r.source, r.code, r.account, r.type, r.debit ? (r.debit / 100).toFixed(2) : "", r.credit ? (r.credit / 100).toFixed(2) : ""]
       .map(cell)
       .join(","),
   );
