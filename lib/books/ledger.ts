@@ -719,7 +719,7 @@ export async function reconciliation(tenantId: string) {
 }
 
 /** Every posted journal line, oldest first, as CSV. */
-export async function generalLedgerCsv(tenantId: string): Promise<string> {
+export async function generalLedgerCsv(tenantId: string, range?: { from: string; to: string }): Promise<string> {
   const rows = await db
     .select({
       date: journalEntries.entryDate,
@@ -735,7 +735,11 @@ export async function generalLedgerCsv(tenantId: string): Promise<string> {
     .from(journalLines)
     .innerJoin(journalEntries, eq(journalLines.entryId, journalEntries.id))
     .innerJoin(ledgerAccounts, eq(journalLines.accountId, ledgerAccounts.id))
-    .where(and(eq(journalLines.tenantId, tenantId), eq(journalEntries.tenantId, tenantId), eq(journalEntries.status, "posted")))
+    .where(and(
+      eq(journalLines.tenantId, tenantId), eq(journalEntries.tenantId, tenantId), eq(journalEntries.status, "posted"),
+      range ? gte(journalEntries.entryDate, range.from) : undefined,
+      range ? lte(journalEntries.entryDate, range.to) : undefined,
+    ))
     .orderBy(asc(journalEntries.entryDate), asc(journalEntries.createdAt), asc(journalLines.debitCents));
   const cell = (v: unknown) => {
     let s = v === null || v === undefined ? "" : String(v);

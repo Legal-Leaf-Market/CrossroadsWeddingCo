@@ -27,6 +27,7 @@ const schema = z.discriminatedUnion("action", [
     preview: z.object({
       amountCents: z.number().int().safe().refine((amount) => amount !== 0),
       postedDate: z.iso.date(),
+      taxReviewRequested: z.boolean().optional(),
     }).optional(),
   }),
   z.object({ action: z.literal("exclude"), ids, note, rule }),

@@ -128,7 +128,7 @@ export async function queueCounts(tenantId: string): Promise<Record<ReviewStatus
 }
 
 export type ReviewAction =
-  | { action: "categorize"; ids: string[]; categoryId: string; note?: string; preview?: { amountCents: number; postedDate: string } }
+  | { action: "categorize"; ids: string[]; categoryId: string; note?: string; preview?: { amountCents: number; postedDate: string; taxReviewRequested?: boolean } }
   | { action: "exclude"; ids: string[]; note?: string }
   | { action: "reopen"; ids: string[] }
   | { action: "note"; ids: string[]; note: string };

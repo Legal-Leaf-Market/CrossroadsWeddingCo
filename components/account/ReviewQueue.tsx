@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KIND_LABEL, type CategoryKind } from "@/lib/books/categories";
 import { bankLinePosting } from "@/lib/books/logic";
+import { treatmentGuidance } from "@/lib/books/treatment-guidance";
 import ReceiptControl from "@/components/expenses/ReceiptControl";
 
 export type QueueCategory = { id: string; name: string; kind: CategoryKind };
@@ -87,6 +88,7 @@ function TreatmentPreview({
   onApprove: () => void;
 }) {
   const lines = bankLinePosting(item.amountCents, "bank", "category");
+  const guidance = treatmentGuidance(category, item.amountCents);
   const bank = item.mask ? `${item.accountName} ····${item.mask}` : item.accountName;
   const counter = category.kind === "transfer" ? "Transfers in transit" : category.name;
   return (
@@ -110,6 +112,12 @@ function TreatmentPreview({
           ))}
         </tbody>
       </table>
+      <dl className="mt-2 space-y-2 border-t border-parchment pt-2 text-xs text-ink/75">
+        <div><dt className="font-semibold text-charcoal">Financial books</dt><dd>{guidance.financial}</dd></div>
+        <div><dt className="font-semibold text-charcoal">Management reporting</dt><dd>{guidance.managerial}</dd></div>
+        <div><dt className="font-semibold text-charcoal">U.S. federal tax check</dt><dd>{guidance.tax}</dd></div>
+      </dl>
+      <a href={guidance.source.href} target="_blank" rel="noreferrer" className="mt-2 block text-xs text-terracotta-dark underline">{guidance.source.label}</a>
       <button type="button" className={`mt-2 ${primary}`} disabled={busy} onClick={onApprove}>
         Approve {category.name}
       </button>
@@ -300,7 +308,7 @@ export default function ReviewQueue({
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [always, setAlways] = useState<Record<string, boolean>>({});
   const [bulkCat, setBulkCat] = useState("");
-  const [comparing, setComparing] = useState<{ itemId: string; alternateId: string } | null>(null);
+  const [comparing, setComparing] = useState<{ itemId: string; alternateId: string; taxReviewRequested: boolean } | null>(null);
   const [busy, setBusy] = useState<string>("");
   const [msg, setMsg] = useState("");
 
@@ -339,7 +347,7 @@ export default function ReviewQueue({
     setMsg("");
     finish([item.id], await post({
       action: "categorize", ids: [item.id], categoryId, note: notes[item.id], rule: ruleFor(item),
-      ...(approvedCategory ? { preview: { amountCents: item.amountCents, postedDate: item.postedDate } } : {}),
+      ...(approvedCategory ? { preview: { amountCents: item.amountCents, postedDate: item.postedDate, taxReviewRequested: comparing?.taxReviewRequested ?? false } } : {}),
     }));
   }
 
@@ -517,7 +525,7 @@ export default function ReviewQueue({
                         {busy === item.id ? "Saving..." : "Save category"}
                       </button>
                     ) : (
-                      <button type="button" className={primary} aria-expanded={!!comparison} disabled={busy !== ""} onClick={() => setComparing(comparison ? null : { itemId: item.id, alternateId: "" })}>
+                      <button type="button" className={primary} aria-expanded={!!comparison} disabled={busy !== ""} onClick={() => setComparing(comparison ? null : { itemId: item.id, alternateId: "", taxReviewRequested: false })}>
                         {comparison ? "Close comparison" : "Review T-accounts"}
                       </button>
                     )}
@@ -541,7 +549,7 @@ export default function ReviewQueue({
                 <section aria-label="Compare accounting treatments" className="grid gap-3 rounded-xl bg-cream/70 p-3 sm:ml-7">
                   <p className="text-sm text-ink/70">
                     Choose a category above and optionally compare an alternative. These previews show standard categorization.
-                    Linked reimbursements and period-close rules can affect the final posting.
+                    Linked reimbursements and period-close rules can affect the final posting. Tax guidance highlights what to verify; approval records the bookkeeping choice.
                   </p>
                   <label className="grid gap-1 text-xs font-semibold text-ink/70">
                     Alternate category
@@ -549,10 +557,14 @@ export default function ReviewQueue({
                       className={select}
                       value={alternate?.id ?? ""}
                       disabled={busy !== ""}
-                      onChange={(e) => setComparing({ itemId: item.id, alternateId: e.target.value })}
+                      onChange={(e) => setComparing({ ...comparison, alternateId: e.target.value })}
                     >
                       <CategoryOptions categories={categories.filter((category) => category.id !== selectedCategory?.id)} amountCents={item.amountCents} />
                     </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-ink/75">
+                    <input type="checkbox" checked={comparison.taxReviewRequested} disabled={busy !== ""} onChange={(e) => setComparing({ ...comparison, taxReviewRequested: e.target.checked })} />
+                    Flag the approved treatment for tax review
                   </label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {[selectedCategory, alternate].filter((category): category is QueueCategory => Boolean(category)).map((category) => (
