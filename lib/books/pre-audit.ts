@@ -44,6 +44,7 @@ export async function preAuditEvidence(
     status: expenseClaims.status,
     fileName: receipts.fileName,
     receiptId: receipts.id,
+    receiptBytes: receipts.byteSize,
     amountCents: expenseClaims.amountCents,
   }).from(expenseClaims)
     .leftJoin(receipts, and(eq(expenseClaims.receiptId, receipts.id), eq(receipts.tenantId, tenantId)))
