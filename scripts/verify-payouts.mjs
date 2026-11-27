@@ -15,7 +15,7 @@ import {
   requestDecider,
   requestLinkBlock,
 } from "../lib/payout-logic.ts";
-import { cashPayoutEntry, payoutEntry } from "../lib/books/accrual.ts";
+import { cashPayoutEntry, closeBlockers, payoutEntry } from "../lib/books/accrual.ts";
 
 let failures = 0;
 function check(label, got, want) {
@@ -119,6 +119,8 @@ check("a paid one is not open", isOpenRequest({ status: "approved", paid: true }
 check("amount parse", parseRequestAmount("$1,250.50"), 125050);
 check("amount parse refuses junk", parseRequestAmount("12.345"), null);
 check("amount parse refuses zero", parseRequestAmount("0"), null);
+check("cap: $5,000 is allowed", parseRequestAmount("5000"), 500000);
+check("cap: $5,000.01 is refused", parseRequestAmount("5000.01"), null);
 
 // Posting.
 const A = { commissions_payable: "2600", reimbursements_payable: "2500", uncategorized_expense: "6990" };
@@ -150,6 +152,10 @@ check(
 );
 const p3 = cashPayoutEntry({ amountCents: -12000, postedDate: "2026-11-20", memo: "drift" }, [], [{ amountCents: 10000, accountId: "6100", sub: null }], "CASH", A);
 check("a bank amount that drifted lands on 6990 and still balances", p3.lines.find((l) => l.accountId === "6990"), { accountId: "6990", debitCents: 2000, creditCents: 0 });
+
+const zeroClose = { unbalancedEntries: 0, unreviewedLines: 0, pendingLines: 0, submittedClaims: 0, uncostedJobs: 0, jobsWithoutPlan: 0, unmatchedHandPayments: 0, transfersInTransitCents: 0, bankDifferences: 0 };
+check("close: unmatched approved payouts warn, soft", closeBlockers({ ...zeroClose, unmatchedApprovedPayouts: 2 }).map((b) => `${b.key}:${b.hard}:${b.count}`), ["payouts:false:2"]);
+check("close: none unmatched, no warning", closeBlockers({ ...zeroClose, unmatchedApprovedPayouts: 0 }).length, 0);
 
 if (failures) {
   console.log(`\n${failures} check(s) failed`);

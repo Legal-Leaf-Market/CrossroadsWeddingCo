@@ -1307,14 +1307,17 @@ decisions absorbed from it:
   entry pays down 2600 by person (`cashPayoutEntry`), so Nic's $100 closer commission nets 2600 to
   zero. `/admin/[key]/sales` shows requested and paid out per person with a "Request payout" link.
   Table `payout_requests` (no delete, CHECK: a bank line only on an approved request). Rules
-  `lib/payout-logic.ts`, `node --experimental-strip-types scripts/verify-payouts.mjs` (60 checks).
+  `lib/payout-logic.ts`, `node --experimental-strip-types scripts/verify-payouts.mjs` (64 checks).
   Verified on a local Postgres 16 through the API with three signed-in owners: every refusal above,
   three simultaneous requests for the same $100 (one saved), three simultaneous approvals (one 200),
   match, unmatch voids the entry, a $120 line refused for a $100 request, the draw path vetoed by Nic
   as final, an escalated veto decided by Nic, delete refused, all control accounts tie, audit chain
-  intact; page measured at 360/390/768/1280 with no sideways scroll. Owner decisions still open:
-  whether Terry may also request, a dollar cap per request (form caps at $25,000), and whether the
-  close should warn on approved payouts not yet matched.
+  intact; page measured at 360/390/768/1280 with no sideways scroll. Owner answers (2026-11-27):
+  a request is capped at **$5,000** (`MAX_REQUEST_CENTS`), and the close shows a **soft** warning
+  for approved requests with no bank line matched by the month's end (`payouts` in
+  `closeBlockers`). The question of Terry also requesting is overtaken: Jake says Terry is no
+  longer a partner, so who approves in his place is being settled with Jake before any change to
+  `finance_roles` or the approval chain.
 - **Wild Bramble Catering gets its own page and a menu builder (2026-11-25, Jacob: "Make a page
   for Wild Bramble now ... Catering in Columbus ... They are on HOC").**
   `/partners/wild-bramble-catering` is its own page file (`customPage`) with its own scoped look

@@ -626,6 +626,8 @@ export function closeBlockers(f: {
   bankDifferences: number;
   /** Control accounts (1100, 1300, 2300, 2400, 2500) whose balance differs from the sum of their subledger. */
   subledgerDifferences?: number;
+  /** Approved cash payout requests with no bank line matched yet (owner, 2026-11-27: warn, do not block). */
+  unmatchedApprovedPayouts?: number;
 }): Blocker[] {
   const all: Blocker[] = [
     { key: "unbalanced", label: "Journal entries that don't balance", count: f.unbalancedEntries, hard: true },
@@ -638,6 +640,7 @@ export function closeBlockers(f: {
     { key: "pending", label: "Bank lines still pending", count: f.pendingLines, hard: false },
     { key: "transfers", label: "Money in transfers in transit", count: f.transfersInTransitCents === 0 ? 0 : 1, hard: false },
     { key: "bank", label: "Bank accounts where the books and the bank differ today", count: f.bankDifferences, hard: false },
+    { key: "payouts", label: "Approved payouts not yet matched to the bank line that paid them", count: f.unmatchedApprovedPayouts ?? 0, hard: false },
   ];
   return all.filter((b) => b.count > 0);
 }

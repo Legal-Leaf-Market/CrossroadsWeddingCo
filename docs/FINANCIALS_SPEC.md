@@ -269,6 +269,12 @@ voided; a CHECK refuses a bank line on anything not approved).
   expense reports by the reimbursement rule. With no requests it is exactly `payoutEntry`, so
   existing entries keep their fingerprints. A line matched to an approved payout no longer counts
   as "waiting to be sorted" at the close (this also fixes reimbursement payout lines).
+- **Cap (owner, 2026-11-27):** one request is at most $5,000 (`MAX_REQUEST_CENTS`); more is
+  split into several requests, each decided on its own.
+- **At the close (owner, 2026-11-27):** an approved request with no bank line matched, decided on
+  or before the month's end, is a SOFT warning ("Approved payouts not yet matched to the bank line
+  that paid them"): the money may simply not have gone out yet, so the closer acknowledges it in
+  writing rather than being stopped.
 - Every request, decision, match and unmatch is audited; unmatching voids the entry and the
   commission is owed again.
 

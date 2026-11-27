@@ -170,6 +170,12 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
     select coalesce(sum(l.debit_cents - l.credit_cents),0)::bigint::text as bal
     from journal_lines l join journal_entries e on e.id = l.entry_id join ledger_accounts a on a.id = l.account_id
     where e.tenant_id = ${tenantId} and e.status = 'posted' and e.entry_date <= ${end} and a.system_key = 'transfers_clearing'`);
+  // Approved payout requests still waiting for their bank line: a soft warning, since the
+  // money may simply not have gone out yet.
+  const payouts = hasRequests
+    ? await one<{ n: number }>(sql`select count(*)::int as n from payout_requests
+        where tenant_id = ${tenantId} and status = 'approved' and bank_transaction_id is null and decided_at::date <= ${end}`)
+    : { n: 0 };
   const recon = await reconciliation(tenantId);
   // Every control account must equal the sum of its subledger at the month's end.
   const tie = await tieOutReport(tenantId, end);
@@ -184,6 +190,7 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
     transfersInTransitCents: Number(clearing.bal ?? 0),
     bankDifferences: recon.filter((r) => r.difference !== null && r.difference !== 0).length,
     subledgerDifferences: tieOutDifferences(tie.rows),
+    unmatchedApprovedPayouts: payouts.n ?? 0,
   });
 }
 

@@ -41,7 +41,7 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
 export type RequestAction = "approve" | "veto" | "escalate" | "void" | "link" | "unlink";
 
 /** Largest single request; bigger money moves are a conversation, not a form. */
-export const MAX_REQUEST_CENTS = 2_500_000;
+export const MAX_REQUEST_CENTS = 500_000; // $5,000 (owner, 2026-11-27)
 
 function norm(email: string | null | undefined): string {
   return (email ?? "").trim().toLowerCase();
