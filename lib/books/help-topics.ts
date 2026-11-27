@@ -34,6 +34,11 @@ export const BOOKS_HELP = {
     description: "The close screen puts the month’s checks in one place. Use it to see what still needs review before you close the selected period.",
     link: { href: "/app/books/close", label: "Open month-end close" },
   },
+  jobCosts: {
+    title: "What’s a job cost plan?",
+    description: "It’s the list of people and materials a job needs, with their expected costs. The guide flags held jobs that have no plan or a cost still missing from an existing plan.",
+    link: { href: "/app/books/close?guide=jobs", label: "Open the job-cost check" },
+  },
   expenses: {
     title: "When do expense reports show in Books?",
     description: "Approved expense reports feed into Books. Open a report to see what was submitted and check the attached evidence.",

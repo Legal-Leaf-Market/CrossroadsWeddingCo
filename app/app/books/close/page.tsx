@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
 import BooksHelp from "@/components/account/BooksHelp";
 import CloseActions from "@/components/account/CloseActions";
+import GuidedBookkeeping from "@/components/account/GuidedBookkeeping";
 import { getBooksWorkspace } from "@/lib/auth";
 import { availableActions, LOCKED_STATUSES, periodEnd } from "@/lib/books/accrual";
 import { listPeriods, periodBlockers } from "@/lib/books/close";
@@ -34,15 +35,17 @@ function monthName(p: string) {
   return new Date(`${p.slice(0, 7)}-15T12:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
-export default async function ClosePage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
+export default async function ClosePage({ searchParams }: { searchParams: Promise<{ m?: string; guide?: string }> }) {
   const ws = await getBooksWorkspace();
   if (!ws) redirect("/login");
+  let syncFailed = false;
   try {
     await postLedger(ws.tenant.id, { actor: ws.user.email, cause: "close page opened" });
   } catch (err) {
+    syncFailed = true;
     console.error("[close] sync failed", err);
   }
-  const { m } = await searchParams;
+  const { m, guide } = await searchParams;
   const [periods, roles, seats] = await Promise.all([listPeriods(ws.tenant.id), rolesFor(ws.tenant.id, ws.user.email), listRoles(ws.tenant.id)]);
   // Months close in order, so open on the OLDEST month still open that has ended
   // and has entries (the list is newest first). It used to open the newest.
@@ -60,21 +63,32 @@ export default async function ClosePage({ searchParams }: { searchParams: Promis
         &larr; Books
       </Link>
       <div className="flex flex-wrap items-center gap-3 mt-2">
-        <h1 className="text-2xl text-charcoal">Close the books</h1>
-        <BooksHelp topic="close" />
+        <h1 className="text-2xl text-charcoal">{guide ? "Guided bookkeeping" : "Close the books"}</h1>
+        {!guide && <BooksHelp topic="close" />}
       </div>
-      <p className="mt-1 text-sm text-ink/60">
-        Accrual basis, US GAAP. An open month follows every change live. A closed month never changes: anything that moves
-        later posts as a dated correction in the current month. Signed in as {ws.user.email}
-        {roles.size ? ` (${[...roles].map((x) => ROLE_LABEL[x]).join(", ")})` : " (no seat in the close)"}.
-      </p>
+      {guide ? (
+        <p className="mt-1 text-sm text-ink/70">Review one question at a time for the month you choose.</p>
+      ) : (
+        <p className="mt-1 text-sm text-ink/60">
+          Accrual basis, US GAAP. An open month follows every change live. A closed month never changes: anything that moves
+          later posts as a dated correction in the current month. Signed in as {ws.user.email}
+          {roles.size ? ` (${[...roles].map((x) => ROLE_LABEL[x]).join(", ")})` : " (no seat in the close)"}.
+        </p>
+      )}
+      <Link
+        href={`/app/books/close?${new URLSearchParams({ ...(selected ? { m: selected.periodStart } : {}), ...(guide ? {} : { guide: "start" }) })}`}
+        className="mt-2 inline-block text-sm font-semibold text-terracotta-dark underline underline-offset-2"
+      >
+        {guide ? "Full close screen" : "Start guided bookkeeping"}
+      </Link>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
-        <nav className="space-y-1">
+        <nav className="space-y-1" aria-label="Bookkeeping months">
           {periods.map((p) => (
             <Link
               key={p.periodStart}
-              href={`/app/books/close?m=${p.periodStart}`}
+              href={`/app/books/close?m=${p.periodStart}${guide ? "&guide=start" : ""}`}
+              aria-current={p.periodStart === selected?.periodStart ? "page" : undefined}
               className={`flex items-baseline justify-between gap-2 rounded-xl px-3 py-2 text-sm ${p.periodStart === selected?.periodStart ? "bg-white font-semibold text-charcoal ring-1 ring-parchment" : "text-ink/75 hover:bg-white"}`}
             >
               <span>{monthName(p.periodStart)}</span>
@@ -85,7 +99,20 @@ export default async function ClosePage({ searchParams }: { searchParams: Promis
           ))}
         </nav>
 
-        {selected && (
+        {selected && guide && (
+          <GuidedBookkeeping
+            period={selected.periodStart}
+            month={monthName(selected.periodStart)}
+            status={STATUS_LABEL[selected.status] ?? selected.status}
+            locked={LOCKED_STATUSES.includes(selected.status)}
+            blockers={blockers}
+            requested={guide}
+            syncFailed={syncFailed}
+            house={ws.tenant.kind === "house"}
+          />
+        )}
+
+        {selected && !guide && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-parchment bg-white p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">

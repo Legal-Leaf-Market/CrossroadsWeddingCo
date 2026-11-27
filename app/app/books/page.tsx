@@ -101,6 +101,7 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
     <AccountShell signedIn house={ws.tenant.kind === "house"}>
       <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
         <span className="font-semibold text-charcoal">Accrual basis, US GAAP</span>
+        <Link href="/app/books/close?guide=start" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Guided bookkeeping</Link>
         <Link href="/app/books/close" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Close the books</Link>
         <Link href="/app/books/accounts" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Trial balance</Link>
         <Link href="/app/books/tie-out" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Tie-out</Link>
@@ -193,7 +194,7 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
             </p>
           </section>
 
-          <section className="mt-6 rounded-2xl border border-parchment bg-white p-6">
+          <section id="bank-check" className="mt-6 scroll-mt-4 rounded-2xl border border-parchment bg-white p-6">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl text-charcoal">Do your books match the bank?</h2>
               <BooksHelp topic="reconciliation" label="Explain the bank check" />
