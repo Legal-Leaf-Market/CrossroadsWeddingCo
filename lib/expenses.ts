@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { bankAccounts, bankTransactions, crewMembers, expenseClaims, ledgerCategories, receipts, weddings, type ExpenseClaim } from "@/lib/db/schema";
+import { bankAccounts, bankTransactions, crewMembers, expenseClaims, ledgerCategories, payoutRequests, receipts, weddings, type ExpenseClaim } from "@/lib/db/schema";
 import { audit } from "@/lib/audit";
 import { postBankLedgerQuietly } from "@/lib/books/ledger";
 import { crewIdFromExpenseToken } from "@/lib/expense-token";
@@ -330,7 +330,12 @@ export async function linkReimbursement(tenantId: string, user: Approver, claimI
       .select({ amountCents: expenseClaims.amountCents })
       .from(expenseClaims)
       .where(and(eq(expenseClaims.tenantId, tenantId), eq(expenseClaims.reimbursedBankTransactionId, bankTransactionId), ne(expenseClaims.status, "void")));
-    const covered = already.reduce((s, c) => s + c.amountCents, 0);
+    // Cash payout requests matched to the same line count too (lib/payouts.ts).
+    const requested = await db
+      .select({ amountCents: payoutRequests.amountCents })
+      .from(payoutRequests)
+      .where(and(eq(payoutRequests.tenantId, tenantId), eq(payoutRequests.bankTransactionId, bankTransactionId)));
+    const covered = [...already, ...requested].reduce((s, c) => s + c.amountCents, 0);
     const block = payoutBlock({ amountCents: line.amountCents + covered }, claims.map((c) => c.claim));
     if (block) return { ok: false, error: block, status: 400 };
   }

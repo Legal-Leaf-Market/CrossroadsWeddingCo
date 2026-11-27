@@ -1297,6 +1297,24 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Cash payout requests (2026-11-27, finance task 9; commissions were waiting on it).** Any money
+  out that is not an expense report (commissions from 2600, owner draws, anyone paid outside a cost
+  plan) is requested at `/app/books/payouts` (nav "Payouts"), decided, and only then matched to the
+  bank line that paid it. Jake requests; Terry approves or vetoes; Nic decides money going to Terry
+  and escalated vetoes, never requests or matches cash; whoever requested never approves; nobody
+  decides or records money going to themselves. A commission request is capped at what is ready
+  for that person (held event, client paid in full, less paid and open requests). The bank line's
+  entry pays down 2600 by person (`cashPayoutEntry`), so Nic's $100 closer commission nets 2600 to
+  zero. `/admin/[key]/sales` shows requested and paid out per person with a "Request payout" link.
+  Table `payout_requests` (no delete, CHECK: a bank line only on an approved request). Rules
+  `lib/payout-logic.ts`, `node --experimental-strip-types scripts/verify-payouts.mjs` (60 checks).
+  Verified on a local Postgres 16 through the API with three signed-in owners: every refusal above,
+  three simultaneous requests for the same $100 (one saved), three simultaneous approvals (one 200),
+  match, unmatch voids the entry, a $120 line refused for a $100 request, the draw path vetoed by Nic
+  as final, an escalated veto decided by Nic, delete refused, all control accounts tie, audit chain
+  intact; page measured at 360/390/768/1280 with no sideways scroll. Owner decisions still open:
+  whether Terry may also request, a dollar cap per request (form caps at $25,000), and whether the
+  close should warn on approved payouts not yet matched.
 - **Wild Bramble Catering gets its own page and a menu builder (2026-11-25, Jacob: "Make a page
   for Wild Bramble now ... Catering in Columbus ... They are on HOC").**
   `/partners/wild-bramble-catering` is its own page file (`customPage`) with its own scoped look

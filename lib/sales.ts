@@ -10,6 +10,7 @@ import { accountsMeta, subSums } from "@/lib/books/subledger";
 import { nameSlug } from "@/lib/hub-constants";
 import { CORPORATE_PACKAGE } from "@/lib/invoice";
 import { commissionPayable, commissionsFor, CRM_KINDS, stageOf, termsForSale, type CrmKind, type Stage } from "@/lib/sales-logic";
+import { commissionAvailable, isOpenRequest } from "@/lib/payout-logic";
 import { HOUSE_TENANT_ID } from "@/lib/tenant-constants";
 
 // The sales pipeline (2026-11-13): playbook lead -> CRM account -> sales order
@@ -179,7 +180,7 @@ export type PipelineRow = {
   contractCents: number;
   creditedCents: number;
   stage: Stage;
-  commissions: { role: "closer" | "account_manager"; person: string; cents: number; earned: boolean; payable: boolean }[];
+  commissions: { role: "closer" | "account_manager"; crewId: string; person: string; cents: number; earned: boolean; payable: boolean }[];
 };
 
 /** Every sales order (and every other live booking), newest event last, with stage and commissions. */
@@ -236,6 +237,7 @@ export async function pipeline(): Promise<PipelineRow[]> {
       stage: stageOf({ eventDate: w.eventDate, cancelled, isDepositPaid: !!w.isDepositPaid, paidInFull }, today),
       commissions: comms.map((c) => ({
         role: c.role,
+        crewId: c.crewId,
         person: crew.get(c.crewId) ?? "Former crew",
         cents: c.cents,
         earned: w.eventDate <= today,
@@ -245,8 +247,15 @@ export async function pipeline(): Promise<PipelineRow[]> {
   });
 }
 
-/** Commissions per person: owed per the books (2600, by person), and how much of it is ready to pay. */
-export async function commissionsByPerson() {
+/**
+ * Commissions per person: owed per the books (2600, by person), what is ready
+ * to pay (earned on a held event whose client paid in full, less what was
+ * already paid out or asked for in an open payout request), and what waits on
+ * events still ahead. Keyed by crew member, so a payout request can name the
+ * person exactly (lib/payouts.ts).
+ */
+export async function commissionsByPerson(tenantId: string = T) {
+  if (tenantId !== T) return [];
   const [sums, accounts, rows] = await Promise.all([subSums(T), accountsMeta(T), pipeline()]);
   const tie = tieOut(sums, accounts).find((t) => t.systemKey === "commissions_payable");
   const crew = new Map((await db.select({ id: crewMembers.id, name: crewMembers.name }).from(crewMembers).where(eq(crewMembers.tenantId, T))).map((c) => [c.id, c.name]));
@@ -254,16 +263,46 @@ export async function commissionsByPerson() {
   const ahead = new Map<string, number>();
   for (const r of rows) {
     for (const c of r.commissions) {
-      if (c.payable) ready.set(c.person, (ready.get(c.person) ?? 0) + c.cents);
-      else if (!c.earned) ahead.set(c.person, (ahead.get(c.person) ?? 0) + c.cents);
+      if (c.payable) ready.set(c.crewId, (ready.get(c.crewId) ?? 0) + c.cents);
+      else if (!c.earned) ahead.set(c.crewId, (ahead.get(c.crewId) ?? 0) + c.cents);
     }
   }
   const people = new Set<string>([...ready.keys(), ...ahead.keys()]);
   const owed = new Map<string, number>();
   for (const p of tie?.parties ?? []) {
-    const name = crew.get(subId(p.sub)) ?? "Former crew";
-    owed.set(name, (owed.get(name) ?? 0) + p.balance);
-    people.add(name);
+    const id = subId(p.sub);
+    owed.set(id, (owed.get(id) ?? 0) + p.balance);
+    people.add(id);
   }
-  return [...people].sort().map((name) => ({ name, owedCents: owed.get(name) ?? 0, readyCents: ready.get(name) ?? 0, aheadCents: ahead.get(name) ?? 0 }));
+  // Commission payout requests, paid (matched to the bank) and still open.
+  const hasReq = Boolean(((await db.execute(sql`select to_regclass('payout_requests') is not null as ok`)).rows[0] as { ok: boolean }).ok);
+  const reqs = hasReq
+    ? ((
+        await db.execute(sql`
+          select crew_member_id::text as id, status, (bank_transaction_id is not null) as paid, amount_cents
+          from payout_requests where tenant_id = ${T} and kind = 'commission' and status <> 'void'`)
+      ).rows as { id: string; status: string; paid: boolean; amount_cents: number }[])
+    : [];
+  const paid = new Map<string, number>();
+  const open = new Map<string, number>();
+  for (const r of reqs) {
+    if (r.paid) paid.set(r.id, (paid.get(r.id) ?? 0) + r.amount_cents);
+    else if (isOpenRequest(r)) open.set(r.id, (open.get(r.id) ?? 0) + r.amount_cents);
+    people.add(r.id);
+  }
+  return [...people]
+    .map((id) => {
+      const paidCents = paid.get(id) ?? 0;
+      const openCents = open.get(id) ?? 0;
+      return {
+        crewId: id,
+        name: crew.get(id) ?? "Former crew",
+        owedCents: owed.get(id) ?? 0,
+        readyCents: commissionAvailable({ readyCents: ready.get(id) ?? 0, paidCents, openCents }),
+        paidCents,
+        openCents,
+        aheadCents: ahead.get(id) ?? 0,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

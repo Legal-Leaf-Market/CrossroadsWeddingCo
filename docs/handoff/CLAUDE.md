@@ -73,7 +73,7 @@ Logins are their `@crossroadsweddingco.shop` addresses (default house books list
    Calendar. Exports: GL CSV exists; add trial balance, every subledger, the audit log, and a
    QuickBooks-importable journal.
 8. **Materiality threshold** setting for "correct in the current month" vs "reopen".
-9. **Cash payout requests** (any money out, not just reimbursements; commissions in 2600 are now
+9. **DONE 2026-11-27 (see FINANCIALS_SPEC "Cash payout requests").** **Cash payout requests** (any money out, not just reimbursements; commissions in 2600 are now
    waiting on this, see FINANCIALS_SPEC rule 13): Jake requests, Terry
    approves or vetoes, Nic breaks ties, before the bank line can be matched as that payout.
 

@@ -303,6 +303,34 @@ export function payoutEntry(
   return { date: line.postedDate, memo: line.memo, lines: tidy(lines) };
 }
 
+/**
+ * A bank payout matched to approved cash payout requests (rule 13, and any
+ * other money out; 2026-11-27), possibly alongside expense reports on the same
+ * line. Each request debits what it pays down (2600 Commissions payable keyed
+ * to the person for a commission, else the category's account), the bank is
+ * credited once, and the expense reports take the rest exactly as
+ * payoutEntry does. With no requests this IS payoutEntry, so existing
+ * reimbursement entries keep their fingerprints.
+ */
+export function cashPayoutEntry(
+  line: { amountCents: number; postedDate: string; memo: string },
+  claims: { amountCents: number; personKey: string | null }[],
+  requests: { amountCents: number; accountId: string; sub: string | null }[],
+  bankAccountId: string,
+  acct: Record<AccrualKey, string>,
+): Desired {
+  if (requests.length === 0 || line.amountCents >= 0) return payoutEntry(line, claims, bankAccountId, acct);
+  const reqTotal = requests.reduce((s, r) => s + r.amountCents, 0);
+  const rest = claims.length ? payoutEntry({ ...line, amountCents: line.amountCents + reqTotal }, claims, bankAccountId, acct) : null;
+  const lines: Line[] = [...(rest?.lines ?? []), { accountId: bankAccountId, debitCents: 0, creditCents: reqTotal }];
+  for (const r of requests) lines.push({ accountId: r.accountId, debitCents: r.amountCents, creditCents: 0, sub: r.sub });
+  // With no expense report to carry a difference, the link rules require the
+  // requests to equal the line. If the bank later changes the amount, the
+  // difference goes to 6990 Uncategorized so the entry balances and shows up.
+  if (!claims.length) lines.push(...pair(acct.uncategorized_expense, bankAccountId, -line.amountCents - reqTotal));
+  return { date: line.postedDate, memo: line.memo, lines: tidy(lines) };
+}
+
 // ── Payments marked paid by hand (2026-11-13) ────────────────────────────────
 // Deposits are cash and check for now, marked paid by hand on the booking. That
 // money is real, so it is a source: Dr 1050 Undeposited funds / Cr the job's

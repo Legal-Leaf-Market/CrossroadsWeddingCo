@@ -1412,3 +1412,43 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS pre_audit_packets_immutable ON pre_audit_packets;
 CREATE TRIGGER pre_audit_packets_immutable BEFORE UPDATE OR DELETE ON pre_audit_packets
     FOR EACH ROW EXECUTE FUNCTION forbid_pre_audit_packet_change();
+
+-- Cash payout requests (2026-11-27, finance task 9). Any money out that is not
+-- an expense report (a commission from 2600, an owner draw, a contractor paid
+-- outside the cost plan) is requested by the preparer (Jake), approved or
+-- vetoed by the approver (Terry; the tiebreaker, Nic, on Terry's own money or
+-- an escalated veto), and only then matched to the bank line that paid it.
+-- Rules: lib/payout-logic.ts. Posting: cashPayoutEntry in lib/books/accrual.ts,
+-- on the bank line's own entry. Never deleted: voided.
+CREATE TABLE IF NOT EXISTS payout_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    kind VARCHAR(20) NOT NULL CHECK (kind IN ('commission', 'other')),
+    crew_member_id UUID REFERENCES crew_members(id) ON DELETE RESTRICT,
+    payee_name VARCHAR(160) NOT NULL,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    purpose TEXT NOT NULL DEFAULT '',
+    category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT,
+    status VARCHAR(12) NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'approved', 'vetoed', 'escalated', 'void')),
+    requested_by VARCHAR(255) NOT NULL,
+    requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_by VARCHAR(255),
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT NOT NULL DEFAULT '',
+    bank_transaction_id UUID REFERENCES bank_transactions(id) ON DELETE RESTRICT,
+    linked_by VARCHAR(255),
+    linked_at TIMESTAMPTZ,
+    voided_by VARCHAR(255),
+    voided_at TIMESTAMPTZ,
+    void_note TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- A commission is owed to a crew member; anything else names the account it pays down.
+    CHECK (kind <> 'commission' OR crew_member_id IS NOT NULL),
+    CHECK (kind <> 'other' OR category_id IS NOT NULL),
+    -- Cash is matched only to an approved request.
+    CHECK (bank_transaction_id IS NULL OR status = 'approved')
+);
+CREATE INDEX IF NOT EXISTS idx_payout_requests_tenant ON payout_requests (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_payout_requests_line ON payout_requests (bank_transaction_id) WHERE bank_transaction_id IS NOT NULL;
+DROP TRIGGER IF EXISTS payout_requests_no_delete ON payout_requests;
+CREATE TRIGGER payout_requests_no_delete BEFORE DELETE ON payout_requests FOR EACH ROW EXECUTE FUNCTION forbid_delete();

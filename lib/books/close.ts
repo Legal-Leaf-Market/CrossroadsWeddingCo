@@ -99,11 +99,21 @@ export async function periodBlockers(tenantId: string, periodStart: string): Pro
       select e.id from journal_entries e join journal_lines l on l.entry_id = e.id
       where e.tenant_id = ${tenantId} and e.status = 'posted' and e.entry_date between ${periodStart} and ${end}
       group by e.id having sum(l.debit_cents) <> sum(l.credit_cents)) x`);
-  const lines = await one<{ unreviewed: number; pending: number }>(sql`
-    select count(*) filter (where review_status = 'unreviewed' and not pending and posted_date <= ${end})::int as unreviewed,
-           count(*) filter (where pending and posted_date between ${periodStart} and ${end})::int as pending
-    from bank_transactions where tenant_id = ${tenantId} and removed_at is null`);
   const hasClaims = Boolean(((await db.execute(sql`select to_regclass('expense_claims') is not null as ok`)).rows[0] as { ok: boolean }).ok);
+  const hasRequests = Boolean(((await db.execute(sql`select to_regclass('payout_requests') is not null as ok`)).rows[0] as { ok: boolean }).ok);
+  // A line matched to an approved payout (an expense reimbursement or a cash
+  // payout request) is sorted by that match; its entry posts from the match.
+  const matchedPayout = sql.join(
+    [
+      hasClaims ? sql`exists (select 1 from expense_claims c where c.reimbursed_bank_transaction_id = t.id and c.status = 'approved')` : sql`false`,
+      hasRequests ? sql`exists (select 1 from payout_requests r where r.bank_transaction_id = t.id and r.status = 'approved')` : sql`false`,
+    ],
+    sql` or `,
+  );
+  const lines = await one<{ unreviewed: number; pending: number }>(sql`
+    select count(*) filter (where t.review_status = 'unreviewed' and not t.pending and t.posted_date <= ${end} and not (${matchedPayout}))::int as unreviewed,
+           count(*) filter (where t.pending and t.posted_date between ${periodStart} and ${end})::int as pending
+    from bank_transactions t where t.tenant_id = ${tenantId} and t.removed_at is null`);
   const claims = hasClaims
     ? await one<{ n: number }>(sql`select count(*)::int as n from expense_claims where tenant_id = ${tenantId} and status = 'submitted' and spent_on <= ${end}`)
     : { n: 0 };
