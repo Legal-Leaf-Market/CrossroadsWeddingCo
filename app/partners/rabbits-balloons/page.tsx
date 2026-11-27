@@ -460,7 +460,7 @@ export default function RabbitsBalloonsPage() {
 
           <div className={s.sources}>
             <div className={s.wrap}>
-              <a className={s.badge} href="https://heartofcolumbus.netlify.app/b/rabbits-balloons/" target="_blank" rel="noopener">
+              <a className={s.badge} href="https://heartofcolumbus.shop/b/rabbits-balloons/" target="_blank" rel="noopener">
                 <span>★</span> Founding Member on Heart of Columbus
               </a>
               <p>
