@@ -253,7 +253,10 @@ Any money out that is not an expense report goes through one request before its 
 matched as that payout. Rules: `lib/payout-logic.ts` (checked by `scripts/verify-payouts.mjs`);
 server: `lib/payouts.ts`; page: `/app/books/payouts`; table `payout_requests` (never deleted,
 voided; a CHECK refuses a bank line on anything not approved).
-- **Who:** the preparer (Jake) requests; the approver (Terry) approves or vetoes; on money going to
+- **Seats since 2026-11-27:** Terry left the partnership; Jake prepares, Nic approves, and the
+  tiebreaker seat is empty, so anything that needs the tiebreaker (money going to the approver, an
+  escalated veto) waits until a second approver is seated. The rules below are by seat, not name.
+- **Who:** the preparer (Jake) requests; the approver (Terry until 2026-11-27, now Nic) approves or vetoes; on money going to
   the approver the tiebreaker (Nic) decides; the preparer may escalate a veto to the tiebreaker,
   whose word is final, except on the tiebreaker's own money, where the approver's veto stands.
   Whoever requested never approves; nobody approves, vetoes or records money going to themselves;

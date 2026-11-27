@@ -528,12 +528,13 @@ const RULES: Record<CloseAction, { from: PeriodStatus[]; role: Role; to: PeriodS
   escalate: { from: ["vetoed"], role: "preparer", to: "escalated", needsNote: true },
   request_reopen: { from: ["closed"], role: "preparer", to: "reopen_requested", needsNote: true },
   escalate_reopen: { from: ["reopen_vetoed"], role: "preparer", to: "reopen_escalated", needsNote: true },
-  // Terry approves or vetoes. Never his own trigger.
+  // The approver (Nic since 2026-11-27; Terry before) approves or vetoes. Never their own trigger.
   approve: { from: ["prepared"], role: "approver", to: "closed", notSelf: true },
   veto: { from: ["prepared"], role: "approver", to: "vetoed", needsNote: true, notSelf: true },
   approve_reopen: { from: ["reopen_requested"], role: "approver", to: "open", notSelf: true },
   veto_reopen: { from: ["reopen_requested"], role: "approver", to: "reopen_vetoed", needsNote: true, notSelf: true },
-  // Nic breaks a tie, only once Jake has escalated Terry's veto.
+  // The tie-breaker decides, only once Jake has escalated a veto. Empty since
+  // 2026-11-27 (Terry left, Nic moved to approver): an escalation waits until one is seated.
   tiebreak_close: { from: ["escalated"], role: "tiebreaker", to: "closed", needsNote: true, notSelf: true },
   tiebreak_keep_open: { from: ["escalated"], role: "tiebreaker", to: "open", needsNote: true, notSelf: true },
   tiebreak_reopen: { from: ["reopen_escalated"], role: "tiebreaker", to: "open", needsNote: true, notSelf: true },
@@ -577,7 +578,7 @@ export function checkCloseAction(input: {
   if (!r) return { ok: false, reason: "Unknown action" };
   if (!r.from.includes(input.status)) return { ok: false, reason: `Not possible while the month is ${input.status.replace(/_/g, " ")}` };
   if (!input.roles.has(r.role)) {
-    const who = r.role === "preparer" ? "the preparer (Jake)" : r.role === "approver" ? "the approver (Terry)" : "the tie-breaker (Nic)";
+    const who = r.role === "preparer" ? "the preparer (Jake)" : r.role === "approver" ? "the approver (Nic)" : "the tie-breaker (no one holds that seat right now)";
     return { ok: false, reason: `Only ${who} can do this` };
   }
   if (r.notSelf && input.triggeredBy && input.triggeredBy.toLowerCase() === input.actor.toLowerCase()) {

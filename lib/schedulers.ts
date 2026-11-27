@@ -56,9 +56,8 @@ const BOOKABLE: { slug: string; envVar: string }[] = [
   { slug: "nic", envVar: "SCHEDULER_EMAIL_NIC" },
   { slug: "brayton", envVar: "SCHEDULER_EMAIL_BRAYTON" },
   { slug: "ashton", envVar: "SCHEDULER_EMAIL_ASHTON" },
-  // Added 2026-11-01. Unlike the four above, terry@ is NOT printed on a card
-  // or confirmed to exist: until it is, set SCHEDULER_EMAIL_TERRY in Netlify
-  // to his real address. The owner is copied on every call either way.
+  // Added 2026-11-01, RESERVED since 2026-11-27 when Terry came off the team:
+  // with no lib/team.ts entry the flatMap skips it, like brayton and ashton.
   { slug: "terry", envVar: "SCHEDULER_EMAIL_TERRY" },
 ];
 

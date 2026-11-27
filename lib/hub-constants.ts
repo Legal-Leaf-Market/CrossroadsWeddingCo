@@ -169,7 +169,7 @@ export function daysOut(eventDate: string): number {
  * row, so renaming an entry does not rewrite history: past messages keep the
  * name they were sent under.
  */
-export const TEAM_NAMES = ["Jake", "Nic", "Terry"] as const;
+export const TEAM_NAMES = ["Jake", "Nic"] as const; // Terry came off the team 2026-11-27
 export type TeamName = (typeof TEAM_NAMES)[number];
 
 export function isTeamName(v: unknown): v is TeamName {

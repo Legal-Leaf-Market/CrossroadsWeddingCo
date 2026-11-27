@@ -57,13 +57,23 @@ export async function listRequests(tenantId: string) {
 }
 export type RequestRow = Awaited<ReturnType<typeof listRequests>>[number];
 
-/** Who money can go to: the active crew. */
+/**
+ * Who money can go to: the active crew, plus anyone retired who still has
+ * commission ready to pay. Leaving the crew (Terry, 2026-11-27) does not cancel
+ * what was earned, so a retired person stays payable until they are paid up.
+ */
 export async function payees(tenantId: string) {
-  return db
-    .select({ id: crewMembers.id, name: crewMembers.name, email: crewMembers.email })
-    .from(crewMembers)
-    .where(and(eq(crewMembers.tenantId, tenantId), isNull(crewMembers.retiredAt)))
-    .orderBy(asc(crewMembers.sort), asc(crewMembers.createdAt));
+  const [rows, ready] = await Promise.all([
+    db
+      .select({ id: crewMembers.id, name: crewMembers.name, email: crewMembers.email, retiredAt: crewMembers.retiredAt })
+      .from(crewMembers)
+      .where(eq(crewMembers.tenantId, tenantId))
+      .orderBy(asc(crewMembers.sort), asc(crewMembers.createdAt)),
+    commissionsReady(tenantId),
+  ]);
+  return rows
+    .filter((r) => !r.retiredAt || (ready.get(r.id)?.readyCents ?? 0) > 0 || (ready.get(r.id)?.owedCents ?? 0) > 0)
+    .map((r) => ({ id: r.id, name: r.retiredAt ? `${r.name} (former crew)` : r.name, email: r.email }));
 }
 
 /** What an "other" payout can pay down: expense categories, and equity ones (an owner draw). */

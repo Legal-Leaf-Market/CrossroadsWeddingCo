@@ -119,7 +119,7 @@ export default async function SalesPage({ params, searchParams }: { params: Prom
               </table>
               <p className="mt-2 text-xs text-ink/55">
                 Owed is 2600 Commissions payable, by person. Ready to pay counts held events whose client has paid in full, less what is already
-                requested or paid out. Jake requests a payout in Books, Terry approves it (Nic on Terry&apos;s own), and the bank line is matched to it there.
+                requested or paid out. Jake requests a payout in Books, Nic approves it, and the bank line is matched to it there. Money going to Nic waits for a second approver.
               </p>
             </div>
           )}

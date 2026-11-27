@@ -5,7 +5,8 @@ import type { Role } from "@/lib/books/accrual";
 
 // Who holds which seat in the finance chain (2026-11-13): Jake (CEO) triggers,
 // Terry Winchester II (CBO, acting CFO) approves or vetoes, Nic (COO) breaks
-// ties. Everyone signed in can see, enter and edit; these seats only decide
+// ties. Since 2026-11-27 (Terry left the partnership): Jake prepares, Nic
+// approves, and the tiebreaker seat is empty. Everyone signed in can see, enter and edit; these seats only decide
 // who can trigger and who can approve. Read from finance_roles every time, so
 // revoking a seat takes effect at once.
 

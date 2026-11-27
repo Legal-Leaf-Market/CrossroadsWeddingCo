@@ -5,9 +5,10 @@
 // 1. The REPORT: only the preparer (Jake, CEO, keeps the books) approves or
 //    rejects a submitted claim ("only jake can approve expense reports"). The
 //    ledger recognizes the expense and the amount owed back at this point.
-// 2. The PAYOUT: before any cash moves, the approver (Terry Winchester II,
-//    CBO acting CFO, where the buck stops) approves or vetoes the payout. On
-//    Terry's own reports the tiebreaker (Nic, COO) decides instead. A veto can
+// 2. The PAYOUT: before any cash moves, the approver (Nic since 2026-11-27,
+//    when Terry left; Terry before) approves or vetoes the payout. On the
+//    approver's own reports the tiebreaker decides instead; that seat is empty
+//    for now, so Nic's own reports wait for a second approver. A veto can
 //    be escalated by the preparer to the tiebreaker, whose decision is final.
 // Nobody decides a payout to themselves (so on the tiebreaker's own report a
 // veto cannot be escalated), and the tiebreaker never initiates

@@ -8,7 +8,9 @@
 // (owner, 2026-11-13, docs/handoff task 9):
 // - The preparer (Jake, CEO) requests. The tiebreaker (Nic, COO) never
 //   triggers cash, so he can't request, link or escalate.
-// - The approver (Terry Winchester II, CBO acting CFO) approves or vetoes.
+// - The approver approves or vetoes (Nic since 2026-11-27, when Terry left;
+//   the tiebreaker seat is empty until a second approver is seated, so money
+//   going to Nic and escalated vetoes wait).
 //   When the money is going to the approver himself, the tiebreaker decides.
 // - The preparer may escalate a veto to the tiebreaker, whose word is final,
 //   EXCEPT when the money is the tiebreaker's own: then the approver's veto

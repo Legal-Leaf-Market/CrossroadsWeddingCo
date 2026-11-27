@@ -51,8 +51,14 @@ export type TeamMember = {
 // corporate and events side; title and roles are what each person does on the
 // day, which is what a couple is actually booking. Both are shown, officer
 // title first. Terry's surname is Winchester; first names only on the site,
-// matching Jake and Nic. Terry's bio carries only what Jacob stated (event
-// promotion and execution experience, the go-to guy) and no number.
+// matching Jake and Nic.
+//
+// TERRY CAME OFF THE TEAM (2026-11-27, Jacob: "he's no longer a business
+// partner ... needs wiped from the crossroads website"). Like Brayton and
+// Ashton, removing his entry here is the whole public change: /book?with=terry
+// falls through to the ordinary booking page and the slug stays reserved in
+// lib/schedulers.ts. He still officiates as Compass Events (lib/compass.ts),
+// which does not read this list. Restoring him is putting the entry back.
 export const TEAM: TeamMember[] = [
   {
     slug: "jake",
@@ -71,17 +77,6 @@ export const TEAM: TeamMember[] = [
     roles: "DJ · MC · Acoustic · Bar",
     bio: "Nic keeps the operation running, from the schedule to the gear to the crew, and he's the live music and the steady hand behind the bar. He plays the solo acoustic sets, singer-songwriter style, and brings about twenty years of serving and bartending, with a current Indiana ATC permit. When we say licensed bartenders, he's who we mean.",
     initials: "N",
-  },
-  {
-    // TERRY (bookable since 2026-11-01; titles, roles and bio from Jacob
-    // 2026-11-08, so he is on the public team section now).
-    slug: "terry",
-    name: "Terry",
-    executiveTitle: "Chief Business Officer",
-    title: "Stage Manager",
-    roles: "DJ · Bar · Stage Management",
-    bio: "Terry brings tons of experience in event promotion and execution, and he's our go-to guy on just about everything. He DJs, works the bar, and runs the stage, so the room, the crew and the timing all come together the way they should.",
-    initials: "T",
   },
 ];
 

@@ -1452,3 +1452,62 @@ CREATE INDEX IF NOT EXISTS idx_payout_requests_tenant ON payout_requests (tenant
 CREATE INDEX IF NOT EXISTS idx_payout_requests_line ON payout_requests (bank_transaction_id) WHERE bank_transaction_id IS NOT NULL;
 DROP TRIGGER IF EXISTS payout_requests_no_delete ON payout_requests;
 CREATE TRIGGER payout_requests_no_delete BEFORE DELETE ON payout_requests FOR EACH ROW EXECUTE FUNCTION forbid_delete();
+
+-- Terry leaves the partnership (2026-11-27, Jacob: "he's no longer a business
+-- partner"; asked and answered: "Nic approves, Jake requests"). Seeded once and
+-- recorded, so a seat changed later in the app sticks. Nothing is deleted:
+-- Terry's approver seat and Nic's tiebreaker seat are revoked, Nic gains the
+-- approver seat, and Terry's crew row is retired, so his past job lines,
+-- commissions and audit history keep their name. The tiebreaker seat is left
+-- EMPTY on purpose: money going to Nic, and any escalated veto, waits until a
+-- second approver (the accountant, or a new partner) is seated, because nobody
+-- decides their own money. Every change is written to the audit log.
+DO $$
+DECLARE
+    house CONSTANT UUID := '00000000-0000-4000-8000-000000000001';
+    n INT;
+BEGIN
+    IF EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'finance_roles_v2_terry_out') THEN
+        RETURN;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM tenants WHERE id = house) THEN
+        RETURN;
+    END IF;
+
+    UPDATE finance_roles SET revoked_at = now()
+    WHERE tenant_id = house AND revoked_at IS NULL
+      AND ((lower(email) = 'terry@crossroadsweddingco.shop')
+        OR (lower(email) = 'nic@crossroadsweddingco.shop' AND role = 'tiebreaker'));
+    GET DIAGNOSTICS n = ROW_COUNT;
+    IF n > 0 THEN
+        INSERT INTO audit_log (tenant_id, actor, action, entity_type, entity_id, before, after, reason, hash)
+        VALUES (house, 'migration', 'finance_roles.revoke', 'finance_roles', NULL,
+                '{"approver":"terry@crossroadsweddingco.shop","tiebreaker":"nic@crossroadsweddingco.shop"}'::jsonb,
+                '{"approver":null,"tiebreaker":null}'::jsonb,
+                'Terry left the partnership (owner, 2026-11-27). Nic moves from tiebreaker to approver.', '');
+    END IF;
+
+    INSERT INTO finance_roles (tenant_id, email, name, role)
+    VALUES (house, 'nic@crossroadsweddingco.shop', 'Nic', 'approver')
+    ON CONFLICT DO NOTHING;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    IF n > 0 THEN
+        INSERT INTO audit_log (tenant_id, actor, action, entity_type, entity_id, before, after, reason, hash)
+        VALUES (house, 'migration', 'finance_roles.grant', 'finance_roles', NULL, NULL,
+                '{"approver":"nic@crossroadsweddingco.shop"}'::jsonb,
+                'Owner, 2026-11-27: "Nic approves, Jake requests."', '');
+    END IF;
+
+    UPDATE crew_members SET retired_at = now(), updated_at = now()
+    WHERE tenant_id = house AND retired_at IS NULL
+      AND (lower(coalesce(email, '')) = 'terry@crossroadsweddingco.shop' OR name = 'Terry');
+    GET DIAGNOSTICS n = ROW_COUNT;
+    IF n > 0 THEN
+        INSERT INTO audit_log (tenant_id, actor, action, entity_type, entity_id, before, after, reason, hash)
+        VALUES (house, 'migration', 'crew.retire', 'crew_member', NULL,
+                '{"name":"Terry","retired":false}'::jsonb, '{"name":"Terry","retired":true}'::jsonb,
+                'Terry left the partnership (owner, 2026-11-27).', '');
+    END IF;
+
+    INSERT INTO schema_seeds (name) VALUES ('finance_roles_v2_terry_out') ON CONFLICT (name) DO NOTHING;
+END $$;
