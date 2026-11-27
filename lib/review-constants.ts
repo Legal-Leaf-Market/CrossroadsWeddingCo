@@ -84,8 +84,6 @@ export const REVIEW_EVENTS: ReviewEvent[] = [
       { src: `${VV}/dance-floor.mp4`, kind: "video", home: true, poster: `${VV}/dance-floor-poster.jpg`, alt: "A short clip of a parent dance, filmed from the DJ table", width: 720, height: 1280 },
       { src: `${VV}/dj-table.jpg`, kind: "image", alt: "Jake and Nic at the DJ table getting the music ready", width: 1600, height: 1200 },
       { src: `${VV}/dance-floor.jpg`, kind: "image", home: true, alt: "The parent dance, seen from behind the mixer and laptop at the DJ table", width: 1200, height: 1600 },
-      { src: `${VV}/jake-before.jpg`, kind: "image", home: true, alt: "Jake in the ballroom before the reception", width: 1200, height: 1600 },
-      { src: `${VV}/jake-reception.jpg`, kind: "image", home: true, alt: "Jake during the reception with guests on the floor behind him", width: 1200, height: 1600 },
     ],
   },
   {
