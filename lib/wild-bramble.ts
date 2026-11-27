@@ -63,7 +63,7 @@ export const WILD_BRAMBLE = {
     gift: `${ORIGIN}/gift-meals`,
     about: `${ORIGIN}/about`,
     menu: `${ORIGIN}/menu`,
-    hoc: "https://heartofcolumbus.netlify.app/b/wild-bramble-catering/",
+    hoc: "https://heartofcolumbus.shop/b/wild-bramble-catering/",
     directions:
       "https://www.google.com/maps/dir/?api=1&destination=4389+North+Long+Rd%2C+Suite+202%2C+Columbus%2C+IN+47203",
     map: "https://www.google.com/maps?q=4389+North+Long+Rd%2C+Columbus%2C+IN+47203&output=embed",
