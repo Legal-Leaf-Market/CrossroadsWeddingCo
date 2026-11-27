@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
+import BooksHelp from "@/components/account/BooksHelp";
 import OpeningBalanceForm from "@/components/account/OpeningBalanceForm";
 import { getBooksWorkspace } from "@/lib/auth";
 import { balances, postBankLedger, profitAndLoss, reconciliation } from "@/lib/books/ledger";
@@ -100,6 +101,7 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
     <AccountShell signedIn house={ws.tenant.kind === "house"}>
       <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
         <span className="font-semibold text-charcoal">Accrual basis, US GAAP</span>
+        <Link href="/app/books/close?guide=start" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Guided bookkeeping</Link>
         <Link href="/app/books/close" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Close the books</Link>
         <Link href="/app/books/accounts" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Trial balance</Link>
         <Link href="/app/books/tie-out" className="font-semibold text-terracotta underline decoration-parchment underline-offset-2">Tie-out</Link>
@@ -113,7 +115,10 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
       )}
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-3xl text-charcoal">Books</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl text-charcoal">Books</h1>
+            <BooksHelp />
+          </div>
           <p className="mt-2 max-w-xl text-ink/70">
             Built from the transactions you sort, your jobs and approved expense reports, on an accrual basis: a job&apos;s
             revenue and its direct costs count on the event date, whenever the cash moves. Every line opens down to its source. A
@@ -136,7 +141,10 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
         <>
           <section className="mt-8 rounded-2xl border border-parchment bg-white p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl text-charcoal">Profit and loss</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl text-charcoal">Profit and loss</h2>
+                <BooksHelp topic="profit" label="Explain profit and loss" />
+              </div>
               <nav className="flex flex-wrap gap-2" aria-label="Period">
                 {(Object.keys(PERIODS) as PeriodKey[]).map((k) => (
                   <Link
@@ -186,8 +194,11 @@ export default async function BooksPage({ searchParams }: { searchParams: Promis
             </p>
           </section>
 
-          <section className="mt-6 rounded-2xl border border-parchment bg-white p-6">
-            <h2 className="text-xl text-charcoal">Do your books match the bank?</h2>
+          <section id="bank-check" className="mt-6 scroll-mt-4 rounded-2xl border border-parchment bg-white p-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl text-charcoal">Do your books match the bank?</h2>
+              <BooksHelp topic="reconciliation" label="Explain the bank check" />
+            </div>
             {data.rec.length === 0 ? (
               <p className="mt-3 text-sm text-ink/65">
                 <Link href="/app/integrations" className="font-semibold text-terracotta-dark hover:underline">

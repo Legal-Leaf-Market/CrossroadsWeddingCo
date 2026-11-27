@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
+import BooksHelp from "@/components/account/BooksHelp";
 import ClaimReview, { type ReviewClaim } from "@/components/expenses/ClaimReview";
 import { getBooksWorkspace } from "@/lib/auth";
 import { decide, owedBackByPerson, ROLE_LABEL, type ClaimAction, type Role } from "@/lib/expense-logic";
@@ -78,7 +79,10 @@ export default async function ExpensesPage() {
       <Link href="/app/books" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
         &larr; Books
       </Link>
-      <h1 className="mt-3 text-3xl text-charcoal">Expense reports</h1>
+      <div className="flex flex-wrap items-center gap-3 mt-3">
+        <h1 className="text-3xl text-charcoal">Expense reports</h1>
+        <BooksHelp topic="expenses" />
+      </div>
       <p className="mt-2 max-w-2xl text-ink/70">
         Staff send receipts from their own link. The preparer approves each report, then the payout is approved before anyone is
         paid back. Nobody decides a payout to themselves.

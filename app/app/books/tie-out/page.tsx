@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
+import BooksHelp from "@/components/account/BooksHelp";
 import { getBooksWorkspace } from "@/lib/auth";
 import { ledgerToday, postBankLedgerQuietly } from "@/lib/books/ledger";
 import { tieOutReport } from "@/lib/books/subledger";
@@ -31,7 +32,10 @@ export default async function TieOutPage({ searchParams }: { searchParams: Promi
       <Link href="/app/books" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
         &larr; Books
       </Link>
-      <h1 className="mt-2 text-2xl text-charcoal">Control accounts against their subledgers</h1>
+      <div className="flex flex-wrap items-center gap-3 mt-2">
+        <h1 className="text-2xl text-charcoal">Control accounts against their subledgers</h1>
+        <BooksHelp topic="tieOut" />
+      </div>
       <p className="mt-1 max-w-2xl text-sm text-ink/60">
         Every line on a control account says whose it is: which job for receivables, prepaid costs, deferred revenue and accrued
         costs; which person for reimbursements. Each account&apos;s balance must equal the sum of those. A difference means money

@@ -10,12 +10,13 @@ import { BROCHURES, shareUrl } from "@/lib/brochures";
 // pops its card open once per visit (after a few seconds, or halfway down the
 // page) and can be shrunk back to the pill, never removed. It stays off the
 // pages where a visitor is mid-task or the page is private: booking, the
-// planning hub, admin, live and guest views, and the brochure pages themselves.
+// planning hub, business workspace, admin, live and guest views, and brochures.
 // /partners/cookie-paradise is a shopping cart (2026-11-25): its order button
 // owns the bottom right corner there. /partners/wild-bramble-catering is a
 // menu builder: on phones its "Review and send" bar owns the bottom edge.
 const HIDDEN_ON = [
   "/admin",
+  "/app",
   "/hub",
   "/live",
   "/schedule",
