@@ -24,8 +24,8 @@ import {
   jobEntries,
   keyedClaimEntry,
   LOCKED_STATUSES,
+  cashPayoutEntry,
   matchedBankEntry,
-  payoutEntry,
   periodOf,
   planPosting,
   type AccrualKey,
@@ -333,6 +333,27 @@ export async function postLedger(
       if (c.reimbursed_bank_transaction_id) reimbursing.set(c.reimbursed_bank_transaction_id, [...(reimbursing.get(c.reimbursed_bank_transaction_id) ?? []), c]);
     }
 
+    // Approved cash payout requests matched to the bank line that paid them
+    // (lib/payouts.ts). A commission pays down 2600 for the person; anything
+    // else pays down its category's account.
+    type Req = { amount_cents: number; kind: string; crew_member_id: string | null; cat_ledger_id: string | null; bank_transaction_id: string };
+    const reqRows: Req[] = (await tableExists(tx, "payout_requests"))
+      ? ((
+          await tx.execute(sql`
+            select r.amount_cents, r.kind, r.crew_member_id, lc.ledger_account_id as cat_ledger_id, r.bank_transaction_id
+            from payout_requests r left join ledger_categories lc on lc.id = r.category_id
+            where r.tenant_id = ${tenantId} and r.status = 'approved' and r.bank_transaction_id is not null
+            order by r.requested_at, r.id`)
+        ).rows as Req[])
+      : [];
+    const requesting = new Map<string, { amountCents: number; accountId: string; sub: string | null }[]>();
+    for (const r of reqRows) {
+      const accountId = r.kind === "commission" ? acct.commissions_payable : r.cat_ledger_id;
+      if (!accountId) continue;
+      const sub = r.kind === "commission" && r.crew_member_id ? crewSub(r.crew_member_id) : null;
+      requesting.set(r.bank_transaction_id, [...(requesting.get(r.bank_transaction_id) ?? []), { amountCents: r.amount_cents, accountId, sub }]);
+    }
+
     const sources: Source[] = [];
     const payments = new Map<string, { date: string; cents: number }[]>();
     const prepaid = new Map<string, { date: string; cents: number }[]>();
@@ -359,10 +380,13 @@ export async function postLedger(
           bankIn.set(job.id, { cents: b.cents + l.amountCents, depositLines: b.depositLines + (l.paymentKind === "deposit" ? 1 : 0) });
         }
         else if (l.postedDate <= job.eventDate) push(prepaid, job.id, { date: l.postedDate, cents: -l.amountCents });
-      } else if (live && reimbursing.has(l.id)) {
-        desired = payoutEntry(
-          { amountCents: l.amountCents, postedDate: l.postedDate, memo: `${l.merchant || l.description || "Reimbursement"} (expense reimbursement)` },
+      } else if (live && (reimbursing.has(l.id) || requesting.has(l.id))) {
+        const reqs = requesting.get(l.id) ?? [];
+        const label = reimbursing.has(l.id) ? (reqs.length ? "reimbursement and payout" : "expense reimbursement") : "approved payout";
+        desired = cashPayoutEntry(
+          { amountCents: l.amountCents, postedDate: l.postedDate, memo: `${l.merchant || l.description || (reqs.length ? "Payout" : "Reimbursement")} (${label})` },
           (reimbursing.get(l.id) ?? []).map((c) => ({ amountCents: c.amount_cents, personKey: personKey(c) })),
+          reqs,
           l.bankLedgerId!,
           acct,
         );

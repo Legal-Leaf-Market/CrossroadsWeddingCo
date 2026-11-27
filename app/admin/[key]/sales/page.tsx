@@ -85,29 +85,41 @@ export default async function SalesPage({ params, searchParams }: { params: Prom
             <p className="rounded-2xl border border-parchment bg-white p-5 text-sm text-ink/60">None yet. They start with the first sales order that names who closed it.</p>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-parchment bg-white p-3">
-              <table className="w-full min-w-[520px] text-sm">
+              <table className="w-full min-w-[720px] text-sm">
                 <thead>
                   <tr className="text-left text-xs text-ink/55">
                     <th className="pb-2 font-medium">Person</th>
                     <th className="pb-2 text-right font-medium">Owed (in the books)</th>
                     <th className="pb-2 text-right font-medium">Ready to pay</th>
+                    <th className="pb-2 text-right font-medium">Requested</th>
+                    <th className="pb-2 text-right font-medium">Paid out</th>
                     <th className="pb-2 text-right font-medium">On events still ahead</th>
+                    <th className="pb-2 text-right font-medium"><span className="sr-only">Pay</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {people.map((p) => (
-                    <tr key={p.name} className="border-t border-parchment tabular-nums">
+                    <tr key={p.crewId} className="border-t border-parchment tabular-nums">
                       <td className="py-1.5 font-semibold text-charcoal">{p.name}</td>
                       <td className="py-1.5 text-right">{centsLabel(p.owedCents)}</td>
                       <td className="py-1.5 text-right">{centsLabel(p.readyCents)}</td>
+                      <td className="py-1.5 text-right">{centsLabel(p.openCents)}</td>
+                      <td className="py-1.5 text-right">{centsLabel(p.paidCents)}</td>
                       <td className="py-1.5 text-right">{centsLabel(p.aheadCents)}</td>
+                      <td className="py-1.5 text-right">
+                        {p.readyCents > 0 && (
+                          <a href={`/app/books/payouts?crew=${p.crewId}`} className="text-xs font-semibold text-terracotta underline decoration-parchment underline-offset-2">
+                            Request payout
+                          </a>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <p className="mt-2 text-xs text-ink/55">
-                Owed is 2600 Commissions payable, by person. Ready to pay counts held events whose client has paid in full. Paying it out from the bank is the
-                next step (cash payout requests).
+                Owed is 2600 Commissions payable, by person. Ready to pay counts held events whose client has paid in full, less what is already
+                requested or paid out. Jake requests a payout in Books, Nic approves it, and the bank line is matched to it there. Money going to Nic waits for a second approver.
               </p>
             </div>
           )}

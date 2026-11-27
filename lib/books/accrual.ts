@@ -303,6 +303,34 @@ export function payoutEntry(
   return { date: line.postedDate, memo: line.memo, lines: tidy(lines) };
 }
 
+/**
+ * A bank payout matched to approved cash payout requests (rule 13, and any
+ * other money out; 2026-11-27), possibly alongside expense reports on the same
+ * line. Each request debits what it pays down (2600 Commissions payable keyed
+ * to the person for a commission, else the category's account), the bank is
+ * credited once, and the expense reports take the rest exactly as
+ * payoutEntry does. With no requests this IS payoutEntry, so existing
+ * reimbursement entries keep their fingerprints.
+ */
+export function cashPayoutEntry(
+  line: { amountCents: number; postedDate: string; memo: string },
+  claims: { amountCents: number; personKey: string | null }[],
+  requests: { amountCents: number; accountId: string; sub: string | null }[],
+  bankAccountId: string,
+  acct: Record<AccrualKey, string>,
+): Desired {
+  if (requests.length === 0 || line.amountCents >= 0) return payoutEntry(line, claims, bankAccountId, acct);
+  const reqTotal = requests.reduce((s, r) => s + r.amountCents, 0);
+  const rest = claims.length ? payoutEntry({ ...line, amountCents: line.amountCents + reqTotal }, claims, bankAccountId, acct) : null;
+  const lines: Line[] = [...(rest?.lines ?? []), { accountId: bankAccountId, debitCents: 0, creditCents: reqTotal }];
+  for (const r of requests) lines.push({ accountId: r.accountId, debitCents: r.amountCents, creditCents: 0, sub: r.sub });
+  // With no expense report to carry a difference, the link rules require the
+  // requests to equal the line. If the bank later changes the amount, the
+  // difference goes to 6990 Uncategorized so the entry balances and shows up.
+  if (!claims.length) lines.push(...pair(acct.uncategorized_expense, bankAccountId, -line.amountCents - reqTotal));
+  return { date: line.postedDate, memo: line.memo, lines: tidy(lines) };
+}
+
 // ── Payments marked paid by hand (2026-11-13) ────────────────────────────────
 // Deposits are cash and check for now, marked paid by hand on the booking. That
 // money is real, so it is a source: Dr 1050 Undeposited funds / Cr the job's
@@ -500,12 +528,13 @@ const RULES: Record<CloseAction, { from: PeriodStatus[]; role: Role; to: PeriodS
   escalate: { from: ["vetoed"], role: "preparer", to: "escalated", needsNote: true },
   request_reopen: { from: ["closed"], role: "preparer", to: "reopen_requested", needsNote: true },
   escalate_reopen: { from: ["reopen_vetoed"], role: "preparer", to: "reopen_escalated", needsNote: true },
-  // Terry approves or vetoes. Never his own trigger.
+  // The approver (Nic since 2026-11-27; Terry before) approves or vetoes. Never their own trigger.
   approve: { from: ["prepared"], role: "approver", to: "closed", notSelf: true },
   veto: { from: ["prepared"], role: "approver", to: "vetoed", needsNote: true, notSelf: true },
   approve_reopen: { from: ["reopen_requested"], role: "approver", to: "open", notSelf: true },
   veto_reopen: { from: ["reopen_requested"], role: "approver", to: "reopen_vetoed", needsNote: true, notSelf: true },
-  // Nic breaks a tie, only once Jake has escalated Terry's veto.
+  // The tie-breaker decides, only once Jake has escalated a veto. Empty since
+  // 2026-11-27 (Terry left, Nic moved to approver): an escalation waits until one is seated.
   tiebreak_close: { from: ["escalated"], role: "tiebreaker", to: "closed", needsNote: true, notSelf: true },
   tiebreak_keep_open: { from: ["escalated"], role: "tiebreaker", to: "open", needsNote: true, notSelf: true },
   tiebreak_reopen: { from: ["reopen_escalated"], role: "tiebreaker", to: "open", needsNote: true, notSelf: true },
@@ -549,7 +578,7 @@ export function checkCloseAction(input: {
   if (!r) return { ok: false, reason: "Unknown action" };
   if (!r.from.includes(input.status)) return { ok: false, reason: `Not possible while the month is ${input.status.replace(/_/g, " ")}` };
   if (!input.roles.has(r.role)) {
-    const who = r.role === "preparer" ? "the preparer (Jake)" : r.role === "approver" ? "the approver (Terry)" : "the tie-breaker (Nic)";
+    const who = r.role === "preparer" ? "the preparer (Jake)" : r.role === "approver" ? "the approver (Nic)" : "the tie-breaker (no one holds that seat right now)";
     return { ok: false, reason: `Only ${who} can do this` };
   }
   if (r.notSelf && input.triggeredBy && input.triggeredBy.toLowerCase() === input.actor.toLowerCase()) {
@@ -598,6 +627,8 @@ export function closeBlockers(f: {
   bankDifferences: number;
   /** Control accounts (1100, 1300, 2300, 2400, 2500) whose balance differs from the sum of their subledger. */
   subledgerDifferences?: number;
+  /** Approved cash payout requests with no bank line matched yet (owner, 2026-11-27: warn, do not block). */
+  unmatchedApprovedPayouts?: number;
 }): Blocker[] {
   const all: Blocker[] = [
     { key: "unbalanced", label: "Journal entries that don't balance", count: f.unbalancedEntries, hard: true },
@@ -610,6 +641,7 @@ export function closeBlockers(f: {
     { key: "pending", label: "Bank lines still pending", count: f.pendingLines, hard: false },
     { key: "transfers", label: "Money in transfers in transit", count: f.transfersInTransitCents === 0 ? 0 : 1, hard: false },
     { key: "bank", label: "Bank accounts where the books and the bank differ today", count: f.bankDifferences, hard: false },
+    { key: "payouts", label: "Approved payouts not yet matched to the bank line that paid them", count: f.unmatchedApprovedPayouts ?? 0, hard: false },
   ];
   return all.filter((b) => b.count > 0);
 }

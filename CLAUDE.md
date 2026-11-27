@@ -1285,9 +1285,10 @@ decisions absorbed from it:
 - **Checks and balances**: Jake (CEO, accounting experience) triggers; Terry Winchester II (CBO,
   acting CFO) approves or vetoes and is where the buck stops; Nic (COO) breaks ties and never
   triggers cash. Whoever triggers never approves. Expense reports: only Jake approves the report;
-  Terry approves the payout, Nic approves Terry's own. Seats: `finance_roles`.
-- **Logins**: jake@, terry@ and nic@crossroadsweddingco.shop, all with full see/enter/edit access
-  (default `houseBooksEmails`).
+  Terry approves the payout, Nic approves Terry's own. Seats: `finance_roles`. **Superseded
+  2026-11-27: Terry left; Jake triggers, Nic approves, the tiebreaker seat is empty (see 9.6).**
+- **Logins**: jake@ and nic@crossroadsweddingco.shop (terry@ removed 2026-11-27), all with full
+  see/enter/edit access (default `houseBooksEmails`).
 - **ETL first**: every feature has a way in and a way out; non-sync imports go through staging,
   a cached preview, approval and audit. Mail and calendar: **Proton and Google, not Microsoft**.
 - **Compass Events** is a separate division to be owned solely by Terry Winchester II; book it
@@ -1297,6 +1298,49 @@ decisions absorbed from it:
   SOPs), `GEMINI.md` (integrations and formats).
 
 ### 9.6 Phase log
+- **Terry is off the team and out of the books (2026-11-27, Jacob: "he's no longer a business
+  partner on any repo and needs wiped from the crossroads website ... He may work with us in the
+  future and will still officiate Olivia Ash's wedding"; asked and answered: "Nic approves, Jake
+  requests").** Public: his `lib/team.ts` entry is gone (the whole public change, as with Brayton
+  and Ashton), so "Who you get" shows Jake and Nic and `/book?with=terry` falls through to the
+  ordinary booking page; `terry` stays reserved in `BOOKABLE`. `TEAM_NAMES` is Jake and Nic; the
+  playbook's "Calling as" picker and `NUMS` drop him (his number is off the public repo). Books:
+  `houseBooksEmails()` defaults to jake@ and nic@ only (read every request, so a live session is
+  locked out at once; a `HOUSE_BOOKS_EMAILS` set in Netlify overrides the default and must drop
+  terry@ too). Seats: the `finance_roles_v2_terry_out` seed revokes Terry's approver seat and Nic's
+  tiebreaker seat, grants Nic the approver seat, and retires Terry's crew row, each audited; nothing
+  is deleted, so his past job lines, commissions and history keep his name. **The tiebreaker seat is
+  EMPTY on purpose**: money going to Nic, Nic's own expense-report payouts and any escalated veto
+  (payouts, expense reports, the close) wait until a second approver (the accountant or a new
+  partner) is given that seat in `finance_roles`. Nic as approver may also match bank lines, never
+  for his own money. A retired person with commission still owed stays in the payout picker as
+  "(former crew)" until paid up; new sales never credit a retired closer or account manager, so
+  any CRM account Terry managed should get a new manager. **Unchanged on purpose: Compass Events
+  officiating** (`lib/compass.ts`, his signature, the officiant agreement, `/sign/officiant/...`)
+  for Olivia Ash's wedding. Heart of Columbus's site never named him (only an old handoff doc,
+  updated there); Legal Leaf had no mention. Migration verified on a local Postgres 16: run on a
+  copy of the old state and again (one set of three audit rows, chain verifies), and on a fresh
+  database (Jake preparer, Nic approver, nothing else live). Restoring him is his `lib/team.ts`
+  entry plus new `finance_roles` rows.
+- **Cash payout requests (2026-11-27, finance task 9; commissions were waiting on it).** Any money
+  out that is not an expense report (commissions from 2600, owner draws, anyone paid outside a cost
+  plan) is requested at `/app/books/payouts` (nav "Payouts"), decided, and only then matched to the
+  bank line that paid it. Jake requests; Terry approves or vetoes; Nic decides money going to Terry
+  and escalated vetoes, never requests or matches cash; whoever requested never approves; nobody
+  decides or records money going to themselves. A commission request is capped at what is ready
+  for that person (held event, client paid in full, less paid and open requests). The bank line's
+  entry pays down 2600 by person (`cashPayoutEntry`), so Nic's $100 closer commission nets 2600 to
+  zero. `/admin/[key]/sales` shows requested and paid out per person with a "Request payout" link.
+  Table `payout_requests` (no delete, CHECK: a bank line only on an approved request). Rules
+  `lib/payout-logic.ts`, `node --experimental-strip-types scripts/verify-payouts.mjs` (64 checks).
+  Verified on a local Postgres 16 through the API with three signed-in owners: every refusal above,
+  three simultaneous requests for the same $100 (one saved), three simultaneous approvals (one 200),
+  match, unmatch voids the entry, a $120 line refused for a $100 request, the draw path vetoed by Nic
+  as final, an escalated veto decided by Nic, delete refused, all control accounts tie, audit chain
+  intact; page measured at 360/390/768/1280 with no sideways scroll. Owner answers (2026-11-27):
+  a request is capped at **$5,000** (`MAX_REQUEST_CENTS`), and the close shows a **soft** warning
+  for approved requests with no bank line matched by the month's end (`payouts` in
+  `closeBlockers`). Whether Terry may also request is overtaken: see the next entry.
 - **Wild Bramble Catering gets its own page and a menu builder (2026-11-25, Jacob: "Make a page
   for Wild Bramble now ... Catering in Columbus ... They are on HOC").**
   `/partners/wild-bramble-catering` is its own page file (`customPage`) with its own scoped look

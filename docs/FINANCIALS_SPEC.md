@@ -147,7 +147,8 @@ job costs, 6990 Uncategorized expense (receipts).
 | 10. Anything not tied to a job | As before: the bank line against its category | |
 | 11. Deposit or balance marked paid by hand (cash, check), not matched from the bank | 1050 Undeposited funds | Deferred revenue (on or before the event) / Accounts receivable (after) |
 | 12. Event date, a sale's commission (closer $100; account manager 5% on later events from the account) | 5100 Sales commissions (the job) | 2600 Commissions payable (the person) |
-| 13. Commission paid out (once the client has paid in full; payout linking comes with cash payout requests) | 2600 Commissions payable | Cash |
+| 13. Commission paid out (once the client has paid in full, through an approved cash payout request matched to the bank line) | 2600 Commissions payable (the person) | Cash |
+| 14. Any other approved cash payout request matched to a bank line (owner draw, someone paid outside a cost plan) | The request's category | Cash |
 
 Job cost = each cost-plan line's paid (actual) amount, else its planned cost (an estimate,
 trued up as a change in estimate), plus job-linked receipts dated on or before the event.
@@ -247,9 +248,41 @@ sale (`weddings.closer_crew_id`, `account_manager_crew_id`, `commission_direct_c
 Rules: `lib/sales-logic.ts`; posting: `commissionEntry` in `lib/books/accrual.ts`; 2600 is a
 control account by person. Checked by `scripts/verify-sales.mjs`.
 
+### Cash payout requests (2026-11-27, handoff task 9)
+Any money out that is not an expense report goes through one request before its bank line can be
+matched as that payout. Rules: `lib/payout-logic.ts` (checked by `scripts/verify-payouts.mjs`);
+server: `lib/payouts.ts`; page: `/app/books/payouts`; table `payout_requests` (never deleted,
+voided; a CHECK refuses a bank line on anything not approved).
+- **Seats since 2026-11-27:** Terry left the partnership; Jake prepares, Nic approves, and the
+  tiebreaker seat is empty, so anything that needs the tiebreaker (money going to the approver, an
+  escalated veto) waits until a second approver is seated. The rules below are by seat, not name.
+- **Who:** the preparer (Jake) requests; the approver (Terry until 2026-11-27, now Nic) approves or vetoes; on money going to
+  the approver the tiebreaker (Nic) decides; the preparer may escalate a veto to the tiebreaker,
+  whose word is final, except on the tiebreaker's own money, where the approver's veto stands.
+  Whoever requested never approves; nobody approves, vetoes or records money going to themselves;
+  the tiebreaker never requests, escalates or matches cash. Preparer or approver matches the line.
+- **Commissions:** a request may not ask for more than is ready for that person: commissions on
+  held events whose client paid in full, less what was paid out and what open requests already
+  hold (a non-final veto still holds its amount until voided). Requests are serialized per tenant
+  with an advisory lock (three simultaneous asks for the same $100: one saved).
+- **Matching:** a money-out, posted line not tied to a booking. Everything on the line (expense
+  reports, earlier requests, these) may not exceed it; with no expense reports the requests must
+  equal it exactly. The line's own entry (`cashPayoutEntry`) then credits cash once and debits 2600
+  keyed to the person for each commission, the category's account for anything else, and the
+  expense reports by the reimbursement rule. With no requests it is exactly `payoutEntry`, so
+  existing entries keep their fingerprints. A line matched to an approved payout no longer counts
+  as "waiting to be sorted" at the close (this also fixes reimbursement payout lines).
+- **Cap (owner, 2026-11-27):** one request is at most $5,000 (`MAX_REQUEST_CENTS`); more is
+  split into several requests, each decided on its own.
+- **At the close (owner, 2026-11-27):** an approved request with no bank line matched, decided on
+  or before the month's end, is a SOFT warning ("Approved payouts not yet matched to the bank line
+  that paid them"): the money may simply not have gone out yet, so the closer acknowledges it in
+  writing rather than being stopped.
+- Every request, decision, match and unmatch is audited; unmatching voids the entry and the
+  commission is owed again.
+
 ### Open items
-Paying commissions out from the bank (rule 13) with the cash payout request approvals; for
-owners, commissions are likely guaranteed payments for tax (the accountant should confirm).
+For owners, commissions are likely guaranteed payments for tax (the accountant should confirm).
 Stripe clearing account (card payments arrive net of fees); customer credits for overpayment;
 Compass Events as its own division owned by Terry Winchester II, with an intercompany due
 to/from account while its money lands in Crossroads; materiality threshold for reopen vs

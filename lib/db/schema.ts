@@ -900,6 +900,37 @@ export const expenseClaims = pgTable(
 );
 export type ExpenseClaim = typeof expenseClaims.$inferSelect;
 
+// Cash payout requests (2026-11-27, finance task 9): any money out that is not
+// an expense report. Rules lib/payout-logic.ts, server lib/payouts.ts.
+export const payoutRequests = pgTable(
+  "payout_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    kind: varchar("kind", { length: 20 }).notNull(),
+    crewMemberId: uuid("crew_member_id").references(() => crewMembers.id, { onDelete: "restrict" }),
+    payeeName: varchar("payee_name", { length: 160 }).notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    purpose: text("purpose").notNull().default(""),
+    categoryId: uuid("category_id").references(() => ledgerCategories.id, { onDelete: "restrict" }),
+    status: varchar("status", { length: 12 }).notNull().default("requested"),
+    requestedBy: varchar("requested_by", { length: 255 }).notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedBy: varchar("decided_by", { length: 255 }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note").notNull().default(""),
+    bankTransactionId: uuid("bank_transaction_id").references(() => bankTransactions.id, { onDelete: "restrict" }),
+    linkedBy: varchar("linked_by", { length: 255 }),
+    linkedAt: timestamp("linked_at", { withTimezone: true }),
+    voidedBy: varchar("voided_by", { length: 255 }),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidNote: text("void_note").notNull().default(""),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_payout_requests_tenant").on(t.tenantId, t.status)],
+);
+export type PayoutRequest = typeof payoutRequests.$inferSelect;
+
 // 17. CRM accounts (2026-11-13): who sends us work. lib/sales.ts
 export const crmAccounts = pgTable("crm_accounts", {
   id: uuid("id").primaryKey().defaultRandom(),

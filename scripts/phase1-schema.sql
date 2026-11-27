@@ -1412,3 +1412,102 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS pre_audit_packets_immutable ON pre_audit_packets;
 CREATE TRIGGER pre_audit_packets_immutable BEFORE UPDATE OR DELETE ON pre_audit_packets
     FOR EACH ROW EXECUTE FUNCTION forbid_pre_audit_packet_change();
+
+-- Cash payout requests (2026-11-27, finance task 9). Any money out that is not
+-- an expense report (a commission from 2600, an owner draw, a contractor paid
+-- outside the cost plan) is requested by the preparer (Jake), approved or
+-- vetoed by the approver (Terry; the tiebreaker, Nic, on Terry's own money or
+-- an escalated veto), and only then matched to the bank line that paid it.
+-- Rules: lib/payout-logic.ts. Posting: cashPayoutEntry in lib/books/accrual.ts,
+-- on the bank line's own entry. Never deleted: voided.
+CREATE TABLE IF NOT EXISTS payout_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    kind VARCHAR(20) NOT NULL CHECK (kind IN ('commission', 'other')),
+    crew_member_id UUID REFERENCES crew_members(id) ON DELETE RESTRICT,
+    payee_name VARCHAR(160) NOT NULL,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    purpose TEXT NOT NULL DEFAULT '',
+    category_id UUID REFERENCES ledger_categories(id) ON DELETE RESTRICT,
+    status VARCHAR(12) NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'approved', 'vetoed', 'escalated', 'void')),
+    requested_by VARCHAR(255) NOT NULL,
+    requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_by VARCHAR(255),
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT NOT NULL DEFAULT '',
+    bank_transaction_id UUID REFERENCES bank_transactions(id) ON DELETE RESTRICT,
+    linked_by VARCHAR(255),
+    linked_at TIMESTAMPTZ,
+    voided_by VARCHAR(255),
+    voided_at TIMESTAMPTZ,
+    void_note TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- A commission is owed to a crew member; anything else names the account it pays down.
+    CHECK (kind <> 'commission' OR crew_member_id IS NOT NULL),
+    CHECK (kind <> 'other' OR category_id IS NOT NULL),
+    -- Cash is matched only to an approved request.
+    CHECK (bank_transaction_id IS NULL OR status = 'approved')
+);
+CREATE INDEX IF NOT EXISTS idx_payout_requests_tenant ON payout_requests (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_payout_requests_line ON payout_requests (bank_transaction_id) WHERE bank_transaction_id IS NOT NULL;
+DROP TRIGGER IF EXISTS payout_requests_no_delete ON payout_requests;
+CREATE TRIGGER payout_requests_no_delete BEFORE DELETE ON payout_requests FOR EACH ROW EXECUTE FUNCTION forbid_delete();
+
+-- Terry leaves the partnership (2026-11-27, Jacob: "he's no longer a business
+-- partner"; asked and answered: "Nic approves, Jake requests"). Seeded once and
+-- recorded, so a seat changed later in the app sticks. Nothing is deleted:
+-- Terry's approver seat and Nic's tiebreaker seat are revoked, Nic gains the
+-- approver seat, and Terry's crew row is retired, so his past job lines,
+-- commissions and audit history keep their name. The tiebreaker seat is left
+-- EMPTY on purpose: money going to Nic, and any escalated veto, waits until a
+-- second approver (the accountant, or a new partner) is seated, because nobody
+-- decides their own money. Every change is written to the audit log.
+DO $$
+DECLARE
+    house CONSTANT UUID := '00000000-0000-4000-8000-000000000001';
+    n INT;
+BEGIN
+    IF EXISTS (SELECT 1 FROM schema_seeds WHERE name = 'finance_roles_v2_terry_out') THEN
+        RETURN;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM tenants WHERE id = house) THEN
+        RETURN;
+    END IF;
+
+    UPDATE finance_roles SET revoked_at = now()
+    WHERE tenant_id = house AND revoked_at IS NULL
+      AND ((lower(email) = 'terry@crossroadsweddingco.shop')
+        OR (lower(email) = 'nic@crossroadsweddingco.shop' AND role = 'tiebreaker'));
+    GET DIAGNOSTICS n = ROW_COUNT;
+    IF n > 0 THEN
+        INSERT INTO audit_log (tenant_id, actor, action, entity_type, entity_id, before, after, reason, hash)
+        VALUES (house, 'migration', 'finance_roles.revoke', 'finance_roles', NULL,
+                '{"approver":"terry@crossroadsweddingco.shop","tiebreaker":"nic@crossroadsweddingco.shop"}'::jsonb,
+                '{"approver":null,"tiebreaker":null}'::jsonb,
+                'Terry left the partnership (owner, 2026-11-27). Nic moves from tiebreaker to approver.', '');
+    END IF;
+
+    INSERT INTO finance_roles (tenant_id, email, name, role)
+    VALUES (house, 'nic@crossroadsweddingco.shop', 'Nic', 'approver')
+    ON CONFLICT DO NOTHING;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    IF n > 0 THEN
+        INSERT INTO audit_log (tenant_id, actor, action, entity_type, entity_id, before, after, reason, hash)
+        VALUES (house, 'migration', 'finance_roles.grant', 'finance_roles', NULL, NULL,
+                '{"approver":"nic@crossroadsweddingco.shop"}'::jsonb,
+                'Owner, 2026-11-27: "Nic approves, Jake requests."', '');
+    END IF;
+
+    UPDATE crew_members SET retired_at = now(), updated_at = now()
+    WHERE tenant_id = house AND retired_at IS NULL
+      AND (lower(coalesce(email, '')) = 'terry@crossroadsweddingco.shop' OR name = 'Terry');
+    GET DIAGNOSTICS n = ROW_COUNT;
+    IF n > 0 THEN
+        INSERT INTO audit_log (tenant_id, actor, action, entity_type, entity_id, before, after, reason, hash)
+        VALUES (house, 'migration', 'crew.retire', 'crew_member', NULL,
+                '{"name":"Terry","retired":false}'::jsonb, '{"name":"Terry","retired":true}'::jsonb,
+                'Terry left the partnership (owner, 2026-11-27).', '');
+    END IF;
+
+    INSERT INTO schema_seeds (name) VALUES ('finance_roles_v2_terry_out') ON CONFLICT (name) DO NOTHING;
+END $$;
