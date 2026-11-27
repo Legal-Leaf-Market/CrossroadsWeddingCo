@@ -13,7 +13,7 @@ export default function Team() {
           No rotating roster of strangers. When you book Crossroads, these are
           the people at your event.
         </p>
-        <div className="mx-auto mt-10 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2">
           {PUBLIC_TEAM.map((m) => (
             <div key={m.slug} className="rounded-2xl border border-parchment bg-white p-6 text-center">
               {m.photoUrl ? (
