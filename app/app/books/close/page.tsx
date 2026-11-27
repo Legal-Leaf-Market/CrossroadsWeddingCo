@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
+import BooksHelp from "@/components/account/BooksHelp";
 import CloseActions from "@/components/account/CloseActions";
 import { getBooksWorkspace } from "@/lib/auth";
 import { availableActions, LOCKED_STATUSES, periodEnd } from "@/lib/books/accrual";
@@ -58,7 +59,10 @@ export default async function ClosePage({ searchParams }: { searchParams: Promis
       <Link href="/app/books" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
         &larr; Books
       </Link>
-      <h1 className="mt-2 text-2xl text-charcoal">Close the books</h1>
+      <div className="flex flex-wrap items-center gap-3 mt-2">
+        <h1 className="text-2xl text-charcoal">Close the books</h1>
+        <BooksHelp topic="close" />
+      </div>
       <p className="mt-1 text-sm text-ink/60">
         Accrual basis, US GAAP. An open month follows every change live. A closed month never changes: anything that moves
         later posts as a dated correction in the current month. Signed in as {ws.user.email}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { listPreAuditPackets } from "@/lib/books/pre-audit-packets";
 import AccountShell from "@/components/account/AccountShell";
+import BooksHelp from "@/components/account/BooksHelp";
 import { getBooksWorkspace } from "@/lib/auth";
 import { externalEvidence, preAuditEvidence, preAuditRange, preAuditReports } from "@/lib/books/pre-audit";
 
@@ -28,7 +29,10 @@ export default async function PreAuditPage({ searchParams }: { searchParams: Pro
   return (
     <AccountShell signedIn house={ws.tenant.kind === "house"}>
       <Link href="/app/books" className={link}>Books</Link>
-      <h1 className="mt-2 text-2xl text-charcoal">Pre-audit packet</h1>
+      <div className="flex flex-wrap items-center gap-3 mt-2">
+        <h1 className="text-2xl text-charcoal">Pre-audit packet</h1>
+        <BooksHelp topic="audit" />
+      </div>
       <p className="mt-1 text-sm text-ink/70">
         Live index for {from} through {through}. Links use Books access. Use a saved packet when the reviewer needs a fixed copy.
       </p>

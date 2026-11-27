@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
+import BooksHelp from "@/components/account/BooksHelp";
 import { getBooksWorkspace } from "@/lib/auth";
 import { ledgerToday, postBankLedgerQuietly } from "@/lib/books/ledger";
 import { trialBalance } from "@/lib/books/subledger";
@@ -33,7 +34,10 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
       <Link href="/app/books" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
         &larr; Books
       </Link>
-      <h1 className="mt-2 text-2xl text-charcoal">Trial balance</h1>
+      <div className="flex flex-wrap items-center gap-3 mt-2">
+        <h1 className="text-2xl text-charcoal">Trial balance</h1>
+        <BooksHelp topic="accounts" />
+      </div>
       <p className="mt-1 text-sm text-ink/60">
         Every account with posted activity through {asOf}. Open one for its register, line by line with a running balance.
       </p>

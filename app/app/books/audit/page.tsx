@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { and, desc, eq, lt, sql, type SQL } from "drizzle-orm";
 import AccountShell from "@/components/account/AccountShell";
+import BooksHelp from "@/components/account/BooksHelp";
 import { getBooksWorkspace } from "@/lib/auth";
 import { verifyAudit } from "@/lib/audit";
 import { db } from "@/lib/db";
@@ -66,7 +67,10 @@ export default async function AuditPage({
       <Link href="/app/books" className="text-sm font-semibold text-ink/60 hover:text-terracotta-dark">
         &larr; Books
       </Link>
-      <h1 className="mt-2 text-2xl text-charcoal">Audit log</h1>
+      <div className="flex flex-wrap items-center gap-3 mt-2">
+        <h1 className="text-2xl text-charcoal">Audit log</h1>
+        <BooksHelp topic="audit" />
+      </div>
       <p className="mt-1 text-sm text-ink/60">
         See who made each recorded change, when it happened, and its before-and-after values. The application records changes in an append-only log.
       </p>

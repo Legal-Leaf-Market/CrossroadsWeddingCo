@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AccountShell from "@/components/account/AccountShell";
+import BooksHelp from "@/components/account/BooksHelp";
 import ReviewQueue from "@/components/account/ReviewQueue";
 import { getBooksWorkspace } from "@/lib/auth";
 import { REVIEW_STATUSES, type CategoryKind, type ReviewStatus } from "@/lib/books/categories";
@@ -58,7 +59,10 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       </Link>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-3xl text-charcoal">Transactions</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl text-charcoal">Transactions</h1>
+            <BooksHelp topic="transactions" />
+          </div>
           <p className="mt-2 max-w-xl text-ink/70">
             Sort each bank line into what it is. Sorted lines post to your Books once the bank clears them.
           </p>
